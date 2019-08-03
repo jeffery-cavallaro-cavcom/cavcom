@@ -1,0 +1,11 @@
+# Project Component Makefile
+
+# The name of the project.
+component :=
+
+# The recursive directories that are the components of the component, listed in desired build order.
+targets :=
+
+include ../templates/Makefile.top.mk
+
+# Add any explicit target dependencies here:
