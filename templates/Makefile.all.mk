@@ -37,7 +37,7 @@ msg:	$(includes) $(sources)
 	@touch $@
 
 check: $(tests)
-	echo "Testing"
+	@for d in $(tests); do $$d -v; done
 
 clean:
 	@$(RM) -f $(programs) $(tests) *.a *.o
