@@ -1,11 +1,19 @@
-includes := types.h
+includes := \
+	matrix.h \
+	matrix_base.h \
+	types.h
 
-sources := types_test.cc
+sources := \
+	matrix_test.cc \
+	types_test.cc
 
-tests := types_test
+tests := \
+	matrix_test \
+	types_test
 
 include ../../templates/Makefile.all.mk
 
-types_test:	types_test.o -lunittest -lpthread
+matrix_test:	matrix_test.o $(TESTLIBS)
+types_test:	types_test.o $(TESTLIBS)
 
 -include $(subst .cc,.d,$(sources))

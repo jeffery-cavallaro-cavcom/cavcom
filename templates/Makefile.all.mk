@@ -12,6 +12,8 @@ CXX := g++
 
 CXXFLAGS := -g -Wall
 
+TESTLIBS := -lunittest -lpthread
+
 LINT := cpplint
 
 define show-help
@@ -46,10 +48,10 @@ distclean: clean
 	@$(RM) -f msg *.d
 
 help:
-	$(show-help)
+	@$(show-help)
 
 lint:
 	@$(LINT) --root=../../.. $(includes) $(sources)
 
 %.d: %.cc
-	$(d-from-cc)
+	@$(d-from-cc)
