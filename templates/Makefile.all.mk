@@ -16,6 +16,10 @@ TESTLIBS := -lunittest -lpthread
 
 LINT := cpplint
 
+define make-library
+	$(AR) $(ARFLAGS) $@ $?
+endef
+
 define show-help
 	@$(MAKE) --print-data-base --question msg | \
 	grep -v -e '^no-such-target' -e '^Makefile' | \
@@ -38,7 +42,7 @@ msg:	$(includes) $(sources)
 	@echo "Changed: $?"
 	@touch $@
 
-check: $(tests)
+check: all $(tests)
 	@for d in $(tests); do $$d -v; done
 
 clean:

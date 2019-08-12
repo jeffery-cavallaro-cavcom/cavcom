@@ -1,5 +1,5 @@
 project := cavcom
 
-targets := utility
+targets := utility graph
 
 include templates/Makefile.top.mk
