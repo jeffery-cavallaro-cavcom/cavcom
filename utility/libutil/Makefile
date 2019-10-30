@@ -1,6 +1,5 @@
 includes := \
 	matrix.h \
-	matrix_base.h \
 	types.h
 
 sources := \
