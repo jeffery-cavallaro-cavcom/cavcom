@@ -11,6 +11,12 @@ namespace cavcom {
      public:
       // Default constructor.  Creates a null graph.
       UndirectedGraph() {}
+
+      // The minimum vertex degree in the graph, usually known as small-delta.
+      Degree mindeg(void) const { return minoutdeg(); }
+
+      // The maximum vertex degree in the graph, usually known as capital-delta.
+      Degree maxdeg(void) const { return maxoutdeg(); }
     };
 
   }  // namespace graph

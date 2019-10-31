@@ -3,6 +3,7 @@
 
 #include <map>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -11,6 +12,17 @@
 
 namespace cavcom {
   namespace graph {
+    // Thrown when attempting to join an unknown vertex with an edge.
+    class NoSuchVertexError : public std::runtime_error {
+     public:
+      NoSuchVertexError(void) : runtime_error("No such vertex") {};
+    };
+
+    // Thrown when attempting label a vertex with an already existing label.
+    class DuplicateLabelError : public std::runtime_error {
+     public:
+      DuplicateLabelError(void) : runtime_error("Duplicate label") {};
+    };
 
     // This is the base class for all graphs.  A graph consists of vertices and edges that join vertices.
     class Graph {
@@ -54,6 +66,10 @@ namespace cavcom {
       // matrix, they are stored as attributes for efficiency.
       class Vertex {
        public:
+        // Creates a new isolated vertex with the specified label and color.
+        Vertex(const Label &label = std::string(), Color color = BLACK)
+          : id_(0), label_(label), color_(color), indeg_(0), outdeg_(0) {}
+
         // Accessors and mutators.
         VertexID id(void) const { return id_; }
         const Label &label(void) const { return label_; }
@@ -74,10 +90,6 @@ namespace cavcom {
         Degree outdeg_;
         Contracted contracted_;
 
-        // Creates a new isolated vertex with the specified label and color.
-        Vertex(const Label &label = std::string(), Color color = BLACK)
-          : id_(0), label_(label), color_(color), indeg_(0), outdeg_(0) {}
-
         // The parent graph needs access during graph mutations.
         friend class Graph;
       };
@@ -88,6 +100,10 @@ namespace cavcom {
       // parent graph.
       class Edge {
        public:
+        // Creates a new edge with the specified label and weight between the specified endpoints.
+        Edge(VertexID from, VertexID to, const Label &label = std::string(), Color color = BLACK, Weight weight = 0.0)
+          : from_(from), to_(to), label_(label), color_(color), weight_(weight) {}
+
         // Accessors and mutators.  Only the parent graph can set the endpoints.
         VertexID from(void) const { return from_; }
         VertexID to(void) const { return to_; }
@@ -108,10 +124,6 @@ namespace cavcom {
         Color color_;
         Weight weight_;
 
-        // Creates a new edge with the specified label and weight between the specified endpoints.
-        Edge(VertexID from, VertexID to, const Label &label = std::string(), Color color = BLACK, Weight weight = 0.0)
-          : from_(from), to_(to), label_(label), color_(color), weight_(weight) {}
-
         // The parent graph needs access during graph mutations.
         friend class Graph;
       };
@@ -123,25 +135,21 @@ namespace cavcom {
       // The number of edges (size).
       EdgeNumber size(void) const { return edges_.size(); }
 
-      // The minimum vertex degree in the graph, usually known as small-delta.
-      Degree mindeg(void) const { return mindeg_; }
-
-      // The maximum vertex degree in the graph, usually known as capital-delta.
-      Degree maxdeg(void) const { return maxdeg_; }
-
       // Returns a vertex by position, with range checking.
       Vertex &operator[](VertexNumber i) { return vertices_.at(i); }
+      const Vertex &operator[](VertexNumber i) const { return vertices_.at(i); }
       Vertex &vertex(VertexNumber i) { return (*this)[i]; }
+      const Vertex &vertex(VertexNumber i) const { return (*this)[i]; }
 
-      // Finds a vertex number by vertex ID or label.
-      VertexNumber find_vertex(VertexID id) const;
-      VertexNumber find_vertex(Label label) const;
+      // Finds a vertex number by vertex ID or label.  Returns order() if not found.
+      bool find_vertex(VertexID id, VertexNumber *number) const;
+      bool find_vertex(const Label &label, VertexNumber *number) const;
 
       // Returns the edge list for the specified from and to endpoints, with range checking.
       const Edges &edges(VertexNumber from, VertexNumber to) const { return connections_->at(from, to); }
 
       // Returns the specified edge between the specified two vertices, with range checking.
-      EdgeNumber edge(VertexNumber from, VertexNumber to, Degree i) { return (connections_->at(from, to))[i]; }
+      EdgeNumber edge(VertexNumber from, VertexNumber to, Degree i) { return (connections_->at(from, to)).at(i); }
 
       // Returns true if there is an edge between the two vertices, with range checking.
       bool adjacent(VertexNumber from, VertexNumber to) const { return !edges(from, to).empty(); }
@@ -150,11 +158,37 @@ namespace cavcom {
       // vertices are initialized with default attributes.
       void add_vertices(VertexNumber n);
 
+      // Values for constructing vertices.
+      struct VertexValues {
+        Label label;
+        Color color;
+      };
+
+      using VertexValuesList = std::vector<VertexValues>;
+
+      // Adds isolated vertices using the specified values.
+      void add_vertices(const VertexValuesList &vertices);
+
+      // Labels the specified vertex.
+      void label_vertex(VertexNumber iv, const std::string &label);
+
      protected:
       // Default constructor.  Creates a null graph with the specified number of isolated nodes, or a null graph if
       // a node count is not specified.  Graphs can only be created by a derived type that enforces whether the
       // graph is simple or multi and undirected or directed.
-      explicit Graph(VertexNumber n = 0) : next_(0), connections_(new Connections(0)), mindeg_(0), maxdeg_(0) {}
+      explicit Graph(VertexNumber n = 0)
+        : next_(0), connections_(new Connections(0)), minindeg_(0), maxindeg_(0), minoutdeg_(0), maxoutdeg_(0) {}
+
+      // Different derived graph types will interpret these differently, so they are protected.
+      Degree minindeg(void) const { return minindeg_; }
+      Degree maxindeg(void) const { return maxindeg_; }
+      Degree minoutdeg(void) const { return minoutdeg_; }
+      Degree maxoutdeg(void) const { return maxoutdeg_; }
+
+      // The rules for adding edges are enforced by the derived classes.  Derived classes can call this routine to
+      // append an edge to the edge list, join the endpoint vertices, and update the various degree attributes.
+      void add_edge(VertexID from, VertexID to,
+                    const Label &label = std::string(), Color color = BLACK, Weight weight = 0.0);
 
      private:
       // The vertices, in no particular order.
@@ -180,11 +214,17 @@ namespace cavcom {
 
       // The following values can be determined from the connection matrix; however, they are stored as attributes
       // for efficiency.
-      Degree mindeg_;
-      Degree maxdeg_;
+      Degree minindeg_;
+      Degree maxindeg_;
+      Degree minoutdeg_;
+      Degree maxoutdeg_;
 
       // Reconstructs the connection matrix from the current vertex and edge lists.
       void reconnect(void);
+
+      // Uses the edge at the specified offset in the edge table to join its endpoint vertices and update all of the
+      // relevant degree attributes.
+      void join(EdgeNumber ie);
     };
 
   }  // namespace graph
