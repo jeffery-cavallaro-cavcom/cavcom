@@ -17,18 +17,28 @@ namespace cavcom {
       using Contracted = std::vector<VertexID>;
 
       // Creates a new isolated vertex.  The ID is assigned by the parent graph.
-      Vertex(const Label &label = Label(), Color color = BLACK)
-        : id_(0), label_(label), color_(color), indeg_(0), outdeg_(0) {}
+      Vertex(const Label &label = Label(), Color color = BLACK);
 
-      // Accessors and mutators.
+      // Copy constructor.
+      Vertex(const Vertex &source);
+
+      // The vertex ID assigned by the parent graph when the vertex is first added to the graph.  Although a vertex's
+      // number (position in the vertex table) may change across a graph mutation, the vertex ID does not.
       VertexID id(void) const { return id_; }
+
+      // Vertex labels can only be changed via the parent graph in order to guarantee uniqueness.
       const Label &label(void) const { return label_; }
 
+      // Vertex colors are typically used in partitioning applications.
       const Color color(void) const { return color_; }
       void color(Color color) { color_ = color; }
 
+      // A vertex's degree (number of incident edges) can be computed from the connection matrix; however, it is
+      // recorded here since it is such a commonly used parameter.  Input and output degrees are supported in the
+      // case of digraphs.  For undirected graphs, these values should be equal; a degree synonym is provided.
       Degree indeg(void) const { return indeg_; }
       Degree outdeg(void) const { return outdeg_; }
+      Degree degree(void) const { return outdeg_; }
 
       const Contracted &contracted(void) const { return contracted_; }
 

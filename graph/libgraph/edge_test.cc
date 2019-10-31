@@ -1,4 +1,4 @@
-// Creates and mutates simple graphs.
+// Creates and mutates edges.
 
 #include <libunittest/all.hpp>
 
