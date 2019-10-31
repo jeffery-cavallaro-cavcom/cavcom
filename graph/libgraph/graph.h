@@ -7,127 +7,26 @@
 #include <string>
 #include <vector>
 
-#include "types.h"
 #include "matrix.h"
+
+#include "vertex.h"
 
 namespace cavcom {
   namespace graph {
     // Thrown when attempting to join an unknown vertex with an edge.
     class NoSuchVertexError : public std::runtime_error {
      public:
-      NoSuchVertexError(void) : runtime_error("No such vertex") {};
+      NoSuchVertexError(void) : runtime_error("No such vertex") {}
     };
 
     // Thrown when attempting label a vertex with an already existing label.
     class DuplicateLabelError : public std::runtime_error {
      public:
-      DuplicateLabelError(void) : runtime_error("Duplicate label") {};
+      DuplicateLabelError(void) : runtime_error("Duplicate label") {}
     };
 
     // This is the base class for all graphs.  A graph consists of vertices and edges that join vertices.
     class Graph {
-     public:
-      // Vertex and edge labels are strings.
-      using Label = std::string;
-
-      // Vertex and edge colors are represented by unsigned integer values.  These values can be used as indexes
-      // into an external color array for application-specific color assignment.  The default color value is 0,
-      // which should correspond to black.
-      using Color = uint;
-      static constexpr Color BLACK = 0;
-
-      // Edges can be assign weights.  An edge's weight can be interpreted as the cost to traverse the edge between
-      // the endpoint vertices.
-      using Weight = double;
-
-      // Vertices are stored in the vertex table and are identified by a vertex ID that is invariant across graph
-      // mutations.  Thus, a vertex that changes its position in the connection matrix is still identifiable with
-      // the corresponding vertex in the original graph.  Vertices in a particular graph are also identified by
-      // their position in the vertex table, which corresponds to their position in the connection matrix.
-      class Vertex;
-      using VertexTable = std::vector<Vertex>;
-      using VertexID = VertexTable::size_type;
-      using VertexNumber = VertexTable::size_type;
-
-      // Edges are stored in an edge table and are referenced by index in the connection matrix.
-      class Edge;
-      using EdgeTable = std::vector<Edge>;
-      using EdgeNumber = EdgeTable::size_type;
-      using Edges = std::vector<EdgeNumber>;
-
-      // The degree of a vertex is the number of edges incident to a vertex.
-      using Degree = Edges::size_type;
-
-      // Each vertex also maintains a list of vertex IDs that track vertex contractions.  An empty contracted list
-      // indicates that the vertex is not the result of any contractions.
-      using Contracted = std::vector<VertexID>;
-
-      // A single vertex in a graph.  Although a vertex's in and out degrees can be determined from the connection
-      // matrix, they are stored as attributes for efficiency.
-      class Vertex {
-       public:
-        // Creates a new isolated vertex with the specified label and color.
-        Vertex(const Label &label = std::string(), Color color = BLACK)
-          : id_(0), label_(label), color_(color), indeg_(0), outdeg_(0) {}
-
-        // Accessors and mutators.
-        VertexID id(void) const { return id_; }
-        const Label &label(void) const { return label_; }
-
-        const Color color(void) const { return color_; }
-        void color(Color color) { color_ = color; }
-
-        Degree indeg(void) const { return indeg_; }
-        Degree outdeg(void) const { return outdeg_; }
-
-        const Contracted &contracted(void) const { return contracted_; }
-
-       private:
-        VertexID id_;
-        Label label_;
-        Color color_;
-        Degree indeg_;
-        Degree outdeg_;
-        Contracted contracted_;
-
-        // The parent graph needs access during graph mutations.
-        friend class Graph;
-      };
-
-      // A single edge, used to join endpoint vertices.  Edges can have an identifying label, a color, and a
-      // weight.  The color can be used to partition edges.  The weight can be interpreted as the cost of
-      // traversing the edge between its endpoint vertices.  Whether or not an edge is directed depends on the
-      // parent graph.
-      class Edge {
-       public:
-        // Creates a new edge with the specified label and weight between the specified endpoints.
-        Edge(VertexID from, VertexID to, const Label &label = std::string(), Color color = BLACK, Weight weight = 0.0)
-          : from_(from), to_(to), label_(label), color_(color), weight_(weight) {}
-
-        // Accessors and mutators.  Only the parent graph can set the endpoints.
-        VertexID from(void) const { return from_; }
-        VertexID to(void) const { return to_; }
-
-        const Label &label(void) const { return label_; }
-        void label(const Label &label) { label_ = label; }
-
-        const Color color(void) const { return color_; }
-        void color(Color color) { color_ = color; }
-
-        const Weight weight(void) const { return weight_; }
-        void weight(Weight weight) { weight_ = weight; }
-
-       private:
-        VertexID from_;
-        VertexID to_;
-        Label label_;
-        Color color_;
-        Weight weight_;
-
-        // The parent graph needs access during graph mutations.
-        friend class Graph;
-      };
-
      public:
       // The number of vertices (order).
       VertexNumber order(void) const { return vertices_.size(); }

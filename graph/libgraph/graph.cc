@@ -5,8 +5,6 @@
 namespace cavcom {
   namespace graph {
 
-    constexpr Graph::Color Graph::BLACK;
-
     bool Graph::find_vertex(VertexID id, VertexNumber *number) const {
       const auto &iv = id_to_number_.find(id);
       if (iv == id_to_number_.end()) {
@@ -65,7 +63,7 @@ namespace cavcom {
 
     void Graph::label_vertex(VertexNumber iv, const std::string &label) {
       Vertex &v = vertex(iv);
-      if (! label_to_number_.emplace(label, iv).second) {
+      if (!label_to_number_.emplace(label, iv).second) {
         throw DuplicateLabelError();
       }
       v.label_ = label;
@@ -100,7 +98,7 @@ namespace cavcom {
 
       // Make sure that the endpoints exists.
       VertexNumber out, in;
-      if ( ! (find_vertex(e.from(), &out) && find_vertex(e.to(), &in)) ) {
+      if (!(find_vertex(e.from(), &out) && find_vertex(e.to(), &in))) {
         throw NoSuchVertexError();
       }
 

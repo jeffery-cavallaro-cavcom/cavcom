@@ -1,14 +1,14 @@
-includes := graph.h undirected.h simple.h
+includes := graphtypes.h edge.h vertex.h graph.h undirected.h simple.h
 
-libgraph_sources := graph.cc
+libgraph_sources := edge.cc graph.cc
 
-test_sources := simple_test.cc
+test_sources := edge_test.cc simple_test.cc
 
 sources := $(libgraph_sources) $(test_sources)
 
 libraries := libgraph.a
 
-tests := simple_test
+tests := edge_test simple_test
 
 include ../../templates/Makefile.all.mk
 
@@ -18,6 +18,7 @@ CPPFLAGS += -I../../utility/libutil
 libgraph.a: $(subst .cc,.o,$(libgraph_sources))
 	$(make-library)
 
+edge_test:	edge_test.o $(libraries) $(TESTLIBS)
 simple_test:	simple_test.o $(libraries) $(TESTLIBS)
 
 -include $(subst .cc,.d,$(sources))
