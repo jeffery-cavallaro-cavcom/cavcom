@@ -7,7 +7,6 @@
 #include "types.h"
 
 TEST(check_type_limits) {
-  UNITTEST_TESTINFO("Check limits for common typedefs");
   // tiny = signed char
   UNITTEST_ASSERT_EQUAL(std::numeric_limits<tiny>::min(), std::numeric_limits<signed char>::min());
   UNITTEST_ASSERT_EQUAL(std::numeric_limits<tiny>::max(), std::numeric_limits<signed char>::max());

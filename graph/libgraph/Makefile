@@ -1,6 +1,14 @@
-includes := graphtypes.h edge.h vertex.h graph.h undirected.h simple.h
+includes :=	graphtypes.h \\
+		errors.h \\
+		edge.h \\
+		vertex.h \\
+		labels.h \\
+		vertices.h \\
+		graph.h \\
+		undirected.h \\
+		simple.h
 
-libgraph_sources := edge.cc vertex.cc graph.cc
+libgraph_sources := errors.cc edge.cc vertex.cc labels.cc vertices.cc graph.cc
 
 test_sources := edge_test.cc vertex_test.cc simple_test.cc
 

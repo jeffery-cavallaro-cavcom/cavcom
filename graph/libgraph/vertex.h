@@ -1,6 +1,8 @@
 #ifndef CAVCOM_GRAPH_LIBGRAPH_VERTEX_H_
 #define CAVCOM_GRAPH_LIBGRAPH_VERTEX_H_
 
+#include <vector>
+
 #include "edge.h"
 
 namespace cavcom {
@@ -11,7 +13,7 @@ namespace cavcom {
 
     // A single vertex in a graph.
     class Vertex {
-    public:
+     public:
       // Each vertex maintains a list of vertex IDs that track vertex contractions.  An empty contracted list
       // indicates that the vertex is not the result of any contractions.
       using Contracted = std::vector<VertexID>;
@@ -42,13 +44,16 @@ namespace cavcom {
 
       const Contracted &contracted(void) const { return contracted_; }
 
-    private:
+     private:
       VertexID id_;
       Label label_;
       Color color_;
       Degree indeg_;
       Degree outdeg_;
       Contracted contracted_;
+
+      // Disable assignment.
+      Vertex &operator=(const Vertex &source) { return *this; }
 
       // The parent graph needs access during graph mutations.
       friend class Graph;

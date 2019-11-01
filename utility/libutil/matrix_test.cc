@@ -74,14 +74,12 @@ template <uint n, uint m> struct TestArrayFixture {
 using RaggedArrayFixture = TestArrayFixture<100, 29>;
 
 TEST_FIXTURE(RaggedArrayFixture, create_and_access_matrix) {
-  UNITTEST_TESTINFO("Create a matrix and check the element values");
   run_test();
 }
 
 using SquareArrayFixture = TestArrayFixture<50, 50>;
 
 TEST_FIXTURE(SquareArrayFixture, create_and_access_square_matrix) {
-  UNITTEST_TESTINFO("Create a square matrix and check the element values");
   run_test();
 }
 
@@ -89,7 +87,6 @@ TEST(out_of_range_error) {
   constexpr uint NROWS = 10;
   constexpr uint NCOLS = 29;
 
-  UNITTEST_TESTINFO("Check for an expected out-of-range error");
   TestMatrix matrix(NROWS, NCOLS);
 
   // Good:
