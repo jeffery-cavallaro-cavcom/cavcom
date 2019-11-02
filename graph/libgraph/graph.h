@@ -28,10 +28,8 @@ namespace cavcom {
       EdgeNumber size(void) const { return edges_.size(); }
 
       // Returns a vertex by position, with range checking.
-      Vertex &operator[](VertexNumber i) { return vertices_.at(i); }
-      const Vertex &operator[](VertexNumber i) const { return vertices_.at(i); }
-      Vertex &vertex(VertexNumber i) { return (*this)[i]; }
-      const Vertex &vertex(VertexNumber i) const { return (*this)[i]; }
+      Vertex &operator[](VertexNumber i) { return vertices_[i]; }
+      const Vertex &operator[](VertexNumber i) const { return vertices_[i]; }
 
       // Finds a vertex number by vertex ID or label.  Returns order() if not found.
       bool find_vertex(VertexID id, VertexNumber *number) const;

@@ -3,7 +3,8 @@
 namespace cavcom {
   namespace graph {
 
-    Vertex::Vertex(const Label &label, Color color) : id_(0), label_(label), color_(color), indeg_(0), outdeg_(0) {}
+    Vertex::Vertex(VertexID id, const Label &label, Color color)
+      : id_(id), label_(label), color_(color), indeg_(0), outdeg_(0) {}
 
     Vertex::Vertex(const Vertex &source)
       : id_(source.id_),

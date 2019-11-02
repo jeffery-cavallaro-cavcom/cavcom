@@ -4,6 +4,7 @@
 #include <map>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 
 namespace cavcom {
   namespace utility {
@@ -54,16 +55,13 @@ namespace cavcom {
       using LookupTable = std::map<K, V>;
       typename LookupTable::size_type size(void) const { return lookup_.size(); }
 
-      // Returns true and the corresponding value if the specified key is known.  Otherwise, returns false or
+      // Returns a pointer to the corresponding value if the specified key is known.  Otherwise, returns null or
       // throws a not found error if exceptions are enabled by the errors argument.
-      bool find(const K &key, V *value, bool errors = false) const {
-        const auto &i = lookup_.find(key);
-        if (i == lookup_.end()) {
-          if (errors) throw NotFoundLookupError(name_, key);
-          return false;
-        }
-        *value = i->second;
-        return true;
+      V *find(const K &key, bool errors = false) {
+        auto i = lookup_.find(key);
+        if (i != lookup_.end()) return &i->second;
+        if (errors) throw NotFoundLookupError(name_, key);
+        return nullptr;
       }
 
       // Adds the specified key/value pair to the lookup table.  Returns true if the key was not already in use.

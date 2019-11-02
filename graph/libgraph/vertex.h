@@ -18,8 +18,8 @@ namespace cavcom {
       // indicates that the vertex is not the result of any contractions.
       using Contracted = std::vector<VertexID>;
 
-      // Creates a new isolated vertex.  The ID is assigned by the parent graph.
-      Vertex(const Label &label = Label(), Color color = BLACK);
+      // Creates a new isolated vertex.
+      explicit Vertex(VertexID id, const Label &label = Label(), Color color = BLACK);
 
       // Copy constructor.
       Vertex(const Vertex &source);

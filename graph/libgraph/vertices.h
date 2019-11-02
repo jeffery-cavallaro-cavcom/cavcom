@@ -1,8 +1,9 @@
 #ifndef CAVCOM_GRAPH_LIBGRAPH_VERTICES_H_
 #define CAVCOM_GRAPH_LIBGRAPH_VERTICES_H_
 
+#include "lookup.h"
+
 #include "vertex.h"
-#include "labels.h"
 
 namespace cavcom {
   namespace graph {
@@ -12,6 +13,9 @@ namespace cavcom {
      public:
       // Creates a new, empty vertex table.
       Vertices(void);
+
+      // Returns the number of vertices in the table.
+      VertexNumber size(void) const { return vertices_.size(); }
 
       // A capacity hint for the number of vertices that will need to be stored.  This should be called prior to
       // adding a set of vertices in order to avoid needless reallocations.
@@ -26,17 +30,21 @@ namespace cavcom {
       // already assigned to an existing vertex.
       void add(const Label &label = Label(), Color color = BLACK);
 
+      // Find vertex by ID or label.  Returns true if found.
+      bool find(VertexID id, VertexNumber *number);
+      bool find(Label label, VertexNumber *number);
+
       // Min and max degrees.  A synonym is provided for undirected graphs.
       Degree minindeg(void) const { return minindeg_; }
       Degree maxindeg(void) const { return maxindeg_; }
-      
+
       Degree minoutdeg(void) const { return minoutdeg_; }
       Degree maxoutdeg(void) const { return maxoutdeg_; }
 
       Degree mindeg(void) const { return minoutdeg(); }
       Degree maxdeg(void) const { return maxoutdeg(); }
 
-    private:
+     private:
       // The vertices, indexed by vertex number.
       VertexTable vertices_;
 
@@ -44,8 +52,8 @@ namespace cavcom {
       VertexID next_;
 
       // Vertices can be found by ID or label.
-      IDs id_to_number_;
-      Labels label_to_number_;
+      cavcom::utility::Lookup<VertexID, VertexNumber> id_to_number_;
+      cavcom::utility::Lookup<Label, VertexNumber> label_to_number_;
 
       // The following values can be determined from the connection matrix; however, they are widely used in various
       // graph algorithms, and so they are stored here for efficiency.  Both input and output degrees are stored in
