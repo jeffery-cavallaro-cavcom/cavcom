@@ -45,20 +45,17 @@ namespace cavcom {
         DuplicateLookupError(const std::string &name, const K &key) : LookupError("Duplicate", name, key) {}
       };
 
-     private:
-      // Forward reference:
-      using LookupTable = std::map<K, V>;
-
      public:
       // Creates a new, empty lookup table.  The name argument is a description name for the key type that appears
       // in exception messages.
       explicit Lookup(const std::string &name = "key") : name_(name) {}
 
       // Returns the number of key/value pairs in the lookup table.
+      using LookupTable = std::map<K, V>;
       typename LookupTable::size_type size(void) const { return lookup_.size(); }
 
-      // Returns true and the corresponding value if the specified key is known.  Otherwise, returns false or throws
-      // a not found error if exceptions are enabled by the "errors" argument.
+      // Returns true and the corresponding value if the specified key is known.  Otherwise, returns false or
+      // throws a not found error if exceptions are enabled by the errors argument.
       bool find(const K &key, V *value, bool errors = false) const {
         const auto &i = lookup_.find(key);
         if (i == lookup_.end()) {
@@ -69,13 +66,17 @@ namespace cavcom {
         return true;
       }
 
-      // Adds the specified key/value pair to the lookup table.  Throws an exception if the specified key is
-      // already in use.
-      void add(const K &key, const V &value) {
-        if (!lookup_.emplace(key, value).second) {
-          throw DuplicateLookupError(name_, key);
-        }
+      // Adds the specified key/value pair to the lookup table.  Returns true if the key was not already in use.
+      // Otherwise, returns false or throws a duplicate error if exceptions are enabled by the errors argument.
+      bool add(const K &key, const V &value, bool errors = false) {
+        bool success = lookup_.emplace(key, value).second;
+        if ((!success) && errors) throw DuplicateLookupError(name_, key);
+        return success;
       }
+
+      // Discards the key/value pair associated with the specified key from the lookup table.  Does nothing if the
+      // key is not known.
+      void remove(const K &key) { lookup_.erase(key); }
 
       // Discards all entries in the lookup table.
       void clear(void) { lookup_.clear(); }
