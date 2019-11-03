@@ -1,16 +1,6 @@
 #ifndef CAVCOM_GRAPH_LIBGRAPH_GRAPH_H_
 #define CAVCOM_GRAPH_LIBGRAPH_GRAPH_H_
 
-#include <map>
-#include <memory>
-#include <stdexcept>
-#include <string>
-#include <vector>
-
-#include "matrix.h"
-
-#include "vertices.h"
-
 namespace cavcom {
   namespace graph {
     class NoSuchVertexNumberError : public std::runtime_error {

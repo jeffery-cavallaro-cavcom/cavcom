@@ -10,9 +10,6 @@ static void check_vertex(const Vertex &vertex, VertexID id, const Label &label =
   UNITTEST_ASSERT_EQUAL(vertex.id(), id);
   UNITTEST_ASSERT_EQUAL(vertex.label(), label);
   UNITTEST_ASSERT_EQUAL(vertex.color(), color);
-  UNITTEST_ASSERT_EQUAL(vertex.indeg(), 0);
-  UNITTEST_ASSERT_EQUAL(vertex.outdeg(), 0);
-  UNITTEST_ASSERT_EQUAL(vertex.degree(), 0);
   UNITTEST_ASSERT_TRUE(vertex.contracted().empty());
 }
 

@@ -9,24 +9,32 @@
 
 using StringToInt = cavcom::utility::Lookup<std::string, int>;
 
-TEST(create_notfound_exception) {
-  const std::string name = "stuff";
-  const std::string val = "hello";
-  const std::string msg = "Unknown stuff: hello";
+TEST(throw_notfound_exception) {
+  const std::string NAME = "stuff";
+  const std::string VALUE = "hello";
+  const std::string MESSAGE = "Unknown stuff: hello";
 
-  StringToInt::NotFoundLookupError es(name, val);
-  UNITTEST_ASSERT_EQUAL(es.key(), val);
-  UNITTEST_ASSERT_EQUAL(es.what(), msg);
+  try {
+    throw StringToInt::NotFoundLookupError(NAME, VALUE);
+  }
+  catch (const StringToInt::NotFoundLookupError &error) {
+    UNITTEST_ASSERT_EQUAL(error.key(), VALUE);
+    UNITTEST_ASSERT_EQUAL(error.what(), MESSAGE);
+  }
 }
 
-TEST(create_duplicate_exception) {
-  const std::string name = "junk";
-  const std::string val = "world";
-  const std::string msg = "Duplicate junk: world";
+TEST(throw_duplicate_exception) {
+  const std::string NAME = "junk";
+  const std::string VALUE = "world";
+  const std::string MESSAGE = "Duplicate junk: world";
 
-  StringToInt::DuplicateLookupError es(name, val);
-  UNITTEST_ASSERT_EQUAL(es.key(), val);
-  UNITTEST_ASSERT_EQUAL(es.what(), msg);
+  try {
+    throw StringToInt::DuplicateLookupError(NAME, VALUE);
+  }
+  catch (const StringToInt::DuplicateLookupError &error) {
+    UNITTEST_ASSERT_EQUAL(error.key(), VALUE);
+    UNITTEST_ASSERT_EQUAL(error.what(), MESSAGE);
+  }
 }
 
 TEST(create_empty_table) {
