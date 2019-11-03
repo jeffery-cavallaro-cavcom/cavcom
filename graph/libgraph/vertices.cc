@@ -1,11 +1,24 @@
 #include <algorithm>
+#include <vector>
 
 #include "vertices.h"
 
 namespace cavcom {
   namespace graph {
 
-    Vertices::Vertices(void) : next_(0), id_to_number_("vertex ID"), label_to_number_("vertex label") {}
+    Vertices::Vertices(void) : next_(0), id_to_number_("vertex id"), label_to_number_("vertex label") {}
+
+    Vertices::Vertices(const Vertices &source, const VertexNumbers &remove) : Vertices() {
+      VertexNumber n = source.size();
+      for (VertexNumber iv = 0; iv < n; ++iv) {
+        if (remove.find(iv) == remove.cend()) {
+          const Vertex &v = source[iv];
+          next_ = v.id();
+          add(v.label(), v.color(), v.xpos(), v.ypos());
+        }
+      }
+      next_ = source.next_;
+    }
 
     void Vertices::reserve(VertexNumber n) {
       if (vertices_.capacity() < n) vertices_.reserve(n);

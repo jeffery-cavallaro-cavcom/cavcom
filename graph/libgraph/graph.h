@@ -19,9 +19,6 @@ namespace cavcom {
 
     using EdgeValuesList = std::vector<EdgeValues>;
 
-    // A list of vertices by vertex number.  Used during subgraph operations.
-    using VertexNumbers = std::vector<VertexNumber>;
-
     // A graph is a mathematical object consisting of vertices and edges.  Graphs can be simple or allow multiple
     // edges, can be undirected or directed, and can optionally support loop edges.
     class Graph {
@@ -56,6 +53,10 @@ namespace cavcom {
       // Gets a vertex by vertex number.  An invalid vertex number throws an out-of-range error.
       Vertex &vertex(VertexNumber number) { return vertices_[number]; }
       const Vertex &vertex(VertexNumber number) const { return vertices_[number]; }
+
+      // Gets a vertex number by vertex ID or label.  Returns true if found.
+      bool find_vertex(VertexID id, VertexNumber *found) { return vertices_.find(id, found); }
+      bool find_vertex(Label label, VertexNumber *found) { return vertices_.find(label, found); }
 
       // Gets an edge by edge number.  An invalid vertex number throws an out-of-range error.
       Edge &edge(EdgeNumber number) { return edges_.at(number); }

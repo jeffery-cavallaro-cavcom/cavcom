@@ -22,20 +22,16 @@ namespace cavcom {
     }
 
     Graph::Graph(const Graph &source, const VertexNumbers &remove)
-      : connections_(source.order(), source.directed(), source.multiple(), source.loops()) {
-      VertexNumber n = source.order();
+      : vertices_(source.vertices_, remove),
+        connections_(source.order() - remove.size(), source.directed(), source.multiple(), source.loops()) {
+      // Only add the edges with both endpoints in the subgraph.
       EdgeNumber m = source.size();
-
-      // Make the vertices that are to be removed.
-      std::vector<bool> vremove;
-      vremove.reserve(n);
-      for_each(remove.cbegin(), remove.cend(), [&](VertexNumber iv){ vremove[iv] = true; });
-
-      // Mark all of the edges incident to the removed vertices as also being removed.
-      std::vector<bool> eremove;
-      eremove.reserve(m);
       for (EdgeNumber ie = 0; ie < m; ++ie) {
         const Edge &e = source.edge(ie);
+        VertexNumber from, to;
+        if (find_vertex(e.from(), &from) && find_vertex(e.to(), &to)) {
+          join(from, to, e.label(), e.color(), e.weight());
+        }
       }
     }
 

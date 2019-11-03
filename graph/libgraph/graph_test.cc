@@ -89,7 +89,14 @@ TEST(make_simple_graph) {
 
   // Check the vertices.
   for (VertexNumber iv = 0; iv < VERTICES.size(); ++iv) {
-    check_vertex(g.vertex(iv), iv, VERTICES[iv]);
+    const VertexValues &v = VERTICES[iv];
+    check_vertex(g.vertex(iv), iv, v);
+    VertexNumber found = 0;
+    UNITTEST_ASSERT_TRUE(g.find_vertex(iv, &found));
+    UNITTEST_ASSERT_EQUAL(found, iv);
+    found = 0;
+    UNITTEST_ASSERT_TRUE(g.find_vertex(v.label, &found));
+    UNITTEST_ASSERT_EQUAL(found, iv);
   }
 
   // Check the edges.
@@ -126,4 +133,61 @@ TEST(make_simple_graph) {
   UNITTEST_ASSERT_EQUAL(g.degree(3), 1);
 
   check_degrees(g, 1, 3, 1, 3);
+}
+
+static const VertexValuesList KV = {{"v1"}, {"v2"}, {"v3"}, {"v4"}, {"v5"}};
+
+static const EdgeValuesList KE = {{0, 1, "e0"}, {0, 2, "e1"}, {0, 3, "e2"}, {0, 4, "e3"},
+                                  {1, 2, "e4"}, {1, 3, "e5"}, {1, 4, "e6"},
+                                  {2, 3, "e7"}, {2, 4, "e8"},
+                                  {3, 4, "e9"}};
+
+TEST(make_simple_subgraph) {
+  // Start with a complete graph.
+  Graph kg(KV, KE);
+  UNITTEST_ASSERT_EQUAL(kg.order(), KV.size());
+  UNITTEST_ASSERT_EQUAL(kg.size(), KE.size());
+  check_degrees(kg, 4, 4, 4, 4);
+
+  // Remove two of the vertices.
+  const VertexNumbers out = {1, 3};
+  Graph sg(kg, out);
+  UNITTEST_ASSERT_EQUAL(sg.order(), KV.size() - 2);
+  UNITTEST_ASSERT_EQUAL(sg.size(), KE.size() - 7);
+  check_degrees(sg, 2, 2, 2, 2);
+
+  // Check the remaining.
+  for (VertexNumber iv = 0; iv < kg.order(); ++iv) {
+    const Vertex v = kg.vertex(iv);
+    VertexNumber found;
+    if (out.find(v.id()) == out.cend()) {
+      UNITTEST_ASSERT_TRUE(sg.find_vertex(v.id(), &found));
+      const Vertex &sv = sg.vertex(found);
+      UNITTEST_ASSERT_EQUAL(sv.id(), v.id());
+      UNITTEST_ASSERT_EQUAL(sv.label(), v.label());
+      UNITTEST_ASSERT_EQUAL(sv.color(), BLACK);
+      UNITTEST_ASSERT_EQUAL(sv.xpos(), 0.0);
+      UNITTEST_ASSERT_EQUAL(sv.ypos(), 0.0);
+    } else {
+      UNITTEST_ASSERT_FALSE(sg.find_vertex(v.id(), &found));
+    }
+  }
+
+  // The remaining vertices should all be adjacent.
+  UNITTEST_ASSERT_FALSE(sg.adjacent(0, 0));
+  UNITTEST_ASSERT_TRUE(sg.adjacent(0, 1));
+  UNITTEST_ASSERT_TRUE(sg.adjacent(0, 2));
+
+  UNITTEST_ASSERT_TRUE(sg.adjacent(1, 0));
+  UNITTEST_ASSERT_FALSE(sg.adjacent(1, 1));
+  UNITTEST_ASSERT_TRUE(sg.adjacent(1, 2));
+
+  UNITTEST_ASSERT_TRUE(sg.adjacent(2, 0));
+  UNITTEST_ASSERT_TRUE(sg.adjacent(2, 1));
+  UNITTEST_ASSERT_FALSE(sg.adjacent(2, 2));
+
+  // All degrees should be 2.
+  for (VertexNumber iv = 0; iv < sg.order(); ++iv) {
+    UNITTEST_ASSERT_EQUAL(sg.degree(iv), 2);
+  }
 }

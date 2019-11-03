@@ -170,3 +170,28 @@ TEST(reuse_duplicate_label) {
 
   UNITTEST_ASSERT_EQUAL(vertices.size(), VALUES.size());
 }
+
+TEST(copy_and_remove_vertices) {
+  // Make the starting table.
+  Vertices vertices;
+  add_vertices(&vertices);
+
+  // Remove some vertices.
+  VertexNumbers vremove = {0, 3, 6, 8, 9};
+  Vertices removed(vertices, vremove);
+
+  // Check what is left.
+  VertexNumber n = vertices.size() - vremove.size();
+  UNITTEST_ASSERT_EQUAL(n, removed.size());
+
+  for (VertexNumber iv = 0; iv < vertices.size(); ++iv) {
+    const Vertex &v = vertices[iv];
+    VertexNumber found;
+    if (find(vremove.cbegin(), vremove.cend(), iv) == vremove.cend()) {
+      UNITTEST_ASSERT_TRUE(removed.find(v.id(), &found));
+      check_vertex(removed[found], v.id(), VALUES[iv]);
+    } else {
+      UNITTEST_ASSERT_FALSE(removed.find(v.id(), &found));
+    }
+  }
+}

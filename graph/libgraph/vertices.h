@@ -1,7 +1,7 @@
 #ifndef CAVCOM_GRAPH_LIBGRAPH_VERTICES_H_
 #define CAVCOM_GRAPH_LIBGRAPH_VERTICES_H_
 
-#include <vector>
+#include <set>
 
 #include "lookup.h"
 
@@ -12,6 +12,9 @@ namespace cavcom {
     // A list of vertex attributes for defining vertices.
     using VertexValuesList = std::vector<VertexValues>;
 
+    // A set of vertices by vertex number.  Used during subgraph operations.
+    using VertexNumbers = std::set<VertexNumber>;
+
     // The vertices in a graph.
     class Vertices {
      public:
@@ -21,6 +24,9 @@ namespace cavcom {
 
       // Creates a new, empty vertex table.
       Vertices(void);
+
+      // Copies a vertex table, omitting any vertices in the specified remove array.  Used for subgraphs.
+      Vertices(const Vertices &source, const VertexNumbers &remove);
 
       // Returns the number of vertices in the table.
       VertexNumber size(void) const { return vertices_.size(); }
