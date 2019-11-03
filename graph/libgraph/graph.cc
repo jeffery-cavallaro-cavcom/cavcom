@@ -21,6 +21,24 @@ namespace cavcom {
       join(edges);
     }
 
+    Graph::Graph(const Graph &source, const VertexNumbers &remove)
+      : connections_(source.order(), source.directed(), source.multiple(), source.loops()) {
+      VertexNumber n = source.order();
+      EdgeNumber m = source.size();
+
+      // Make the vertices that are to be removed.
+      std::vector<bool> vremove;
+      vremove.reserve(n);
+      for_each(remove.cbegin(), remove.cend(), [&](VertexNumber iv){ vremove[iv] = true; });
+
+      // Mark all of the edges incident to the removed vertices as also being removed.
+      std::vector<bool> eremove;
+      eremove.reserve(m);
+      for (EdgeNumber ie = 0; ie < m; ++ie) {
+        const Edge &e = source.edge(ie);
+      }
+    }
+
     Degree Graph::join(VertexNumber from, VertexNumber to, const Label &label, Color color, Weight weight) {
       // Fetch the endpoint vertex IDs.  An out-of-range error will occur if the vertex numbers are invalid.
       VertexID fid = vertices_[from].id();

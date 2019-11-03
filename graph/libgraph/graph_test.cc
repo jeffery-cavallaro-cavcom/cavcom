@@ -98,6 +98,27 @@ TEST(make_simple_graph) {
     check_edge(g.edge(ie), values.from, values.to, values);
   }
 
+  // Check adjacencies.
+  UNITTEST_ASSERT_FALSE(g.adjacent(0, 0));
+  UNITTEST_ASSERT_TRUE(g.adjacent(0, 1));
+  UNITTEST_ASSERT_TRUE(g.adjacent(0, 2));
+  UNITTEST_ASSERT_TRUE(g.adjacent(0, 3));
+
+  UNITTEST_ASSERT_TRUE(g.adjacent(1, 0));
+  UNITTEST_ASSERT_FALSE(g.adjacent(1, 1));
+  UNITTEST_ASSERT_FALSE(g.adjacent(1, 2));
+  UNITTEST_ASSERT_FALSE(g.adjacent(1, 3));
+
+  UNITTEST_ASSERT_TRUE(g.adjacent(2, 0));
+  UNITTEST_ASSERT_FALSE(g.adjacent(2, 1));
+  UNITTEST_ASSERT_FALSE(g.adjacent(2, 2));
+  UNITTEST_ASSERT_FALSE(g.adjacent(2, 3));
+
+  UNITTEST_ASSERT_TRUE(g.adjacent(3, 0));
+  UNITTEST_ASSERT_FALSE(g.adjacent(3, 1));
+  UNITTEST_ASSERT_FALSE(g.adjacent(3, 2));
+  UNITTEST_ASSERT_FALSE(g.adjacent(3, 3));
+
   // Check the degrees.
   UNITTEST_ASSERT_EQUAL(g.degree(0), 3);
   UNITTEST_ASSERT_EQUAL(g.degree(1), 1);

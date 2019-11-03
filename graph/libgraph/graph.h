@@ -19,6 +19,9 @@ namespace cavcom {
 
     using EdgeValuesList = std::vector<EdgeValues>;
 
+    // A list of vertices by vertex number.  Used during subgraph operations.
+    using VertexNumbers = std::vector<VertexNumber>;
+
     // A graph is a mathematical object consisting of vertices and edges.  Graphs can be simple or allow multiple
     // edges, can be undirected or directed, and can optionally support loop edges.
     class Graph {
@@ -30,6 +33,9 @@ namespace cavcom {
       // positions in the vertex list.
       Graph(const VertexValuesList &vertices, const EdgeValuesList &edges,
             bool directed = false, bool multiple = false, bool loops = false);
+
+      // Creates a subgraph of the specified graph by removing the specified vertices.
+      Graph(const Graph &source, const VertexNumbers &remove = VertexNumbers());
 
       // Returns true for digraph edge semantics (otherwise undirected).
       bool directed(void) const { return connections_.directed(); }
@@ -49,9 +55,18 @@ namespace cavcom {
 
       // Gets a vertex by vertex number.  An invalid vertex number throws an out-of-range error.
       Vertex &vertex(VertexNumber number) { return vertices_[number]; }
+      const Vertex &vertex(VertexNumber number) const { return vertices_[number]; }
 
       // Gets an edge by edge number.  An invalid vertex number throws an out-of-range error.
       Edge &edge(EdgeNumber number) { return edges_.at(number); }
+      const Edge &edge(EdgeNumber number) const { return edges_.at(number); }
+
+      // Returns the edges that join the specified vertices.  An invalid vertex number throws an out-of-range
+      // error.
+      const Edges &edges(VertexNumber from, VertexNumber to) const { return connections_.edges(from, to); }
+
+      // Returns true if the specified vertices are adjacent.
+      bool adjacent(VertexNumber from, VertexNumber to) const { return connections_.adjacent(from, to); }
 
       // Adds an edge between the specified endpoint vertices.  An invalid vertex number throws an out-of-range
       // error.  Attempting to add a multiple or loop edge throw an error if disabled.  Returns the resulting

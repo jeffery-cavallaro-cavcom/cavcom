@@ -34,6 +34,13 @@ namespace cavcom {
       // Returns true if loop edges (on the same vertex) are allowed.
       bool loops(void) const { return loops_; }
 
+      // Returns the list of edges that join the specified vertices.  An invalid vertex number throws an
+      // out-of-range error.
+      const Edges &edges(VertexNumber from, VertexNumber to) const { return connections_->at(from, to); }
+
+      // Returns true if the specified edges are adjacent.
+      bool adjacent(VertexNumber from, VertexNumber to) const { return !edges(from, to).empty(); }
+
       // Joins the specified endpoint vertices with the specified edge.  If the parent graph is undirected then
       // this will result in the edge being added as both (from, to) and (to, from).  Attempts to add multiple
       // edges will throw a multiple edge error if multiple edges are disabled.  Attempts to add loop edges will
@@ -41,13 +48,6 @@ namespace cavcom {
       // error.  The degree counters are updated as necessary.  Returns the new number of edges between the two
       // endpoint vertices.
       Degree join(VertexNumber from, VertexNumber to, EdgeNumber edge);
-
-      // Returns the list of edges that join the specified vertices.  An invalid vertex number throws an
-      // out-of-range error.
-      const Edges &edges(VertexNumber from, VertexNumber to) const { return connections_->at(from, to); }
-
-      // Returns true if the specified edges are adjacent.
-      bool adjacent(VertexNumber from, VertexNumber to) const { return !edges(from, to).empty(); }
 
       // Calculates the minimum and maximum degrees.  A synonym is provided for undirected graphs.  The results are
       // not cached, so these calls should be considered expensive.
