@@ -10,6 +10,22 @@ using namespace cavcom::graph;
 
 static constexpr VertexNumber ORDER = 4;
 
+static void check_vertex(const Vertex &vertex, VertexID id, const VertexValues &values) {
+  UNITTEST_ASSERT_EQUAL(vertex.id(), id);
+  UNITTEST_ASSERT_EQUAL(vertex.label(), values.label);
+  UNITTEST_ASSERT_EQUAL(vertex.color(), values.color);
+  UNITTEST_ASSERT_EQUAL(vertex.xpos(), values.xpos);
+  UNITTEST_ASSERT_EQUAL(vertex.ypos(), values.ypos);
+}
+
+static void check_edge(const Edge &edge, VertexID from, VertexID to, const EdgeValues &values) {
+  UNITTEST_ASSERT_EQUAL(edge.from(), from);
+  UNITTEST_ASSERT_EQUAL(edge.to(), to);
+  UNITTEST_ASSERT_EQUAL(edge.label(), values.label);
+  UNITTEST_ASSERT_EQUAL(edge.color(), values.color);
+  UNITTEST_ASSERT_EQUAL(edge.weight(), values.weight);
+}
+
 static void check_degrees(const Graph &g, Degree inmin, Degree inmax, Degree outmin, Degree outmax) {
   UNITTEST_ASSERT_EQUAL(g.minindeg(), inmin);
   UNITTEST_ASSERT_EQUAL(g.maxindeg(), inmax);
@@ -38,6 +54,8 @@ TEST(make_simple_empty) {
     UNITTEST_ASSERT_TRUE(v.label().empty());
     UNITTEST_ASSERT_EQUAL(v.color(), BLACK);
     UNITTEST_ASSERT_TRUE(v.contracted().empty());
+    UNITTEST_ASSERT_EQUAL(v.xpos(), 0.0);
+    UNITTEST_ASSERT_EQUAL(v.ypos(), 0.0);
   }
 
   // All degrees should be 0.
@@ -53,36 +71,31 @@ TEST(make_simple_empty) {
   UNITTEST_ASSERT_THROW(std::out_of_range, [&](){ g.edge(0); });
 }
 
-using EdgeValues = struct { VertexNumber from; VertexNumber to; const Label label; Color color; Weight weight; };
-using EdgeData = std::vector<EdgeValues>;
+static const VertexValuesList VERTICES = {{"v1", BLACK, 0, 0},
+                                          {"v2", 1, 0, 1},
+                                          {"v3", 2, 1, 1},
+                                          {"v4", 3, 1, 0}};
 
-static const EdgeData EDGEDATA = {{0, 1, "e1", 0, 1.0},
-                                  {0, 2, Label(), 3, 0.0},
-                                  {0, 3, "e3", 1, 0.5}};
+static const EdgeValuesList EDGES = {{0, 1, "e1", 0, 1.0},
+                                     {0, 2, Label(), 3, 0.0},
+                                     {0, 3, "e3", 1, 0.5}};
 
-TEST(add_simple_edges) {
-  Graph g(ORDER);
-
-  // By vertex number.
-  EdgeNumber m = EDGEDATA.size();
-  for (EdgeNumber ie = 0; ie < m; ++ie) {
-    const EdgeValues &e = EDGEDATA[ie];
-    UNITTEST_ASSERT_EQUAL(g.join(e.from, e.to, e.label, e.color, e.weight), 1);
-  }
+TEST(make_simple_graph) {
+  Graph g(VERTICES, EDGES);
 
   // Check for proper order and size.
   UNITTEST_ASSERT_EQUAL(g.order(), ORDER);
   UNITTEST_ASSERT_EQUAL(g.size(), 3);
 
+  // Check the vertices.
+  for (VertexNumber iv = 0; iv < VERTICES.size(); ++iv) {
+    check_vertex(g.vertex(iv), iv, VERTICES[iv]);
+  }
+
   // Check the edges.
-  for (EdgeNumber ie = 0; ie < m; ++ie) {
-    const EdgeValues &values = EDGEDATA[ie];
-    const Edge &edge = g.edge(ie);
-    UNITTEST_ASSERT_EQUAL(edge.from(), g.vertex(values.from).id());
-    UNITTEST_ASSERT_EQUAL(edge.to(), g.vertex(values.to).id());
-    UNITTEST_ASSERT_EQUAL(edge.label(), values.label);
-    UNITTEST_ASSERT_EQUAL(edge.color(), values.color);
-    UNITTEST_ASSERT_EQUAL(edge.weight(), values.weight);
+  for (EdgeNumber ie = 0; ie < EDGES.size(); ++ie) {
+    const EdgeValues &values = EDGES[ie];
+    check_edge(g.edge(ie), values.from, values.to, values);
   }
 
   // Check the degrees.

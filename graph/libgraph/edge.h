@@ -7,7 +7,6 @@
 
 namespace cavcom {
   namespace graph {
-
     // A single edge, used to join endpoint vertices.
     class Edge {
      public:

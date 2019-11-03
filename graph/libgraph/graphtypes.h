@@ -26,6 +26,9 @@ namespace cavcom {
     // graph.
     using VertexID = uint;
 
+    // Vertices can be assigned and X and Y position to aid drawing software.
+    using Dimension = double;
+
   }  // namespace graph
 }  // namespace cavcom
 

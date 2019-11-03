@@ -1,12 +1,16 @@
 #ifndef CAVCOM_GRAPH_LIBGRAPH_VERTICES_H_
 #define CAVCOM_GRAPH_LIBGRAPH_VERTICES_H_
 
+#include <vector>
+
 #include "lookup.h"
 
 #include "vertex.h"
 
 namespace cavcom {
   namespace graph {
+    // A list of vertex attributes for defining vertices.
+    using VertexValuesList = std::vector<VertexValues>;
 
     // The vertices in a graph.
     class Vertices {
@@ -31,7 +35,11 @@ namespace cavcom {
 
       // Adds a new isolated vertex to the vertex table.  The vertex is assigned the next vertex ID.  Throws a
       // duplicate label error if a label is specified that is already assigned to an existing vertex.
-      void add(const Label &label = Label(), Color color = BLACK);
+      void add(const Label &label = Label(), Color color = BLACK, Dimension xpos = 0.0, Dimension ypos = 0.0);
+      void add(const VertexValues &values);
+
+      // Adds multiple isolated vertices to the vertex table.
+      void add(const VertexValuesList &values);
 
       // Find vertex by ID or label.  Returns true if found.
       bool find(VertexID id, VertexNumber *number);

@@ -1,17 +1,35 @@
 #ifndef CAVCOM_GRAPH_LIBGRAPH_GRAPH_H_
 #define CAVCOM_GRAPH_LIBGRAPH_GRAPH_H_
 
+#include <vector>
+
 #include "connections.h"
 #include "vertices.h"
 
 namespace cavcom {
   namespace graph {
+    // A values structure for adding edges.
+    struct EdgeValues {
+      VertexNumber from;
+      VertexNumber to;
+      Label label;
+      Color color;
+      Weight weight;
+    };
+
+    using EdgeValuesList = std::vector<EdgeValues>;
+
     // A graph is a mathematical object consisting of vertices and edges.  Graphs can be simple or allow multiple
     // edges, can be undirected or directed, and can optionally support loop edges.
     class Graph {
      public:
       // Creates an empty graph with the specified number of unlabeled vertices (or the null graph if n = 0).
       explicit Graph(VertexNumber n = 0, bool directed = false, bool multiple = false, bool loops = false);
+
+      // Creates a graph with the specified vertices and edges.  The vertex number is the edge values correspond to
+      // positions in the vertex list.
+      Graph(const VertexValuesList &vertices, const EdgeValuesList &edges,
+            bool directed = false, bool multiple = false, bool loops = false);
 
       // Returns true for digraph edge semantics (otherwise undirected).
       bool directed(void) const { return connections_.directed(); }
@@ -40,6 +58,12 @@ namespace cavcom {
       // number of edges joining the two endpoint vertices.
       Degree join(VertexNumber from, VertexNumber to,
                   const Label &label = Label(), Color color = BLACK, Weight weight = FREE);
+
+      // Adds an edge using the specified values.
+      Degree join(const EdgeValues &values);
+
+      // Adds all of the specified edges.
+      void join(const EdgeValuesList &values);
 
       // Calculates the minimum and maximum degrees.  A synonym is provided for undirected graphs.  The results are
       // not cached, so these calls should be considered expensive.

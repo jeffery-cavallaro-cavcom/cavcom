@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "vertices.h"
 
 namespace cavcom {
@@ -9,7 +11,7 @@ namespace cavcom {
       if (vertices_.capacity() < n) vertices_.reserve(n);
     }
 
-    void Vertices::add(const Label &label, Color color) {
+    void Vertices::add(const Label &label, Color color, Dimension xpos, Dimension ypos) {
       // Mark what the new vertex's number will be when added.
       auto number = vertices_.size();
 
@@ -18,7 +20,15 @@ namespace cavcom {
       id_to_number_.add(next_, number, true);
 
       // Add the new vertex.
-      vertices_.emplace_back(next_++, label, color);
+      vertices_.emplace_back(next_++, label, color, xpos, ypos);
+    }
+
+    void Vertices::add(const VertexValues &values) {
+      add(values.label, values.color, values.xpos, values.ypos);
+    }
+
+    void Vertices::add(const VertexValuesList &values) {
+      for_each(values.cbegin(), values.cend(), [this](const VertexValues &vertex){ add(vertex); });
     }
 
     bool Vertices::find(VertexID id, VertexNumber *number) {

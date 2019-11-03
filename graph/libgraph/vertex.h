@@ -7,6 +7,13 @@
 
 namespace cavcom {
   namespace graph {
+    // A values structure for creating a vertex.
+    struct VertexValues {
+      Label label;
+      Color color;
+      Dimension xpos;
+      Dimension ypos;
+    };
 
     // A single vertex in a graph.
     class Vertex {
@@ -15,8 +22,13 @@ namespace cavcom {
       // indicates that the vertex is not the result of any contractions.
       using Contracted = std::vector<VertexID>;
 
-      // Creates a new isolated vertex.
-      explicit Vertex(VertexID id, const Label &label = Label(), Color color = BLACK);
+      // Creates a new isolated vertex with the specified attributes.
+      explicit Vertex(VertexID id, const Label &label = Label(), Color color = BLACK,
+                      Dimension xpos = 0.0, Dimension ypos = 0.0);
+
+      // Creates a new isolated vertex using the specified attribute values.  Note that the vertex ID is assigned
+      // by the parent graph and thus is not part of the values structure.
+      Vertex(VertexID id, const VertexValues &values);
 
       // Copy constructor.
       Vertex(const Vertex &source);
@@ -34,11 +46,20 @@ namespace cavcom {
 
       const Contracted &contracted(void) const { return contracted_; }
 
+      // Vertex location, for drawing add-ons.
+      Dimension xpos(void) const { return xpos_; }
+      void xpos(Dimension x) { xpos_ = x; }
+
+      Dimension ypos(void) const { return ypos_; }
+      void ypos(Dimension y) { ypos_ = y; }
+
      private:
       VertexID id_;
       Label label_;
       Color color_;
       Contracted contracted_;
+      Dimension xpos_;
+      Dimension ypos_;
 
       // Disable assignment.
       Vertex &operator=(const Vertex &source) { return *this; }
