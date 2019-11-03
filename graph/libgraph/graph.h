@@ -1,87 +1,70 @@
 #ifndef CAVCOM_GRAPH_LIBGRAPH_GRAPH_H_
 #define CAVCOM_GRAPH_LIBGRAPH_GRAPH_H_
 
+#include "connections.h"
+#include "vertices.h"
+
 namespace cavcom {
   namespace graph {
-    class NoSuchVertexNumberError : public std::runtime_error {
-     public:
-      NoSuchVertexError(void) : runtime_error("No such vertex") {}
-    };
-
-    // This is the base class for all graphs.  A graph consists of vertices and edges that join vertices.
+    // A graph is a mathematical object consisting of vertices and edges.  Graphs can be simple or allow multiple
+    // edges, can be undirected or directed, and can optionally support loop edges.
     class Graph {
      public:
-      // The number of vertices (order).
+      // Creates an empty graph with the specified number of unlabeled vertices (or the null graph if n = 0).
+      explicit Graph(VertexNumber n = 0, bool directed = false, bool multiple = false, bool loops = false);
+
+      // Returns true for digraph edge semantics (otherwise undirected).
+      bool directed(void) const { return connections_.directed(); }
+
+      // Returns true if multiple edges (in the same direction in the case of digraphs) are allowed between the
+      // same two endpoint vertices.
+      bool multiple(void) const { return connections_.multiple(); }
+
+      // Returns true if loop edges (on the same vertex) are allowed.
+      bool loops(void) const { return connections_.loops(); }
+
+      // Returns the number of vertices (order).
       VertexNumber order(void) const { return vertices_.size(); }
 
-      // The number of edges (size).
+      // Returns the number of edges (size).
       EdgeNumber size(void) const { return edges_.size(); }
 
-      // Returns a vertex by position, with range checking.
-      Vertex &operator[](VertexNumber i) { return vertices_[i]; }
-      const Vertex &operator[](VertexNumber i) const { return vertices_[i]; }
+      // Gets a vertex by vertex number.  An invalid vertex number throws an out-of-range error.
+      Vertex &vertex(VertexNumber number) { return vertices_[number]; }
 
-      // Finds a vertex number by vertex ID or label.  Returns order() if not found.
-      bool find_vertex(VertexID id, VertexNumber *number) const;
-      bool find_vertex(const Label &label, VertexNumber *number) const;
+      // Gets an edge by edge number.  An invalid vertex number throws an out-of-range error.
+      Edge &edge(EdgeNumber number) { return edges_.at(number); }
 
-      // Returns the edge list for the specified from and to endpoints, with range checking.
-      const Edges &edges(VertexNumber from, VertexNumber to) const { return connections_->at(from, to); }
+      // Adds an edge between the specified endpoint vertices.  An invalid vertex number throws an out-of-range
+      // error.  Attempting to add a multiple or loop edge throw an error if disabled.  Returns the resulting
+      // number of edges joining the two endpoint vertices.
+      Degree join(VertexNumber from, VertexNumber to,
+                  const Label &label = Label(), Color color = BLACK, Weight weight = FREE);
 
-      // Returns the specified edge between the specified two vertices, with range checking.
-      EdgeNumber edge(VertexNumber from, VertexNumber to, Degree i) { return (connections_->at(from, to)).at(i); }
+      // Calculates the minimum and maximum degrees.  A synonym is provided for undirected graphs.  The results are
+      // not cached, so these calls should be considered expensive.
+      Degree minindeg(void) const { return connections_.minindeg(); }
+      Degree maxindeg(void) const { return connections_.maxindeg(); }
 
-      // Returns true if there is an edge between the two vertices, with range checking.
-      bool adjacent(VertexNumber from, VertexNumber to) const { return !edges(from, to).empty(); }
+      Degree minoutdeg(void) const { return connections_.minoutdeg(); }
+      Degree maxoutdeg(void) const { return connections_.maxoutdeg(); }
 
-      // Adds the specified number of isolated vertices to the graph and then adjusts the connection matrix.  The
-      // vertices are initialized with default attributes.
-      void add_vertices(VertexNumber n);
+      Degree mindeg(void) const { return minoutdeg(); }
+      Degree maxdeg(void) const { return maxoutdeg(); }
 
-      // Values for constructing vertices.
-      struct VertexValues {
-        Label label;
-        Color color;
-      };
+      // Returns the degrees for a single vertex.  A synonym is provided for undirected graphs.  An invalid vertex
+      // number throws an out-of-range error.
+      Degree indeg(VertexNumber vertex) const { return connections_.indeg(vertex); }
+      Degree outdeg(VertexNumber vertex) const { return connections_.outdeg(vertex); }
+      Degree degree(VertexNumber vertex) const { return outdeg(vertex); }
 
-      using VertexValuesList = std::vector<VertexValues>;
-
-      // Adds isolated vertices using the specified values.
-      void add_vertices(const VertexValuesList &vertices);
-
-      // Labels the specified vertex.
-      void label_vertex(VertexNumber iv, const std::string &label);
-
-     protected:
-      // Default constructor.  Creates a null graph with the specified number of isolated nodes, or a null graph if
-      // a node count is not specified.  Graphs can only be created by a derived type that enforces whether the
-      // graph is simple or multi and undirected or directed.
-      explicit Graph(VertexNumber n = 0)
-        : next_(0), connections_(new Connections(0)), minindeg_(0), maxindeg_(0), minoutdeg_(0), maxoutdeg_(0) {}
-
-      // The rules for adding edges are enforced by the derived classes.  Derived classes can call this routine to
-      // append an edge to the edge list, join the endpoint vertices, and update the various degree attributes.
-      void add_edge(VertexID from, VertexID to,
-                    const Label &label = std::string(), Color color = BLACK, Weight weight = 0.0);
-
-     private:
-      // The vertices.
+    private:
+      // The vertices and edges.
       Vertices vertices_;
-
-      // The edges, in no particular order.
       EdgeTable edges_;
 
       // The connection matrix.  Indexed by from vertex and to vertex, in that order.
-      using Connections = cavcom::utility::Matrix<Edges>;
-      using ConnectionsPtr = std::unique_ptr<Connections>;
-      ConnectionsPtr connections_;
-
-      // Reconstructs the connection matrix from the current vertex and edge lists.
-      void reconnect(void);
-
-      // Uses the edge at the specified offset in the edge table to join its endpoint vertices and update all of the
-      // relevant degree attributes.
-      void join(EdgeNumber ie);
+      Connections connections_;
     };
 
   }  // namespace graph
