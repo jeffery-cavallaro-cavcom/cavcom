@@ -18,10 +18,6 @@ namespace cavcom {
     // A single vertex in a graph.
     class Vertex {
      public:
-      // Each vertex maintains a list of vertex IDs that track vertex contractions.  An empty contracted list
-      // indicates that the vertex is not the result of any contractions.
-      using Contracted = std::vector<VertexID>;
-
       // Creates a new isolated vertex with the specified attributes.
       explicit Vertex(VertexID id, const Label &label = Label(), Color color = BLACK,
                       Dimension xpos = 0.0, Dimension ypos = 0.0);
@@ -66,6 +62,7 @@ namespace cavcom {
 
       // The parent graph needs access during graph mutations.
       friend class Vertices;
+      friend class Graph;
     };
 
     // Vertices are stored in the vertex table and are identified by a vertex ID that is invariant across graph

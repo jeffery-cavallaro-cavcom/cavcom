@@ -34,6 +34,13 @@ namespace cavcom {
       // Creates a subgraph of the specified graph by removing the specified vertices.
       Graph(const Graph &source, const VertexNumbers &remove = VertexNumbers());
 
+      // Creates a copy of the specified graph, but with the two specified vertices contracted.  The contracted
+      // vertex will be a new vertex with a new vertex ID and will have the label, color, and position of the "to"
+      // vertex.  The contracted lists of the two vertices will be concatenated and the old vertex IDs will be
+      // appended.  Multiple edges are suppressed if not allowed.  Any edges between the two contracted vertices
+      // are discarded.
+      Graph(const Graph &source, VertexNumber from, VertexNumber to);
+
       // Returns true for digraph edge semantics (otherwise undirected).
       bool directed(void) const { return connections_.directed(); }
 
@@ -105,6 +112,9 @@ namespace cavcom {
 
       // The connection matrix.  Indexed by from vertex and to vertex, in that order.
       Connections connections_;
+
+      // Constructs a contracted list from two vertices.
+      void contract(const Vertex &from, const Vertex &to, Contracted *contracted);
     };
 
   }  // namespace graph

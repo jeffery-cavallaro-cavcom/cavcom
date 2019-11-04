@@ -35,6 +35,47 @@ namespace cavcom {
       }
     }
 
+    Graph::Graph(const Graph &source, VertexNumber from, VertexNumber to)
+      : vertices_(source.vertices_, {from, to}),
+        connections_(source.order() - 1, source.directed(), source.multiple(), source.loops()) {
+      // Add the contracted vertex.
+      const Vertex &vfrom = source.vertex(from);
+      const Vertex &vto = source.vertex(to);
+      vertices_.add(vto.label(), vto.color(), vto.xpos(), vto.ypos());
+
+      // The contracted list for the new vertex is composed of the lists from the contracted vertices, and then
+      // the contracted vertices themselves.
+      contract(vfrom, vto, &vertices_[vertices_.size() - 1].contracted_);
+
+      // Merge edges.
+      EdgeNumber m = source.size();
+      for (EdgeNumber ie = 0; ie < m; ++ie) {
+        const Edge &e = source.edge(ie);
+        VertexNumber efrom = 0, eto = 0;
+        find_vertex(e.from(), &efrom);
+        find_vertex(e.to(), &eto);
+
+        // Discard edges between the contracted vertices.
+        if (((efrom == from) && (eto == to)) || ((efrom == to) && (eto == from))) continue;
+
+        // Move edges incident to the contracted from vertex to the contracted to vertex.
+        VertexNumber newfrom, newto;
+        if (efrom == from) {
+          newfrom = to;
+          newto = eto;
+        } else if (eto == from) {
+          newfrom = efrom;
+          newto = to;
+        } else {
+          newfrom = efrom;
+          newto = eto;
+        }
+
+        // Suppress multiple edges if disabled.
+        if ((!adjacent(newfrom, newto)) || multiple()) join(newfrom, newto, e.label(), e.color(), e.weight());
+      }
+    }
+
     Degree Graph::join(VertexNumber from, VertexNumber to, const Label &label, Color color, Weight weight) {
       // Fetch the endpoint vertex IDs.  An out-of-range error will occur if the vertex numbers are invalid.
       VertexID fid = vertices_[from].id();
@@ -52,6 +93,15 @@ namespace cavcom {
 
     void Graph::join(const EdgeValuesList &values) {
       for_each(values.cbegin(), values.cend(), [this](const EdgeValues &edge){ join(edge); });
+    }
+
+    void Graph::contract(const Vertex &from, const Vertex &to, Contracted *contracted) {
+      const Contracted &fc = from.contracted();
+      const Contracted &tc = to.contracted();
+      contracted->insert(contracted->end(), fc.cbegin(), fc.cend());
+      contracted->insert(contracted->end(), tc.cbegin(), tc.cend());
+      contracted->push_back(from.id());
+      contracted->push_back(to.id());
     }
 
   }  // namespace graph

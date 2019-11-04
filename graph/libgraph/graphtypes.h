@@ -2,6 +2,7 @@
 #define CAVCOM_GRAPH_LIBGRAPH_GRAPHTYPES_H_
 
 #include <string>
+#include <vector>
 
 #include "types.h"
 
@@ -25,6 +26,10 @@ namespace cavcom {
     // its position in the connection matrix is still identifiable with the corresponding vertex in the original
     // graph.
     using VertexID = uint;
+
+    // Each vertex maintains a list of vertex IDs that track vertex contractions.  An empty contracted list
+    // indicates that the vertex is not the result of any contractions.
+    using Contracted = std::vector<VertexID>;
 
     // Vertices can be assigned and X and Y position to aid drawing software.
     using Dimension = double;
