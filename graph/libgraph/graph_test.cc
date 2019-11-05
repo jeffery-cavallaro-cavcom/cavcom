@@ -157,18 +157,20 @@ TEST(make_simple_subgraph) {
   UNITTEST_ASSERT_EQUAL(kg.size(), KE.size());
   check_degrees(kg, 4, 4, 4, 4);
 
-  // Remove two of the vertices.
-  const VertexNumbers out = {1, 3};
-  Graph sg(kg, out);
-  UNITTEST_ASSERT_EQUAL(sg.order(), KV.size() - 2);
-  UNITTEST_ASSERT_EQUAL(sg.size(), KE.size() - 7);
-  check_degrees(sg, 2, 2, 2, 2);
+  // Remove two of the vertices.  Also remove two edges: one that would have been removed due to the removed
+  // vertices and one that would have stayed.
+  VertexNumbers vout = {1, 3};
+  EdgeNumbers eout = {4, 3};
+  Graph sg(kg, vout, eout);
+  UNITTEST_ASSERT_EQUAL(sg.order(), 3);
+  UNITTEST_ASSERT_EQUAL(sg.size(), 2);
+  check_degrees(sg, 1, 2, 1, 2);
 
   // Check the remaining.
   for (VertexNumber iv = 0; iv < kg.order(); ++iv) {
     const Vertex v = kg.vertex(iv);
     VertexNumber found;
-    if (out.find(v.id()) == out.cend()) {
+    if (vout.find(v.id()) == vout.cend()) {
       UNITTEST_ASSERT_TRUE(sg.find_vertex(v.id(), &found));
       const Vertex &sv = sg.vertex(found);
       UNITTEST_ASSERT_EQUAL(sv.id(), v.id());
@@ -176,28 +178,29 @@ TEST(make_simple_subgraph) {
       UNITTEST_ASSERT_EQUAL(sv.color(), BLACK);
       UNITTEST_ASSERT_EQUAL(sv.xpos(), 0.0);
       UNITTEST_ASSERT_EQUAL(sv.ypos(), 0.0);
+      UNITTEST_ASSERT_TRUE(sv.contracted().empty());
     } else {
       UNITTEST_ASSERT_FALSE(sg.find_vertex(v.id(), &found));
     }
   }
 
-  // The remaining vertices should all be adjacent.
+  // Check the remaining adjacenies.
   UNITTEST_ASSERT_FALSE(sg.adjacent(0, 0));
   UNITTEST_ASSERT_TRUE(sg.adjacent(0, 1));
-  UNITTEST_ASSERT_TRUE(sg.adjacent(0, 2));
+  UNITTEST_ASSERT_FALSE(sg.adjacent(0, 2));
 
   UNITTEST_ASSERT_TRUE(sg.adjacent(1, 0));
   UNITTEST_ASSERT_FALSE(sg.adjacent(1, 1));
   UNITTEST_ASSERT_TRUE(sg.adjacent(1, 2));
 
-  UNITTEST_ASSERT_TRUE(sg.adjacent(2, 0));
+  UNITTEST_ASSERT_FALSE(sg.adjacent(2, 0));
   UNITTEST_ASSERT_TRUE(sg.adjacent(2, 1));
   UNITTEST_ASSERT_FALSE(sg.adjacent(2, 2));
 
-  // All degrees should be 2.
-  for (VertexNumber iv = 0; iv < sg.order(); ++iv) {
-    UNITTEST_ASSERT_EQUAL(sg.degree(iv), 2);
-  }
+  // Check the degrees.
+  UNITTEST_ASSERT_EQUAL(sg.degree(0), 1);
+  UNITTEST_ASSERT_EQUAL(sg.degree(1), 2);
+  UNITTEST_ASSERT_EQUAL(sg.degree(2), 1);
 }
 
 TEST(remove_all_vertices) {
