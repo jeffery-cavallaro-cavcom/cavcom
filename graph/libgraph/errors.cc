@@ -27,5 +27,15 @@ namespace cavcom {
       msg_ = formatter.str();
     }
 
+    SameVertexContractError::SameVertexContractError(VertexNumber vertex)
+      : std::runtime_error("Cannot contract vertex"), vertex_(vertex) {
+      std::ostringstream formatter;
+      formatter << std::runtime_error::what();
+      formatter << " ";
+      formatter << vertex_;
+      formatter << " with itself";
+      msg_ = formatter.str();
+    }
+
   }  // namespace graph
 }  // namespace cavcom

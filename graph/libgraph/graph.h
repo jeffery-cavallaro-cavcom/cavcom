@@ -36,9 +36,10 @@ namespace cavcom {
 
       // Creates a copy of the specified graph, but with the two specified vertices contracted.  The contracted
       // vertex will be a new vertex with a new vertex ID and will have the label, color, and position of the "to"
-      // vertex.  The contracted lists of the two vertices will be concatenated and the old vertex IDs will be
-      // appended.  Multiple edges are suppressed if not allowed.  Any edges between the two contracted vertices
-      // are discarded.
+      // vertex.  The contracted lists of the two vertices will be concatenated and then each of the contracted
+      // vertices that was not already contracted is appended to the list.  Multiple edges are suppressed if not
+      // allowed.  Any edges between the two contracted vertices are discarded.  Throws a same vertex contraction
+      // error if the from and to vertices are equal.
       Graph(const Graph &source, VertexNumber from, VertexNumber to);
 
       // Returns true for digraph edge semantics (otherwise undirected).
@@ -57,13 +58,19 @@ namespace cavcom {
       // Returns the number of edges (size).
       EdgeNumber size(void) const { return edges_.size(); }
 
+      // Returns true if the graph is a null graph (n=m=0).
+      bool null(void) const { return (order() == 0); }
+
+      // Returns true if the graph is an empty graph (m=0).
+      bool empty(void) const { return (size() == 0); }
+
       // Gets a vertex by vertex number.  An invalid vertex number throws an out-of-range error.
       Vertex &vertex(VertexNumber number) { return vertices_[number]; }
       const Vertex &vertex(VertexNumber number) const { return vertices_[number]; }
 
       // Gets a vertex number by vertex ID or label.  Returns true if found.
-      bool find_vertex(VertexID id, VertexNumber *found) { return vertices_.find(id, found); }
-      bool find_vertex(Label label, VertexNumber *found) { return vertices_.find(label, found); }
+      bool find_vertex(VertexID id, VertexNumber *found) const { return vertices_.find(id, found); }
+      bool find_vertex(Label label, VertexNumber *found) const { return vertices_.find(label, found); }
 
       // Gets an edge by edge number.  An invalid vertex number throws an out-of-range error.
       Edge &edge(EdgeNumber number) { return edges_.at(number); }
@@ -105,7 +112,7 @@ namespace cavcom {
       Degree outdeg(VertexNumber vertex) const { return connections_.outdeg(vertex); }
       Degree degree(VertexNumber vertex) const { return outdeg(vertex); }
 
-    private:
+     private:
       // The vertices and edges.
       Vertices vertices_;
       EdgeTable edges_;

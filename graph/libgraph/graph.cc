@@ -1,5 +1,6 @@
 #include <algorithm>
 
+#include "errors.h"
 #include "graph.h"
 
 namespace cavcom {
@@ -38,37 +39,44 @@ namespace cavcom {
     Graph::Graph(const Graph &source, VertexNumber from, VertexNumber to)
       : vertices_(source.vertices_, {from, to}),
         connections_(source.order() - 1, source.directed(), source.multiple(), source.loops()) {
+      // The vertices must be distinct.
+      if (from == to) throw SameVertexContractError(from);
+
       // Add the contracted vertex.
       const Vertex &vfrom = source.vertex(from);
       const Vertex &vto = source.vertex(to);
       vertices_.add(vto.label(), vto.color(), vto.xpos(), vto.ypos());
 
+      // Mark the contracted vertex.
+      VertexNumber cnum = vertices_.size() - 1;
+      Vertex &cv = vertices_[cnum];
+
       // The contracted list for the new vertex is composed of the lists from the contracted vertices, and then
       // the contracted vertices themselves.
-      contract(vfrom, vto, &vertices_[vertices_.size() - 1].contracted_);
+      contract(vfrom, vto, &cv.contracted_);
 
       // Merge edges.
       EdgeNumber m = source.size();
       for (EdgeNumber ie = 0; ie < m; ++ie) {
         const Edge &e = source.edge(ie);
         VertexNumber efrom = 0, eto = 0;
-        find_vertex(e.from(), &efrom);
-        find_vertex(e.to(), &eto);
+        source.find_vertex(e.from(), &efrom);
+        source.find_vertex(e.to(), &eto);
 
         // Discard edges between the contracted vertices.
         if (((efrom == from) && (eto == to)) || ((efrom == to) && (eto == from))) continue;
 
         // Move edges incident to the contracted from vertex to the contracted to vertex.
         VertexNumber newfrom, newto;
-        if (efrom == from) {
-          newfrom = to;
-          newto = eto;
-        } else if (eto == from) {
-          newfrom = efrom;
-          newto = to;
+        if ((efrom == from) || (efrom == to)) {
+          newfrom = cnum;
+          find_vertex(e.to(), &newto);
+        } else if ((eto == from) || (eto == to)) {
+          find_vertex(e.from(), &newfrom);
+          newto = cnum;
         } else {
-          newfrom = efrom;
-          newto = eto;
+          find_vertex(e.from(), &newfrom);
+          find_vertex(e.to(), &newto);
         }
 
         // Suppress multiple edges if disabled.
@@ -97,11 +105,18 @@ namespace cavcom {
 
     void Graph::contract(const Vertex &from, const Vertex &to, Contracted *contracted) {
       const Contracted &fc = from.contracted();
+      if (fc.empty()) {
+        contracted->push_back(from.id());
+      } else {
+        contracted->insert(contracted->end(), fc.cbegin(), fc.cend());
+      }
+
       const Contracted &tc = to.contracted();
-      contracted->insert(contracted->end(), fc.cbegin(), fc.cend());
-      contracted->insert(contracted->end(), tc.cbegin(), tc.cend());
-      contracted->push_back(from.id());
-      contracted->push_back(to.id());
+      if (tc.empty()) {
+        contracted->push_back(to.id());
+      } else {
+        contracted->insert(contracted->end(), tc.cbegin(), tc.cend());
+      }
     }
 
   }  // namespace graph

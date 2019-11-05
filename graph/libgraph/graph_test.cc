@@ -1,9 +1,10 @@
 // Creates and exercises simple graphs.
 
-#include <libunittest/all.hpp>
-
 #include <vector>
 
+#include <libunittest/all.hpp>
+
+#include "errors.h"
 #include "graph.h"
 
 using namespace cavcom::graph;
@@ -35,8 +36,15 @@ static void check_degrees(const Graph &g, Degree inmin, Degree inmax, Degree out
   UNITTEST_ASSERT_EQUAL(g.maxdeg(), g.maxoutdeg());
 }
 
+TEST(make_null_graph) {
+  Graph g(0);
+  UNITTEST_ASSERT_TRUE(g.null());
+}
+
 TEST(make_simple_empty) {
   Graph g(ORDER);
+  UNITTEST_ASSERT_FALSE(g.null());
+  UNITTEST_ASSERT_TRUE(g.empty());
 
   // Check for a simple graph.
   UNITTEST_ASSERT_FALSE(g.directed());
@@ -190,4 +198,159 @@ TEST(make_simple_subgraph) {
   for (VertexNumber iv = 0; iv < sg.order(); ++iv) {
     UNITTEST_ASSERT_EQUAL(sg.degree(iv), 2);
   }
+}
+
+TEST(remove_all_vertices) {
+  // Start with a complete graph.
+  Graph kg(KV, KE);
+  UNITTEST_ASSERT_EQUAL(kg.order(), KV.size());
+  UNITTEST_ASSERT_EQUAL(kg.size(), KE.size());
+  UNITTEST_ASSERT_FALSE(kg.null());
+  check_degrees(kg, 4, 4, 4, 4);
+
+  // Remove all of the vertices.
+  const VertexNumbers out = {0, 4, 2, 3, 1};
+  Graph sg(kg, out);
+  UNITTEST_ASSERT_EQUAL(sg.order(), 0);
+  UNITTEST_ASSERT_EQUAL(sg.size(), 0);
+  UNITTEST_ASSERT_TRUE(sg.null());
+  check_degrees(sg, 0, 0, 0, 0);
+}
+
+TEST(contract_vertices) {
+  // Start with a complete graph.
+  Graph kg(KV, KE);
+  UNITTEST_ASSERT_EQUAL(kg.order(), KV.size());
+  UNITTEST_ASSERT_EQUAL(kg.size(), KE.size());
+  UNITTEST_ASSERT_FALSE(kg.empty());
+
+  UNITTEST_ASSERT_EQUAL(kg.vertex(0).id(), 0);
+  UNITTEST_ASSERT_EQUAL(kg.vertex(1).id(), 1);
+  UNITTEST_ASSERT_EQUAL(kg.vertex(2).id(), 2);
+  UNITTEST_ASSERT_EQUAL(kg.vertex(3).id(), 3);
+  UNITTEST_ASSERT_EQUAL(kg.vertex(4).id(), 4);
+
+  UNITTEST_ASSERT_EQUAL(kg.edge(0).from(), 0);
+  UNITTEST_ASSERT_EQUAL(kg.edge(0).to(), 1);
+  UNITTEST_ASSERT_EQUAL(kg.edge(1).from(), 0);
+  UNITTEST_ASSERT_EQUAL(kg.edge(1).to(), 2);
+  UNITTEST_ASSERT_EQUAL(kg.edge(2).from(), 0);
+  UNITTEST_ASSERT_EQUAL(kg.edge(2).to(), 3);
+  UNITTEST_ASSERT_EQUAL(kg.edge(3).from(), 0);
+  UNITTEST_ASSERT_EQUAL(kg.edge(3).to(), 4);
+  UNITTEST_ASSERT_EQUAL(kg.edge(4).from(), 1);
+  UNITTEST_ASSERT_EQUAL(kg.edge(4).to(), 2);
+  UNITTEST_ASSERT_EQUAL(kg.edge(5).from(), 1);
+  UNITTEST_ASSERT_EQUAL(kg.edge(5).to(), 3);
+  UNITTEST_ASSERT_EQUAL(kg.edge(6).from(), 1);
+  UNITTEST_ASSERT_EQUAL(kg.edge(6).to(), 4);
+  UNITTEST_ASSERT_EQUAL(kg.edge(7).from(), 2);
+  UNITTEST_ASSERT_EQUAL(kg.edge(7).to(), 3);
+  UNITTEST_ASSERT_EQUAL(kg.edge(8).from(), 2);
+  UNITTEST_ASSERT_EQUAL(kg.edge(8).to(), 4);
+  UNITTEST_ASSERT_EQUAL(kg.edge(9).from(), 3);
+  UNITTEST_ASSERT_EQUAL(kg.edge(9).to(), 4);
+
+  VertexNumber d = kg.order() - 1;
+  for (VertexNumber iv = 0; iv < kg.order(); ++iv) {
+    UNITTEST_ASSERT_EQUAL(kg.degree(iv), d);
+  }
+  check_degrees(kg, d, d, d, d);
+
+  // Contract two of the vertices.
+  Graph cg1(kg, 0, 1);
+  UNITTEST_ASSERT_EQUAL(cg1.order(), KV.size() - 1);
+  UNITTEST_ASSERT_EQUAL(cg1.size(), KE.size() - 4);
+  UNITTEST_ASSERT_FALSE(cg1.empty());
+
+  UNITTEST_ASSERT_EQUAL(cg1.vertex(0).id(), 2);
+  UNITTEST_ASSERT_EQUAL(cg1.vertex(1).id(), 3);
+  UNITTEST_ASSERT_EQUAL(cg1.vertex(2).id(), 4);
+  UNITTEST_ASSERT_EQUAL(cg1.vertex(3).id(), 5);
+
+  UNITTEST_ASSERT_EQUAL(cg1.edge(0).from(), 5);
+  UNITTEST_ASSERT_EQUAL(cg1.edge(0).to(), 2);
+  UNITTEST_ASSERT_EQUAL(cg1.edge(1).from(), 5);
+  UNITTEST_ASSERT_EQUAL(cg1.edge(1).to(), 3);
+  UNITTEST_ASSERT_EQUAL(cg1.edge(2).from(), 5);
+  UNITTEST_ASSERT_EQUAL(cg1.edge(2).to(), 4);
+  UNITTEST_ASSERT_EQUAL(cg1.edge(3).from(), 2);
+  UNITTEST_ASSERT_EQUAL(cg1.edge(3).to(), 3);
+  UNITTEST_ASSERT_EQUAL(cg1.edge(4).from(), 2);
+  UNITTEST_ASSERT_EQUAL(cg1.edge(4).to(), 4);
+  UNITTEST_ASSERT_EQUAL(cg1.edge(5).from(), 3);
+  UNITTEST_ASSERT_EQUAL(cg1.edge(5).to(), 4);
+
+  d = cg1.order() - 1;
+  for (VertexNumber iv = 0; iv < cg1.order(); ++iv) {
+    UNITTEST_ASSERT_EQUAL(cg1.degree(iv), d);
+  }
+  check_degrees(cg1, d, d, d, d);
+
+  Contracted c1 = {0, 1};
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(cg1.vertex(d).contracted(), c1);
+
+  // Contract two more.
+  Graph cg2(cg1, 3, 1);
+  UNITTEST_ASSERT_EQUAL(cg2.order(), cg1.order() - 1);
+  UNITTEST_ASSERT_EQUAL(cg2.size(), cg1.size() - 3);
+  UNITTEST_ASSERT_FALSE(cg2.empty());
+
+  UNITTEST_ASSERT_EQUAL(cg2.vertex(0).id(), 2);
+  UNITTEST_ASSERT_EQUAL(cg2.vertex(1).id(), 4);
+  UNITTEST_ASSERT_EQUAL(cg2.vertex(2).id(), 6);
+
+  UNITTEST_ASSERT_EQUAL(cg2.edge(0).from(), 6);
+  UNITTEST_ASSERT_EQUAL(cg2.edge(0).to(), 2);
+  UNITTEST_ASSERT_EQUAL(cg2.edge(1).from(), 6);
+  UNITTEST_ASSERT_EQUAL(cg2.edge(1).to(), 4);
+  UNITTEST_ASSERT_EQUAL(cg2.edge(2).from(), 2);
+  UNITTEST_ASSERT_EQUAL(cg2.edge(2).to(), 4);
+
+  d = cg2.order() - 1;
+  for (VertexNumber iv = 0; iv < cg2.order(); ++iv) {
+    UNITTEST_ASSERT_EQUAL(cg2.degree(iv), d);
+  }
+  check_degrees(cg2, d, d, d, d);
+
+  c1.push_back(3);
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(cg2.vertex(d).contracted(), c1);
+
+  // And once more.
+  Graph cg3(cg2, 1, 0);
+  UNITTEST_ASSERT_EQUAL(cg3.order(), cg2.order() - 1);
+  UNITTEST_ASSERT_EQUAL(cg3.size(), cg2.size() - 2);
+  UNITTEST_ASSERT_FALSE(cg3.empty());
+
+  UNITTEST_ASSERT_EQUAL(cg3.vertex(0).id(), 6);
+  UNITTEST_ASSERT_EQUAL(cg3.vertex(1).id(), 7);
+
+  UNITTEST_ASSERT_EQUAL(cg3.edge(0).from(), 6);
+  UNITTEST_ASSERT_EQUAL(cg3.edge(0).to(), 7);
+
+  d = cg3.order() - 1;
+  for (VertexNumber iv = 0; iv < cg3.order(); ++iv) {
+    UNITTEST_ASSERT_EQUAL(cg3.degree(iv), d);
+  }
+  check_degrees(cg3, d, d, d, d);
+
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(cg3.vertex(0).contracted(), c1);
+  Contracted c2 = {4, 2};
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(cg3.vertex(1).contracted(), c2);
+
+  // And finally down to one vertex.
+  Graph cg4(cg3, 0, 1);
+  UNITTEST_ASSERT_EQUAL(cg4.order(), 1);
+  UNITTEST_ASSERT_EQUAL(cg4.size(), 0);
+  UNITTEST_ASSERT_TRUE(cg4.empty());
+
+  UNITTEST_ASSERT_EQUAL(cg4.vertex(0).id(), 8);
+  UNITTEST_ASSERT_EQUAL(cg4.degree(0), 0);
+  check_degrees(cg4, 0, 0, 0, 0);
+
+  c1.insert(c1.end(), c2.cbegin(), c2.cend());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(cg4.vertex(0).contracted(), c1);
+
+  // Trying to contract a single vertex throws an exception.
+  UNITTEST_ASSERT_THROW(SameVertexContractError, [&](){ Graph cg5(cg4, 0, 0); });
 }

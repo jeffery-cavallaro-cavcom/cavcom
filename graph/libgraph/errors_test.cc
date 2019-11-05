@@ -37,3 +37,16 @@ TEST(throw_loop_edge_exception) {
     UNITTEST_ASSERT_EQUAL(error.what(), MESSAGE);
   }
 }
+
+TEST(throw_contractions_exception) {
+  constexpr VertexNumber VERTEX = 3;
+  const std::string MESSAGE = "Cannot contract vertex 3 with itself";
+
+  try {
+    throw SameVertexContractError(VERTEX);
+  }
+  catch (const SameVertexContractError &error) {
+    UNITTEST_ASSERT_EQUAL(error.vertex(), VERTEX);
+    UNITTEST_ASSERT_EQUAL(error.what(), MESSAGE);
+  }
+}

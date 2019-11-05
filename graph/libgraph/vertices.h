@@ -2,6 +2,7 @@
 #define CAVCOM_GRAPH_LIBGRAPH_VERTICES_H_
 
 #include <set>
+#include <vector>
 
 #include "lookup.h"
 
@@ -48,8 +49,8 @@ namespace cavcom {
       void add(const VertexValuesList &values);
 
       // Find vertex by ID or label.  Returns true if found.
-      bool find(VertexID id, VertexNumber *number);
-      bool find(Label label, VertexNumber *number);
+      bool find(VertexID id, VertexNumber *number) const;
+      bool find(Label label, VertexNumber *number) const;
 
       // Changes (or sets) the label of an existing vertex.  An empty label results in an unlabeled vertex.
       // Attempting to set the label to the same value does nothing.  Throws a duplicate label error if the

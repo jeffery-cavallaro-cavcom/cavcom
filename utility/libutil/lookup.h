@@ -64,6 +64,13 @@ namespace cavcom {
         return nullptr;
       }
 
+      const V *find(const K &key, bool errors = false) const {
+        const auto i = lookup_.find(key);
+        if (i != lookup_.cend()) return &i->second;
+        if (errors) throw NotFoundLookupError(name_, key);
+        return nullptr;
+      }
+
       // Adds the specified key/value pair to the lookup table.  Returns true if the key was not already in use.
       // Otherwise, returns false or throws a duplicate error if exceptions are enabled by the errors argument.
       bool add(const K &key, const V &value, bool errors = false) {

@@ -40,6 +40,18 @@ namespace cavcom {
       std::string msg_;
     };
 
+    // An attempt to contract a vertex with itself.
+    class SameVertexContractError : public std::runtime_error {
+     public:
+      SameVertexContractError(VertexNumber vertex);
+      virtual const char *what(void) const noexcept { return msg_.c_str(); }
+      const VertexNumber vertex(void) const { return vertex_; }
+
+     private:
+      const VertexNumber vertex_;
+      std::string msg_;
+    };
+
   }  // namespace graph
 }  // namespace cavcom
 

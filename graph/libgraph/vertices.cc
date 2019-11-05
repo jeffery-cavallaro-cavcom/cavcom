@@ -10,11 +10,12 @@ namespace cavcom {
 
     Vertices::Vertices(const Vertices &source, const VertexNumbers &remove) : Vertices() {
       VertexNumber n = source.size();
-      for (VertexNumber iv = 0; iv < n; ++iv) {
+      for (VertexNumber iv = 0, ov = 0; iv < n; ++iv) {
         if (remove.find(iv) == remove.cend()) {
           const Vertex &v = source[iv];
           next_ = v.id();
           add(v.label(), v.color(), v.xpos(), v.ypos());
+          vertices_[ov++].contracted_ = v.contracted_;
         }
       }
       next_ = source.next_;
@@ -44,7 +45,7 @@ namespace cavcom {
       for_each(values.cbegin(), values.cend(), [this](const VertexValues &vertex){ add(vertex); });
     }
 
-    bool Vertices::find(VertexID id, VertexNumber *number) {
+    bool Vertices::find(VertexID id, VertexNumber *number) const {
       const VertexNumber *found = id_to_number_.find(id);
       if (!found) {
         *number = 0;
@@ -54,7 +55,7 @@ namespace cavcom {
       return true;
     }
 
-    bool Vertices::find(Label label, VertexNumber *number) {
+    bool Vertices::find(Label label, VertexNumber *number) const {
       const VertexNumber *found = label_to_number_.find(label);
       if (!found) {
         *number = 0;
