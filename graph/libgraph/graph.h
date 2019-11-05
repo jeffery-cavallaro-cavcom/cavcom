@@ -1,6 +1,7 @@
 #ifndef CAVCOM_GRAPH_LIBGRAPH_GRAPH_H_
 #define CAVCOM_GRAPH_LIBGRAPH_GRAPH_H_
 
+#include <set>
 #include <vector>
 
 #include "connections.h"
@@ -19,6 +20,9 @@ namespace cavcom {
 
     using EdgeValuesList = std::vector<EdgeValues>;
 
+    // A set of edges by edge number.  Used during subgraph operations.
+    using EdgeNumbers = std::set<EdgeNumber>;
+
     // A graph is a mathematical object consisting of vertices and edges.  Graphs can be simple or allow multiple
     // edges, can be undirected or directed, and can optionally support loop edges.
     class Graph {
@@ -31,8 +35,9 @@ namespace cavcom {
       Graph(const VertexValuesList &vertices, const EdgeValuesList &edges,
             bool directed = false, bool multiple = false, bool loops = false);
 
-      // Creates a subgraph of the specified graph by removing the specified vertices.
-      Graph(const Graph &source, const VertexNumbers &remove = VertexNumbers());
+      // Creates a subgraph of the specified graph by removing the specified vertices and/or edges.
+      Graph(const Graph &source,
+            const VertexNumbers &vremove = VertexNumbers(), const EdgeNumbers &eremove = EdgeNumbers());
 
       // Creates a copy of the specified graph, but with the two specified vertices contracted.  The contracted
       // vertex will be a new vertex with a new vertex ID and will have the label, color, and position of the "to"

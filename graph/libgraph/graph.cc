@@ -22,12 +22,13 @@ namespace cavcom {
       join(edges);
     }
 
-    Graph::Graph(const Graph &source, const VertexNumbers &remove)
-      : vertices_(source.vertices_, remove),
-        connections_(source.order() - remove.size(), source.directed(), source.multiple(), source.loops()) {
-      // Only add the edges with both endpoints in the subgraph.
+    Graph::Graph(const Graph &source, const VertexNumbers &vremove, const EdgeNumbers &eremove)
+      : vertices_(source.vertices_, vremove),
+        connections_(source.order() - vremove.size(), source.directed(), source.multiple(), source.loops()) {
+      // Only add the edges that aren't marked for removal and with both endpoints in the subgraph.
       EdgeNumber m = source.size();
       for (EdgeNumber ie = 0; ie < m; ++ie) {
+        if (eremove.find(ie) != eremove.cend()) continue;
         const Edge &e = source.edge(ie);
         VertexNumber from, to;
         if (find_vertex(e.from(), &from) && find_vertex(e.to(), &to)) {

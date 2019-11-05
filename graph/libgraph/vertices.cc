@@ -11,12 +11,11 @@ namespace cavcom {
     Vertices::Vertices(const Vertices &source, const VertexNumbers &remove) : Vertices() {
       VertexNumber n = source.size();
       for (VertexNumber iv = 0, ov = 0; iv < n; ++iv) {
-        if (remove.find(iv) == remove.cend()) {
-          const Vertex &v = source[iv];
-          next_ = v.id();
-          add(v.label(), v.color(), v.xpos(), v.ypos());
-          vertices_[ov++].contracted_ = v.contracted_;
-        }
+        if (remove.find(iv) != remove.cend()) continue;
+        const Vertex &v = source[iv];
+        next_ = v.id();
+        add(v.label(), v.color(), v.xpos(), v.ypos());
+        vertices_[ov++].contracted_ = v.contracted_;
       }
       next_ = source.next_;
     }
