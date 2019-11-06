@@ -163,3 +163,6 @@ TEST(check_call_sequence) {
                         "finish edges\n"
                         "finish graph\n");
 }
+
+
+static const DummyFormatter::ColorValuesList COLORS = {{1, "green"}, {2, "blue"}, {3, "red"}};
