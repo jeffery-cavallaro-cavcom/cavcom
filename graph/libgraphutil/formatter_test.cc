@@ -1,5 +1,6 @@
 // Derives and exercises a dummy formatter class.
 
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -84,7 +85,7 @@ TEST(toggle_flags) {
   check_flags(formatter, {true, false, false, false, false});
   formatter.vertex_labels(false);
   check_flags(formatter, ALL_OFF);
-  
+
   formatter.vertex_colors();
   check_flags(formatter, {false, true, false, false, false});
   formatter.vertex_colors(false);
@@ -94,12 +95,12 @@ TEST(toggle_flags) {
   check_flags(formatter, {false, false, true, false, false});
   formatter.edge_labels(false);
   check_flags(formatter, ALL_OFF);
-  
+
   formatter.edge_colors();
   check_flags(formatter, {false, false, false, true, false});
   formatter.edge_colors(false);
   check_flags(formatter, ALL_OFF);
-  
+
   formatter.edge_weights();
   check_flags(formatter, {false, false, false, false, true});
   formatter.edge_weights(false);
@@ -118,7 +119,7 @@ TEST(toggle_flags) {
   check_flags(formatter, {false, true, true, true, true});
   formatter.vertex_labels(true);
   check_flags(formatter, ALL_ON);
-  
+
   formatter.vertex_colors(false);
   check_flags(formatter, {true, false, true, true, true});
   formatter.vertex_colors(true);
@@ -128,12 +129,12 @@ TEST(toggle_flags) {
   check_flags(formatter, {true, true, false, true, true});
   formatter.edge_labels(true);
   check_flags(formatter, ALL_ON);
-  
+
   formatter.edge_colors(false);
   check_flags(formatter, {true, true, true, false, true});
   formatter.edge_colors(true);
   check_flags(formatter, ALL_ON);
-  
+
   formatter.edge_weights(false);
   check_flags(formatter, {true, true, true, true, false});
   formatter.edge_weights(true);
@@ -166,3 +167,53 @@ TEST(check_call_sequence) {
 
 
 static const DummyFormatter::ColorValuesList COLORS = {{1, "green"}, {2, "blue"}, {3, "red"}};
+static const DummyFormatter::ColorType OTHER = "orange";
+
+TEST(add_and_check_colors) {
+  DummyFormatter formatter;
+  formatter.add_colors(COLORS);
+  UNITTEST_ASSERT_EQUAL(formatter.colors(), COLORS.size());
+
+  // Check the default color.
+  UNITTEST_ASSERT_TRUE(formatter.get_color(NOCOLOR).empty());
+
+  // Check the explicit colors.
+  for_each(COLORS.cbegin(), COLORS.cend(), [&](const DummyFormatter::ColorValues &values){
+                                             UNITTEST_ASSERT_EQUAL(formatter.get_color(values.id), values.color);
+                                           });
+
+  // An out-of-range color ID should return the default color.
+  UNITTEST_ASSERT_TRUE(formatter.get_color(4).empty());
+}
+
+TEST(change_default_color) {
+  DummyFormatter formatter;
+  formatter.add_colors(COLORS);
+  formatter.add_color(NOCOLOR, OTHER);
+  UNITTEST_ASSERT_EQUAL(formatter.get_color(NOCOLOR), OTHER);
+  UNITTEST_ASSERT_EQUAL(formatter.get_color(5), OTHER);
+}
+
+TEST(change_colors) {
+  DummyFormatter formatter;
+  formatter.add_colors(COLORS);
+  UNITTEST_ASSERT_EQUAL(formatter.get_color(2), "blue");
+  formatter.add_color(2, OTHER);
+  UNITTEST_ASSERT_EQUAL(formatter.get_color(2), OTHER);
+}
+
+TEST(remove_colors) {
+  DummyFormatter formatter;
+  formatter.add_colors(COLORS);
+  formatter.add_color(NOCOLOR, OTHER);
+
+  // Remove an explicit color; it should revert to the default color.
+  UNITTEST_ASSERT_EQUAL(formatter.get_color(2), "blue");
+  formatter.remove_color(2);
+  UNITTEST_ASSERT_EQUAL(formatter.get_color(2), OTHER);
+
+  // Remove (reset) the default color.
+  UNITTEST_ASSERT_EQUAL(formatter.get_color(NOCOLOR), OTHER);
+  formatter.remove_color(NOCOLOR);
+  UNITTEST_ASSERT_TRUE(formatter.get_color(NOCOLOR).empty());
+}

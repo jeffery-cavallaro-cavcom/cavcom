@@ -85,24 +85,29 @@ namespace cavcom {
       }
 
       // Adds/replaces a color in the color map.  A color ID of 0 changes the default color.
-      void add_color(Color id, const ColorType &value) {
+      void add_color(Color id, const ColorType &color) {
         if (id == 0) {
-          defcolor_ = value;
+          defcolor_ = color;
           return;
         }
-        auto &ipos = colors_.insert(colors_.cbegin(), id, value);
-        if (ipos->second != value) ipos->second = value;
+        auto ipos = colors_.insert(colors_.begin(), {id, color});
+        if (ipos->second != color) ipos->second = color;
       }
 
-      // Adds all of the specified colors.  Duplicate colors will replace earlier matching colors.
+      // Adds all of the specified colors.  Duplicate colors will replace earlier matching colors.  An ID of NOCOLOR
+      // will replace the default color.
       void add_colors(const ColorValuesList &colors) {
         for_each(colors.cbegin(), colors.cend(), [&](const ColorValues &color)
-                                                 { add_color(color.id, color.value); });
+                                                 { add_color(color.id, color.color); });
       }
 
-      // Removes a color from the color map.
+      // Removes a color from the color map.  An ID of NOCOLOR will reset the default color.
       void remove_color(Color id) {
-        colors_.erase(id);
+        if (id == NOCOLOR) {
+          defcolor_ = ColorType();
+        } else {
+          colors_.erase(id);
+        }
       }
 
       // Returns the color associated with the specified ID, or the default color if the ID is not known.
@@ -111,20 +116,23 @@ namespace cavcom {
         return (ifound == colors_.cend() ? defcolor_ : ifound->second);
       }
 
+      // Returns the number of known colors, not counting the default color.
+      typename ColorMap::size_type colors(void) const { return colors_.size(); }
+
      protected:
       std::ostream *out_;
 
       // The following functions are called in the listed order to format a graph.  Only the vertex and edge
       // formatter are required.  Derived class functions should output the necessary information to the
       // protected out_ stream according to the settings of the various flags.
-      virtual bool start_graph(const Graph &graph) {return out_->good(); };
-      virtual bool start_vertices(const Graph &graph) { return out_->good(); };
+      virtual bool start_graph(const Graph &graph) {return out_->good(); }
+      virtual bool start_vertices(const Graph &graph) { return out_->good(); }
       virtual bool format_vertex(const Vertex &vertex) = 0;
-      virtual bool finish_vertices(const Graph &graph) { return out_->good(); };
-      virtual bool start_edges(const Graph &graph) { return out_->good(); };
+      virtual bool finish_vertices(const Graph &graph) { return out_->good(); }
+      virtual bool start_edges(const Graph &graph) { return out_->good(); }
       virtual bool format_edge(const Edge &edge) = 0;
-      virtual bool finish_edges(const Graph &graph) { return out_->good(); };
-      virtual bool finish_graph(const Graph &graph) { return out_->good(); };
+      virtual bool finish_edges(const Graph &graph) { return out_->good(); }
+      virtual bool finish_graph(const Graph &graph) { return out_->good(); }
 
      private:
       ColorMap colors_;
