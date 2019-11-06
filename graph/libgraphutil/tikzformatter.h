@@ -14,10 +14,18 @@ namespace cavcom {
      public:
       TikzFormatter(std::ostream *out);
 
+     protected:
       virtual bool start_graph(const Graph &graph);
-      virtual bool finish_graph(const Graph &graph);
+      virtual bool start_vertices(const Graph &graph);
       virtual bool format_vertex(const Vertex &vertex);
+      virtual bool end_vertices(const Graph &graph);
       virtual bool format_edge(const Edge &edge);
+      virtual bool finish_graph(const Graph &graph);
+
+     private:
+      // Styles for labeled and unlabeled vertices.
+      static const std::string UNLABELED_STYLE;
+      static const std::string LABELED_NODE;
     };
 
   }  // namespace graph

@@ -13,7 +13,7 @@ using namespace cavcom::graph;
 
 class DummyFormatter : public Formatter<> {
  public:
-  DummyFormatter() : Formatter(&formatted_) {}
+  DummyFormatter(bool fail = false) : Formatter(&formatted_), fail_(fail) {}
 
   virtual bool start_graph(const Graph &graph) {
     *out_ << "start graph" << std::endl;
@@ -36,6 +36,7 @@ class DummyFormatter : public Formatter<> {
   }
 
   virtual bool start_edges(const Graph &graph) {
+    if (fail_) return false;
     *out_ << "start edges" << std::endl;
     return out_->good();
   }
@@ -59,6 +60,7 @@ class DummyFormatter : public Formatter<> {
 
  private:
   std::ostringstream formatted_;
+  bool fail_;
 };
 
 using FlagValues = struct { bool vlabels; bool vcolors; bool elabels; bool ecolors; bool eweights; };
@@ -165,6 +167,17 @@ TEST(check_call_sequence) {
                         "finish graph\n");
 }
 
+TEST(check_failed_format) {
+  Graph graph(VERTICES, EDGES);
+  DummyFormatter formatter(true);
+  UNITTEST_ASSERT_FALSE(formatter.format(graph));
+  UNITTEST_ASSERT_EQUAL(formatter.formatted(),
+                        "start graph\n"
+                        "start vertices\n"
+                        "format vertex v1\n"
+                        "format vertex v2\n"
+                        "finish vertices\n");
+}
 
 static const DummyFormatter::ColorValuesList COLORS = {{1, "green"}, {2, "blue"}, {3, "red"}};
 static const DummyFormatter::ColorType OTHER = "orange";
