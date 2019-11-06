@@ -60,7 +60,7 @@ TEST(make_simple_empty) {
     const Vertex &v = g.vertex(iv);
     UNITTEST_ASSERT_EQUAL(v.id(), iv);
     UNITTEST_ASSERT_TRUE(v.label().empty());
-    UNITTEST_ASSERT_EQUAL(v.color(), BLACK);
+    UNITTEST_ASSERT_EQUAL(v.color(), NOCOLOR);
     UNITTEST_ASSERT_TRUE(v.contracted().empty());
     UNITTEST_ASSERT_EQUAL(v.xpos(), 0.0);
     UNITTEST_ASSERT_EQUAL(v.ypos(), 0.0);
@@ -79,7 +79,7 @@ TEST(make_simple_empty) {
   UNITTEST_ASSERT_THROW(std::out_of_range, [&](){ g.edge(0); });
 }
 
-static const VertexValuesList VERTICES = {{"v1", BLACK, 0, 0},
+static const VertexValuesList VERTICES = {{"v1", NOCOLOR, 0, 0},
                                           {"v2", 1, 0, 1},
                                           {"v3", 2, 1, 1},
                                           {"v4", 3, 1, 0}};
@@ -175,7 +175,7 @@ TEST(make_simple_subgraph) {
       const Vertex &sv = sg.vertex(found);
       UNITTEST_ASSERT_EQUAL(sv.id(), v.id());
       UNITTEST_ASSERT_EQUAL(sv.label(), v.label());
-      UNITTEST_ASSERT_EQUAL(sv.color(), BLACK);
+      UNITTEST_ASSERT_EQUAL(sv.color(), NOCOLOR);
       UNITTEST_ASSERT_EQUAL(sv.xpos(), 0.0);
       UNITTEST_ASSERT_EQUAL(sv.ypos(), 0.0);
       UNITTEST_ASSERT_TRUE(sv.contracted().empty());

@@ -19,7 +19,7 @@ namespace cavcom {
     class Vertex {
      public:
       // Creates a new isolated vertex with the specified attributes.
-      explicit Vertex(VertexID id, const Label &label = Label(), Color color = BLACK,
+      explicit Vertex(VertexID id, const Label &label = Label(), Color color = NOCOLOR,
                       Dimension xpos = 0.0, Dimension ypos = 0.0);
 
       // Creates a new isolated vertex using the specified attribute values.  Note that the vertex ID is assigned
@@ -37,7 +37,7 @@ namespace cavcom {
       const Label &label(void) const { return label_; }
 
       // Vertex colors are typically used in partitioning applications.
-      const Color color(void) const { return color_; }
+      Color color(void) const { return color_; }
       void color(Color color) { color_ = color; }
 
       const Contracted &contracted(void) const { return contracted_; }

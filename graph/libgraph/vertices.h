@@ -42,7 +42,7 @@ namespace cavcom {
 
       // Adds a new isolated vertex to the vertex table.  The vertex is assigned the next vertex ID.  Throws a
       // duplicate label error if a label is specified that is already assigned to an existing vertex.
-      void add(const Label &label = Label(), Color color = BLACK, Dimension xpos = 0.0, Dimension ypos = 0.0);
+      void add(const Label &label = Label(), Color color = NOCOLOR, Dimension xpos = 0.0, Dimension ypos = 0.0);
       void add(const VertexValues &values);
 
       // Adds multiple isolated vertices to the vertex table.

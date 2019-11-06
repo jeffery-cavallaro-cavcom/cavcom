@@ -7,7 +7,7 @@
 using namespace cavcom::graph;
 
 static void check_edge(const Edge &edge, VertexID from, VertexID to,
-                       const Label &label = Label(), Color color = BLACK, Weight weight = FREE) {
+                       const Label &label = Label(), Color color = NOCOLOR, Weight weight = FREE) {
   UNITTEST_ASSERT_EQUAL(edge.from(), from);
   UNITTEST_ASSERT_EQUAL(edge.to(), to);
   UNITTEST_ASSERT_EQUAL(edge.label(), label);

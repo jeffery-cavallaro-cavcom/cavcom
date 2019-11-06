@@ -92,7 +92,7 @@ namespace cavcom {
       // error.  Attempting to add a multiple or loop edge throw an error if disabled.  Returns the resulting
       // number of edges joining the two endpoint vertices.
       Degree join(VertexNumber from, VertexNumber to,
-                  const Label &label = Label(), Color color = BLACK, Weight weight = FREE);
+                  const Label &label = Label(), Color color = NOCOLOR, Weight weight = FREE);
 
       // Adds an edge using the specified values.
       Degree join(const EdgeValues &values);

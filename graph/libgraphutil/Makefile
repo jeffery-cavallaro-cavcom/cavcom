@@ -2,13 +2,13 @@ includes := formatter.h tikzformatter.h
 
 libgraphutil_sources := tikzformatter.cc
 
-test_sources := 
+test_sources := formatter_test.cc
 
 sources := $(libgraphutil_sources) $(test_sources)
 
 libraries := libgraphutil.a
 
-tests := 
+tests := formatter_test
 
 include ../../templates/Makefile.all.mk
 
@@ -20,6 +20,6 @@ TESTLIBS += ../libgraph/libgraph.a
 libgraphutil.a: $(subst .cc,.o,$(libgraphutil_sources))
 	$(make-library)
 
-#tikz_test:	tikz_test.o $(libraries) $(TESTLIBS)
+formatter_test:	formatter_test.o $(libraries) $(TESTLIBS)
 
 -include $(subst .cc,.d,$(sources))

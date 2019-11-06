@@ -7,7 +7,7 @@
 using namespace cavcom::graph;
 
 static void check_vertex(const Vertex &vertex, VertexID id,
-                         const Label &label = Label(), Color color = BLACK,
+                         const Label &label = Label(), Color color = NOCOLOR,
                          Dimension xpos = 0.0, Dimension ypos = 0.0) {
   UNITTEST_ASSERT_EQUAL(vertex.id(), id);
   UNITTEST_ASSERT_EQUAL(vertex.label(), label);

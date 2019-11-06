@@ -11,7 +11,7 @@ namespace cavcom {
     class Edge {
      public:
       // Creates a new edge with the specified attributes between the specified edges.
-      Edge(VertexID from, VertexID to, const Label &label = Label(), Color color = BLACK, Weight weight = FREE);
+      Edge(VertexID from, VertexID to, const Label &label = Label(), Color color = NOCOLOR, Weight weight = FREE);
 
       // Copy constructor.
       Edge(const Edge &source);

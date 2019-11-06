@@ -12,11 +12,10 @@ namespace cavcom {
     // Vertex and edge labels.
     using Label = std::string;
 
-    // Vertex and edge colors are represented by unsigned integer values.  These values can be used as indexes into
-    // an external color table for application-specific color assignment.  The default color value is 0, which
-    // should correspond to black.
+    // Vertex and edge colors are represented by unsigned integer values.  These values can be used as indexes into an
+    // external color table for application-specific color assignments.  The color ID = 0 is interpreted as "none".
     using Color = uint;
-    constexpr Color BLACK = 0;
+    constexpr Color NOCOLOR = 0;
 
     // An edge's weight can be interpreted as the cost to traverse the edge between the endpoint vertices.
     using Weight = double;
