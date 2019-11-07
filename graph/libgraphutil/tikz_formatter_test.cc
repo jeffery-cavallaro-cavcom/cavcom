@@ -4,7 +4,7 @@
 
 #include <libunittest/all.hpp>
 
-#include "tikzformatter.h"
+#include "tikz_formatter.h"
 
 using namespace cavcom::graph;
 

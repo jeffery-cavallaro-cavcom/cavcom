@@ -1,4 +1,4 @@
-#include "tikzformatter.h"
+#include "tikz_formatter.h"
 
 namespace cavcom {
   namespace graph {
