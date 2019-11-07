@@ -1,5 +1,5 @@
-#ifndef CAVCOM_GRAPH_LIBGRAPH_VERTEX_H_
-#define CAVCOM_GRAPH_LIBGRAPH_VERTEX_H_
+#ifndef CAVCOM_GRAPH_LIBGRAPHCORE_VERTEX_H_
+#define CAVCOM_GRAPH_LIBGRAPHCORE_VERTEX_H_
 
 #include <vector>
 
@@ -75,4 +75,4 @@ namespace cavcom {
   }  // namespace graph
 }  // namespace cavcom
 
-#endif  // CAVCOM_GRAPH_LIBGRAPH_VERTEX_H_
+#endif  // CAVCOM_GRAPH_LIBGRAPHCORE_VERTEX_H_

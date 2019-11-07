@@ -1,5 +1,5 @@
-#ifndef CAVCOM_GRAPH_LIBGRAPH_GRAPHTYPES_H_
-#define CAVCOM_GRAPH_LIBGRAPH_GRAPHTYPES_H_
+#ifndef CAVCOM_GRAPH_LIBGRAPHCORE_GRAPHTYPES_H_
+#define CAVCOM_GRAPH_LIBGRAPHCORE_GRAPHTYPES_H_
 
 #include <string>
 #include <vector>
@@ -36,4 +36,4 @@ namespace cavcom {
   }  // namespace graph
 }  // namespace cavcom
 
-#endif  // CAVCOM_GRAPH_LIBGRAPH_GRAPHTYPES_H_
+#endif  // CAVCOM_GRAPH_LIBGRAPHCORE_GRAPHTYPES_H_

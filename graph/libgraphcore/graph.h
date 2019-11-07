@@ -1,5 +1,5 @@
-#ifndef CAVCOM_GRAPH_LIBGRAPH_GRAPH_H_
-#define CAVCOM_GRAPH_LIBGRAPH_GRAPH_H_
+#ifndef CAVCOM_GRAPH_LIBGRAPHCORE_GRAPH_H_
+#define CAVCOM_GRAPH_LIBGRAPHCORE_GRAPH_H_
 
 #include <set>
 #include <vector>
@@ -132,4 +132,4 @@ namespace cavcom {
   }  // namespace graph
 }  // namespace cavcom
 
-#endif  // CAVCOM_GRAPH_LIBGRAPH_GRAPH_H_
+#endif  // CAVCOM_GRAPH_LIBGRAPHCORE_GRAPH_H_

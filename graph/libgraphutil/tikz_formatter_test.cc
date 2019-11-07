@@ -18,5 +18,8 @@ TEST(format_unlabeled_graph) {
   UNITTEST_ASSERT_TRUE(formatter.format(graph));
   UNITTEST_ASSERT_EQUAL(out.str(),
                         "\\begin{tikzpicture}\n"
+                        "  \\begin{scope}[unlabeled node/.style={draw,circle,fill=#1,inner sep=0cm,"
+                        "minimum size=0.2cm}, unlabeled node/.default={black}]\n"
+                        "  \\end{scope}\n"
                         "\\end{tikzpicture}\n");
 }

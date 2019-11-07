@@ -1,5 +1,5 @@
-#ifndef CAVCOM_GRAPH_LIBGRAPH_ERRORS_H_
-#define CAVCOM_GRAPH_LIBGRAPH_ERRORS_H_
+#ifndef CAVCOM_GRAPH_LIBGRAPHCORE_ERRORS_H_
+#define CAVCOM_GRAPH_LIBGRAPHCORE_ERRORS_H_
 
 #include <sstream>
 #include <stdexcept>
@@ -55,4 +55,4 @@ namespace cavcom {
   }  // namespace graph
 }  // namespace cavcom
 
-#endif  // CAVCOM_GRAPH_LIBGRAPH_ERRORS_H_
+#endif  // CAVCOM_GRAPH_LIBGRAPHCORE_ERRORS_H_

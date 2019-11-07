@@ -1,5 +1,5 @@
-#ifndef CAVCOM_GRAPH_LIBGRAPH_VERTICES_H_
-#define CAVCOM_GRAPH_LIBGRAPH_VERTICES_H_
+#ifndef CAVCOM_GRAPH_LIBGRAPHCORE_VERTICES_H_
+#define CAVCOM_GRAPH_LIBGRAPHCORE_VERTICES_H_
 
 #include <set>
 #include <vector>
@@ -77,4 +77,4 @@ namespace cavcom {
   }  // namespace graph
 }  // namespace cavcom
 
-#endif  // CAVCOM_GRAPH_LIBGRAPH_VERTICES_H_
+#endif  // CAVCOM_GRAPH_LIBGRAPHCORE_VERTICES_H_

@@ -83,27 +83,27 @@ TEST(toggle_flags) {
   check_flags(formatter, ALL_OFF);
 
   // Enable each flag separately.  The others should remain off.
-  formatter.vertex_labels();
+  formatter.vertex_labels(true);
   check_flags(formatter, {true, false, false, false, false});
   formatter.vertex_labels(false);
   check_flags(formatter, ALL_OFF);
 
-  formatter.vertex_colors();
+  formatter.vertex_colors(true);
   check_flags(formatter, {false, true, false, false, false});
   formatter.vertex_colors(false);
   check_flags(formatter, ALL_OFF);
 
-  formatter.edge_labels();
+  formatter.edge_labels(true);
   check_flags(formatter, {false, false, true, false, false});
   formatter.edge_labels(false);
   check_flags(formatter, ALL_OFF);
 
-  formatter.edge_colors();
+  formatter.edge_colors(true);
   check_flags(formatter, {false, false, false, true, false});
   formatter.edge_colors(false);
   check_flags(formatter, ALL_OFF);
 
-  formatter.edge_weights();
+  formatter.edge_weights(true);
   check_flags(formatter, {false, false, false, false, true});
   formatter.edge_weights(false);
   check_flags(formatter, ALL_OFF);

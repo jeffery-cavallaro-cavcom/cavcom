@@ -2,11 +2,11 @@
 
 namespace cavcom {
   namespace graph {
+    const std::string TikzFormatter::LABELED_STYLE = "labeled node/.style={draw,circle,minimum size=2em}";
+
     const std::string TikzFormatter::UNLABELED_STYLE =
       "unlabeled node/.style={draw,circle,fill=#1,inner sep=0cm,minimum size=0.2cm}"
       ", unlabeled node/.default={black}";
-
-    const std::string TikzFormatter::LABELED_NODE = "labeled node/.style={draw,circle,minimum size=2em}";
 
     TikzFormatter::TikzFormatter(std::ostream *out) : Formatter<std::string>(out) {}
 
@@ -16,6 +16,7 @@ namespace cavcom {
     }
 
     bool TikzFormatter::start_vertices(const Graph &graph) {
+      *out_ << "  \\begin{scope}[" << (vertex_labels() ? LABELED_STYLE : UNLABELED_STYLE) << "]" << std::endl;
       return out_->good();
     }
 
@@ -30,7 +31,8 @@ namespace cavcom {
       return out_->good();
     }
 
-    bool TikzFormatter::end_vertices(const Graph &graph) {
+    bool TikzFormatter::finish_vertices(const Graph &graph) {
+      *out_ << "  \\end{scope}" << std::endl;
       return out_->good();
     }
 

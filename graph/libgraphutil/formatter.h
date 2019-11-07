@@ -43,25 +43,25 @@ namespace cavcom {
       // Enables/disables vertex labels.  If labels are enabled but a label is blank then the vertex ID should be
       // used instead.  The default is disabled.
       bool vertex_labels(void) const { return vertex_labels_; }
-      void vertex_labels(bool enabled = true) { vertex_labels_ = enabled; }
+      void vertex_labels(bool enabled) { vertex_labels_ = enabled; }
 
       // Enables/disables vertex colors.  Vertices with a color of NOCOLOR use the default color.  Generally, the
       // default color should be clear (not colored).  The default is disabled.
       bool vertex_colors(void) const { return vertex_colors_; }
-      void vertex_colors(bool enabled = true) { vertex_colors_ = enabled; }
+      void vertex_colors(bool enabled) { vertex_colors_ = enabled; }
 
       // Enables/disables edge labels.  Blank labels should be ignored.  The default is disabled.
       bool edge_labels(void) const { return edge_labels_; }
-      void edge_labels(bool enabled = true) { edge_labels_ = enabled; }
+      void edge_labels(bool enabled) { edge_labels_ = enabled; }
 
       // Enables/disables edge colors.  Edges with a color of NOCOLOR use the default color.  Generally, the
       // default color should be black.  The default is disabled.
       bool edge_colors(void) const { return edge_colors_; }
-      void edge_colors(bool enabled = true) { edge_colors_ = enabled; }
+      void edge_colors(bool enabled) { edge_colors_ = enabled; }
 
       // Enables/disables edge weights.  A weight of 0 is treated like any other weight.  The default is disabled.
       bool edge_weights(void) const { return edge_weights_; }
-      void edge_weights(bool enabled = true) { edge_weights_ = enabled; }
+      void edge_weights(bool enabled) { edge_weights_ = enabled; }
 
       // Formats the specified graph for presentation.  The formatter will call the start graph method, then the
       // format vertex method for each vertex, then the format edge method for each edge, and then the end graph

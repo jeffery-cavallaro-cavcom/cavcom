@@ -1,5 +1,5 @@
-#ifndef CAVCOM_GRAPH_LIBGRAPH_CONNECTIONS_H_
-#define CAVCOM_GRAPH_LIBGRAPH_CONNECTIONS_H_
+#ifndef CAVCOM_GRAPH_LIBGRAPHCORE_CONNECTIONS_H_
+#define CAVCOM_GRAPH_LIBGRAPHCORE_CONNECTIONS_H_
 
 #include <memory>
 #include <vector>
@@ -85,4 +85,4 @@ namespace cavcom {
   }  // namespace graph
 }  // namespace cavcom
 
-#endif  // CAVCOM_GRAPH_LIBGRAPH_CONNECTIONS_H_
+#endif  // CAVCOM_GRAPH_LIBGRAPHCORE_CONNECTIONS_H_

@@ -1,5 +1,5 @@
-#ifndef CAVCOM_GRAPH_LIBGRAPH_EDGE_H_
-#define CAVCOM_GRAPH_LIBGRAPH_EDGE_H_
+#ifndef CAVCOM_GRAPH_LIBGRAPHCORE_EDGE_H_
+#define CAVCOM_GRAPH_LIBGRAPHCORE_EDGE_H_
 
 #include <vector>
 
@@ -48,4 +48,4 @@ namespace cavcom {
   }  // namespace graph
 }  // namespace cavcom
 
-#endif  // CAVCOM_GRAPH_LIBGRAPH_EDGE_H_
+#endif  // CAVCOM_GRAPH_LIBGRAPHCORE_EDGE_H_
