@@ -68,10 +68,6 @@ namespace cavcom {
       // Vertices can be found by ID or label.
       IDs id_to_number_;
       Labels label_to_number_;
-
-      // Disable copy and assignment.
-      Vertices(const Vertices &source) {}
-      Vertices &operator=(const Vertices &source) { return *this; }
     };
 
   }  // namespace graph

@@ -35,9 +35,6 @@ namespace cavcom {
       Label label_;
       Color color_;
       Weight weight_;
-
-      // Disable assignment.
-      Edge &operator=(const Edge &source) { return *this; }
     };
 
     // Edges are stored in an edge table and are referenced by index in the connection matrix.

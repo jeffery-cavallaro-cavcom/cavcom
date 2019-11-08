@@ -57,9 +57,6 @@ namespace cavcom {
       Dimension xpos_;
       Dimension ypos_;
 
-      // Disable assignment.
-      Vertex &operator=(const Vertex &source) { return *this; }
-
       // The parent graph needs access during graph mutations.
       friend class Vertices;
       friend class Graph;
