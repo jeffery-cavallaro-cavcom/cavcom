@@ -18,6 +18,10 @@ namespace cavcom {
       // Returns the current k value.  If the algorithm is complete then this is the chromatic number.
       uint k() const { return k_; }
 
+      // The number of times the edge threshold test was applied and the number of hits.
+      ullong edge_threshold_tries() const { return edge_threshold_tries_; }
+      ullong edge_threshold_hits() const { return edge_threshold_hits_; }
+
       // Returns the final complete graph that represents a chromatic coloring of the original G, or null if the
       // algorithm has not yet completed.
       const Graph &chromatic() const { return *chromatic_; }
@@ -28,6 +32,10 @@ namespace cavcom {
       uint k_;
       GraphPtr chromatic_;
 
+      ullong edge_threshold_tries_;
+      ullong edge_threshold_hits_;
+
+      // Resets all the counters and runs the algorithm.
       virtual bool run();
 
       // The steps of the outer loop are as follows:
@@ -45,10 +53,19 @@ namespace cavcom {
       //  5. Increment k and go to step 4.
       //
       // Each of these steps is counted.
-
       void outer_loop(GraphPtr *ppg);
 
-      bool is_k_colorable(GraphPtr *ppsg);
+      // The steps of the inner loop are as follows:
+      //
+      //  1.  If n <= k then return true.
+      //
+      //  2.  Calculate a maximum edge threshold a = n^2(k-1)/2k.
+      //
+      //  3.  If m > a then return false.
+      bool is_k_colorable(GraphPtr *ppg);
+
+      // Resets all the derived-class counters.
+      void reset_counters();
     };
 
   }  // namespace graph

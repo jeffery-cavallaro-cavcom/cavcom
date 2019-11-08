@@ -5,9 +5,14 @@
 namespace cavcom {
   namespace graph {
 
-    QuickZykov::QuickZykov(const Graph &graph) : GraphAlgorithm(graph), k_(0) {}
+    QuickZykov::QuickZykov(const Graph &graph)
+      : GraphAlgorithm(graph), k_(0),
+        edge_threshold_tries_(0), edge_threshold_hits_(0) {}
 
     bool QuickZykov::run() {
+      // Reset all the derived class counters.  The base class resets its own counters.
+      reset_counters();
+
       // Make a dynamic copy of the graph so that the algorithm can replace it with subgraphs.
       GraphPtr pg(new Graph(graph()));
 
@@ -18,18 +23,18 @@ namespace cavcom {
     }
 
     void QuickZykov::outer_loop(GraphPtr *ppg) {
-      Graph &g = **ppg;
+      GraphPtr &pg = *ppg;
 
       // Check for a null graph (n = 0).
       add_step();
-      if (g.order() <= 0) {
+      if (pg->order() <= 0) {
         k_ = 0;
         return;
       }
 
       // Check for an empty graph (m = 0).
       add_step();
-      if (g.size() <= 0) {
+      if (pg->size() <= 0) {
         k_ = 1;
         return;
       }
@@ -46,12 +51,36 @@ namespace cavcom {
       }
 
       // Return the final graph.
-      chromatic_ = std::move(*ppg);
+      chromatic_ = std::move(pg);
     }
 
-    bool QuickZykov::is_k_colorable(GraphPtr *psg) {
+    bool QuickZykov::is_k_colorable(GraphPtr *ppg) {
       add_call();
+      GraphPtr &g = *ppg;
+
+      // Check for success.
+      add_step();
+      VertexNumber n = g->order();
+      if (n <= k_) return true;
+
+      // Calculate a maximum edge threshold.  Fail if the graph size exceeds this threshold.<
+      add_step();
+      ++edge_threshold_tries_;
+      EdgeNumber a = n*n*(k_-1)/(2*k_);
+
+      add_step();
+      if (g->size() > a) {
+        ++edge_threshold_hits_;
+        return false;
+      }
+
+      // The graph is not k-colorable.
       return false;
+    }
+
+    void QuickZykov::reset_counters() {
+      edge_threshold_tries_ = 0;
+      edge_threshold_hits_ = 0;
     }
 
   }  // namespace graph
