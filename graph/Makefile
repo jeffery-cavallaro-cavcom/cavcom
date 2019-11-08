@@ -2,7 +2,7 @@
 
 component := graph
 
-targets := libgraphcore libgraphutil
+targets := libgraphcore libgraphutil libgraphalgo
 
 include ../templates/Makefile.top.mk
 
