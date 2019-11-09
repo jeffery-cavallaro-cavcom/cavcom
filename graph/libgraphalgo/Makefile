@@ -2,13 +2,13 @@ includes := quick_zykov.h
 
 libgraphalgo_sources := quick_zykov.cc
 
-test_sources := 
+test_sources := quick_zykov_test.cc
 
 sources := $(libgraphalgo_sources) $(test_sources)
 
 libraries := libgraphalgo.a
 
-tests := 
+tests := quick_zykov_test
 
 include ../../templates/Makefile.all.mk
 
@@ -20,6 +20,6 @@ TESTLIBS += ../libgraphutil/libgraphutil.a ../libgraphcore/libgraphcore.a
 libgraphalgo.a: $(subst .cc,.o,$(libgraphalgo_sources))
 	$(make-library)
 
-#quick_zykov_test:	quick_zykov_test.o $(libraries) $(TESTLIBS)
+quick_zykov_test:	quick_zykov_test.o $(libraries) $(TESTLIBS)
 
 -include $(subst .cc,.d,$(sources))
