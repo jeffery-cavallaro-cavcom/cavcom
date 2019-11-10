@@ -57,7 +57,7 @@ TEST(sample_graph) {
   QuickZykov::GraphPtr pg(new SimpleGraph(VERTICES, EDGES));
   QuickZykov qz(*pg);
   UNITTEST_ASSERT_TRUE(qz.execute());
-  UNITTEST_ASSERT_EQUAL(qz.steps(), 49);
+  UNITTEST_ASSERT_EQUAL(qz.steps(), 52);
   UNITTEST_ASSERT_EQUAL(qz.calls(), 5);
   UNITTEST_ASSERT_EQUAL(qz.k(), 3);
 
@@ -78,4 +78,13 @@ TEST(sample_graph) {
   UNITTEST_ASSERT_EQUAL(v2.contracted().size(), 2);
   UNITTEST_ASSERT_EQUAL(v2.contracted()[0], 0);
   UNITTEST_ASSERT_EQUAL(v2.contracted()[1], 3);
+
+  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_tries(), 7);
+  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_hits(), 2);
+  UNITTEST_ASSERT_EQUAL(qz.small_degree_tries(), 5);
+  UNITTEST_ASSERT_EQUAL(qz.small_degree_hits(), 2);
+  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_tries(), 3);
+  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_hits(), 1);
+  UNITTEST_ASSERT_EQUAL(qz.common_neighbors_tries(), 2);
+  UNITTEST_ASSERT_EQUAL(qz.common_neighbors_hits(), 0);
 }

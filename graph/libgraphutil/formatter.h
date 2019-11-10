@@ -40,6 +40,9 @@ namespace cavcom {
 
       virtual ~Formatter() {}
 
+      // Returns the target output stream.
+      std::ostream *out(void) { return out_; }
+
       // Enables/disables vertex labels.  If labels are enabled but a label is blank then the vertex ID should be
       // used instead.  The default is disabled.
       bool vertex_labels(void) const { return vertex_labels_; }
