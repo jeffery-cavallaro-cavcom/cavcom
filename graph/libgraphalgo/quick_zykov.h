@@ -2,7 +2,9 @@
 #define CAVCOM_GRAPH_LIBGRAPHALGO_QUICK_ZYKOV_H_
 
 #include <memory>
+#include <ostream>
 
+#include "tikz_formatter.h"
 #include "graph_algorithm.h"
 
 namespace cavcom {
@@ -15,10 +17,14 @@ namespace cavcom {
      public:
       using GraphPtr = std::unique_ptr<SimpleGraph>;
 
-      QuickZykov(const SimpleGraph &g);
+      explicit QuickZykov(const SimpleGraph &g);
 
       // Returns the current k value.  If the algorithm is complete then this is the chromatic number.
       uint k() const { return k_; }
+
+      // Enables a trace to the specified output stream.  If a formatter is also specified then the initial graph
+      // and the graph after each mutation is also formatted.
+      void trace(std::ostream *out, TikzFormatter *formatter = nullptr);
 
       // The number of times that the edge threshold test was applied and the number of hits.
       ullong edge_threshold_tries() const { return edge_threshold_tries_; }
@@ -52,6 +58,9 @@ namespace cavcom {
       ullong neighborhood_subset_hits_;
       ullong common_neighbors_tries_;
       ullong common_neighbors_hits_;
+
+      std::ostream *out_;
+      TikzFormatter *formatter_;
 
       // Resets all the counters and runs the algorithm.
       virtual bool run();
@@ -108,10 +117,15 @@ namespace cavcom {
       // graph.  Also finds such a non-adjacent pair.  If one vertex's neighborhood is found to be a subset of
       // another then the former is removed and the method returns true.  Otherwise, the smallest intersection
       // cardinality and the pair of non-adjacent vertices are returned.
-      bool find_neighborhood_subset(GraphPtr *ppg, Degree *smallest, VertexNumber *v1, VertexNumber *v2);
+      bool find_neighborhood_subset(GraphPtr *ppg,
+                                    Degree *smallest, VertexNumber *v1, VertexNumber *v2,
+                                    Degree *smallest_nonadj, VertexNumber *v1_nonadj, VertexNumber *v2_nonadj);
 
       // Resets all the derived-class counters.
       void reset_counters();
+
+      // Identifies a vertex by number.  Either the label or vertex ID will be used.
+      void identify_vertex(const GraphPtr &pg, VertexNumber iv);
     };
 
   }  // namespace graph
