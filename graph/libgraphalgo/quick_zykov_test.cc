@@ -23,49 +23,33 @@ static const EdgeValuesList EDGES = {{0, 1}, {0, 2}, {0, 6},
                                      {5, 6}, {5, 7}};
                                      
 
-TEST(check_for_null) {
-  // A null graph.
-  QuickZykov::GraphPtr pg(new Graph);
-  QuickZykov qznull(*pg);
-  UNITTEST_ASSERT_EQUAL(qznull.steps(), 0);
-  UNITTEST_ASSERT_TRUE(qznull.check_for_null(pg));
-  UNITTEST_ASSERT_EQUAL(qznull.steps(), 1);
-
-  // An empty graph.
-  pg.reset(new Graph(5));
-  QuickZykov qzempty(*pg);
-  UNITTEST_ASSERT_EQUAL(qzempty.steps(), 0);
-  UNITTEST_ASSERT_FALSE(qzempty.check_for_null(pg));
-  UNITTEST_ASSERT_EQUAL(qzempty.steps(), 1);
-
-  // A full graph.
-  pg.reset(new Graph(VERTICES, EDGES));
-  QuickZykov qzfull(*pg);
-  UNITTEST_ASSERT_EQUAL(qzfull.steps(), 0);
-  UNITTEST_ASSERT_FALSE(qzfull.check_for_null(pg));
-  UNITTEST_ASSERT_EQUAL(qzfull.steps(), 1);
+TEST(null_graph) {
+  QuickZykov::GraphPtr pg(new SimpleGraph);
+  QuickZykov qz(*pg);
+  UNITTEST_ASSERT_TRUE(qz.execute());
+  UNITTEST_ASSERT_EQUAL(qz.steps(), 1);
+  UNITTEST_ASSERT_EQUAL(qz.calls(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.k(), 0);
+  UNITTEST_ASSERT_TRUE(qz.chromatic().null());
 }
 
-TEST(check_for_empty) {
-  // A null graph.
-  QuickZykov::GraphPtr pg(new Graph);
-  QuickZykov qznull(*pg);
-  UNITTEST_ASSERT_EQUAL(qznull.steps(), 0);
-  UNITTEST_ASSERT_TRUE(qznull.check_for_empty(pg));
-  UNITTEST_ASSERT_EQUAL(qznull.steps(), 1);
-
-  // An empty graph.
-  pg.reset(new Graph(5));
-  QuickZykov qzempty(*pg);
-  UNITTEST_ASSERT_EQUAL(qzempty.steps(), 0);
-  UNITTEST_ASSERT_TRUE(qzempty.check_for_empty(pg));
-  UNITTEST_ASSERT_EQUAL(qzempty.steps(), 1);
-
-  // A full graph.
-  pg.reset(new Graph(VERTICES, EDGES));
-  QuickZykov qzfull(*pg);
-  UNITTEST_ASSERT_EQUAL(qzfull.steps(), 0);
-  UNITTEST_ASSERT_FALSE(qzfull.check_for_empty(pg));
-  UNITTEST_ASSERT_EQUAL(qzfull.steps(), 1);
+TEST(empty_graph) {
+  QuickZykov::GraphPtr pg(new SimpleGraph(5));
+  QuickZykov qz(*pg);
+  UNITTEST_ASSERT_TRUE(qz.execute());
+  UNITTEST_ASSERT_EQUAL(qz.steps(), 2);
+  UNITTEST_ASSERT_EQUAL(qz.calls(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.k(), 1);
+  UNITTEST_ASSERT_TRUE(qz.chromatic().empty());
 }
 
+TEST(complete_graph) {
+  QuickZykov::GraphPtr pg(new SimpleGraph(5));
+  pg->make_complete();
+  QuickZykov qz(*pg);
+  UNITTEST_ASSERT_TRUE(qz.execute());
+  UNITTEST_ASSERT_EQUAL(qz.steps(), 16);
+  UNITTEST_ASSERT_EQUAL(qz.calls(), 4);
+  UNITTEST_ASSERT_EQUAL(qz.k(), pg->order());
+  UNITTEST_ASSERT_TRUE(qz.chromatic().complete());
+}

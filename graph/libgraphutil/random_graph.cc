@@ -6,7 +6,7 @@
 namespace cavcom {
   namespace graph {
 
-    RandomGraph::RandomGraph(VertexNumber order, double eprob) : Graph(order), eprob_(eprob) {
+    RandomGraph::RandomGraph(VertexNumber order, double eprob) : SimpleGraph(order), eprob_(eprob) {
       if (eprob_ < 0.0) eprob_ = 0.0;
       if (eprob_ > 1.0) eprob_ = 1.0;
 

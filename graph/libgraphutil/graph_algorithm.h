@@ -3,7 +3,7 @@
 
 #include <chrono>
 
-#include "graph.h"
+#include "simple_graph.h"
 
 namespace cavcom {
   namespace graph {
@@ -18,10 +18,10 @@ namespace cavcom {
       // Creates a new graph algorithm instance for an algorithm to be performed on the specified graph.  The
       // start and end time markers are reset to the epoch and all counters are ainitialized to 0.  The graph must
       // remain valid during the lifetime of the algorithm.
-      explicit GraphAlgorithm(const Graph &graph);
+      explicit GraphAlgorithm(const SimpleGraph &graph);
 
       // The original target graph.
-      const Graph &graph() const { return graph_; }
+      const SimpleGraph &graph() const { return graph_; }
 
       // Returns the algorithm start/stop time.  An unstarted algorithm has a start time of the epoch.  An
       // unfinished algorithm has an end time of the epoch.
@@ -59,7 +59,7 @@ namespace cavcom {
       virtual bool run() { return true; }
 
      private:
-      const Graph &graph_;
+      const SimpleGraph &graph_;
 
       Time start_;
       Time end_;

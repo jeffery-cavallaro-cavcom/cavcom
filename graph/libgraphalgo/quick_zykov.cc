@@ -5,7 +5,7 @@
 namespace cavcom {
   namespace graph {
 
-    QuickZykov::QuickZykov(const Graph &graph) : GraphAlgorithm(graph), k_(0) {
+    QuickZykov::QuickZykov(const SimpleGraph &graph) : GraphAlgorithm(graph), k_(0) {
       reset_counters();
     }
 
@@ -16,7 +16,7 @@ namespace cavcom {
       reset_counters();
 
       // Make a dynamic copy of the graph so that the algorithm can replace it with subgraphs.
-      GraphPtr pg(new Graph(graph()));
+      GraphPtr pg(new SimpleGraph(graph()));
 
       // Call the outer loop.  Note that the algorithm is always successful.
       outer_loop(&pg);
@@ -28,10 +28,20 @@ namespace cavcom {
       GraphPtr &pg = *ppg;
 
       // Null graphs (n=0) are by definition 0-colorable.
-      if (check_for_null(pg)) return;
+      add_step();
+      if (pg->null()) {
+        chromatic_ = std::move(pg);
+        k_ = 0;
+        return;
+      }
 
       // Empty graphs (m=0) are 1-colorable.
-      if (check_for_empty(pg)) return;
+      add_step();
+      if (pg->empty()) {
+        chromatic_ = std::move(pg);
+        k_ = 1;
+        return;
+      }
 
       // All other graphs are 2 or more colorable.
       add_step();
@@ -84,7 +94,7 @@ namespace cavcom {
         ++small_degree_tries_;
         if (!x.empty()) {
           ++small_degree_hits_;
-          pg.reset(new Graph(*pg, x));
+          pg.reset(new SimpleGraph(*pg, x));
           continue;
         }
 
@@ -113,7 +123,7 @@ namespace cavcom {
       // The preceding loop should terminate with v1 and v2 set to two non-adjacent vertices with the smallest
       // number of common neighbors.  Assume that they are the same color and contract them.
       add_step();
-      GraphPtr recursive(new Graph(*pg, v1, v2));
+      GraphPtr recursive(new SimpleGraph(*pg, v1, v2));
       if (is_k_colorable(&recursive)) {
         chromatic_ = std::move(recursive);
         return true;
@@ -121,7 +131,7 @@ namespace cavcom {
 
       // Using the same color doesn't work, so try different colors.
       add_step();
-      recursive.reset(new Graph(*pg));
+      recursive.reset(new SimpleGraph(*pg));
       recursive->join(v1, v2);
       if (is_k_colorable(&recursive)) {
         chromatic_ = std::move(recursive);
@@ -130,20 +140,6 @@ namespace cavcom {
 
       // The graph is not k-colorable.
       return false;
-    }
-
-    bool QuickZykov::check_for_null(const GraphPtr &pg) {
-      add_step();
-      if (!pg->null()) return false;
-      k_ = 0;
-      return true;
-    }
-
-    bool QuickZykov::check_for_empty(const GraphPtr &pg) {
-      add_step();
-      if (!pg->empty()) return false;
-      k_ = 1;
-      return true;
     }
 
     bool QuickZykov::find_neighborhood_subset(GraphPtr *ppg, Degree *b, VertexNumber *v1, VertexNumber *v2) {
@@ -178,7 +174,7 @@ namespace cavcom {
           }
           if (!x.empty()) {
             ++neighborhood_subset_hits_;
-            pg.reset(new Graph(*pg, x));
+            pg.reset(new SimpleGraph(*pg, x));
             return true;
           }
 

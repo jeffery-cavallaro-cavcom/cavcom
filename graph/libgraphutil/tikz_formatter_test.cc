@@ -17,7 +17,7 @@ static const TikzFormatter::ColorType C3 = "red";
 static const TikzFormatter::ColorValuesList COLORS = {{1, C1}, {2, C2}, {3, C3}};
 
 TEST(format_unlabeled_graph) {
-  Graph graph(VERTICES, EDGES);
+  SimpleGraph graph(VERTICES, EDGES);
   std::ostringstream out;
   TikzFormatter formatter(&out);
   UNITTEST_ASSERT_TRUE(formatter.format(graph));
@@ -35,7 +35,7 @@ TEST(format_unlabeled_graph) {
 }
 
 TEST(format_labeled_graph) {
-  Graph graph(VERTICES, EDGES);
+  SimpleGraph graph(VERTICES, EDGES);
   std::ostringstream out;
   TikzFormatter formatter(&out);
   formatter.vertex_labels(true);
@@ -54,7 +54,7 @@ TEST(format_labeled_graph) {
 }
 
 TEST(format_unlabeled_vertex_colors) {
-  Graph graph(VERTICES, EDGES);
+  SimpleGraph graph(VERTICES, EDGES);
   std::ostringstream out;
   TikzFormatter formatter(&out);
   formatter.add_colors(COLORS);
@@ -75,7 +75,7 @@ TEST(format_unlabeled_vertex_colors) {
 }
 
 TEST(format_labeled_vertex_colors) {
-  Graph graph(VERTICES, EDGES);
+  SimpleGraph graph(VERTICES, EDGES);
   std::ostringstream out;
   TikzFormatter formatter(&out);
   formatter.add_colors(COLORS);
@@ -96,7 +96,7 @@ TEST(format_labeled_vertex_colors) {
 }
 
 TEST(format_edges) {
-  Graph graph(VERTICES, EDGES);
+  SimpleGraph graph(VERTICES, EDGES);
   std::ostringstream out;
   TikzFormatter formatter(&out);
   formatter.add_colors(COLORS);

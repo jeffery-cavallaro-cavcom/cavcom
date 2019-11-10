@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "graph.h"
+#include "simple_graph.h"
 
 namespace cavcom {
   namespace graph {
@@ -66,7 +66,7 @@ namespace cavcom {
       // Formats the specified graph for presentation.  The formatter will call the start graph method, then the
       // format vertex method for each vertex, then the format edge method for each edge, and then the end graph
       // method to finish the format operation.  Returns true if the current output stream is in a good state.
-      bool format(const Graph &graph) {
+      bool format(const SimpleGraph &graph) {
         // Start a new format operation.
         if (!start_graph(graph)) return false;
 
@@ -131,14 +131,14 @@ namespace cavcom {
       // The following functions are called in the listed order to format a graph.  Only the vertex and edge
       // formatter are required.  Derived class functions should output the necessary information to the
       // protected out_ stream according to the settings of the various flags.
-      virtual bool start_graph(const Graph &graph) {return out_->good(); }
-      virtual bool start_vertices(const Graph &graph) { return out_->good(); }
+      virtual bool start_graph(const SimpleGraph &graph) {return out_->good(); }
+      virtual bool start_vertices(const SimpleGraph &graph) { return out_->good(); }
       virtual bool format_vertex(const Vertex &vertex) = 0;
-      virtual bool finish_vertices(const Graph &graph) { return out_->good(); }
-      virtual bool start_edges(const Graph &graph) { return out_->good(); }
+      virtual bool finish_vertices(const SimpleGraph &graph) { return out_->good(); }
+      virtual bool start_edges(const SimpleGraph &graph) { return out_->good(); }
       virtual bool format_edge(const Edge &edge) = 0;
-      virtual bool finish_edges(const Graph &graph) { return out_->good(); }
-      virtual bool finish_graph(const Graph &graph) { return out_->good(); }
+      virtual bool finish_edges(const SimpleGraph &graph) { return out_->good(); }
+      virtual bool finish_graph(const SimpleGraph &graph) { return out_->good(); }
 
      private:
       ColorMap colors_;

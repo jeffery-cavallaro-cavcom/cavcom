@@ -10,12 +10,12 @@ namespace cavcom {
 
     TikzFormatter::TikzFormatter(std::ostream *out) : Formatter<std::string>(out) {}
 
-    bool TikzFormatter::start_graph(const Graph &graph) {
+    bool TikzFormatter::start_graph(const SimpleGraph &graph) {
       *out_ << "\\begin{tikzpicture}" << std::endl;
       return out_->good();
     }
 
-    bool TikzFormatter::start_vertices(const Graph &graph) {
+    bool TikzFormatter::start_vertices(const SimpleGraph &graph) {
       *out_ << "\\begin{scope}[" << (vertex_labels() ? LABELED_STYLE : UNLABELED_STYLE) << "]" << std::endl;
       return out_->good();
     }
@@ -44,7 +44,7 @@ namespace cavcom {
       return out_->good();
     }
 
-    bool TikzFormatter::finish_vertices(const Graph &graph) {
+    bool TikzFormatter::finish_vertices(const SimpleGraph &graph) {
       *out_ << "\\end{scope}" << std::endl;
       return out_->good();
     }
@@ -71,7 +71,7 @@ namespace cavcom {
       return out_->good();
     }
 
-    bool TikzFormatter::finish_graph(const Graph &graph) {
+    bool TikzFormatter::finish_graph(const SimpleGraph &graph) {
       *out_ << "\\end{tikzpicture}" << std::endl;
       return out_->good();
     }

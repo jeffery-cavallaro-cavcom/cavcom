@@ -16,20 +16,20 @@ namespace cavcom {
 
      protected:
       // Starts a TikZ picture.
-      virtual bool start_graph(const Graph &graph);
+      virtual bool start_graph(const SimpleGraph &graph);
 
       // Starts a scope for either labeled or unlabeled vertices.
-      virtual bool start_vertices(const Graph &graph);
+      virtual bool start_vertices(const SimpleGraph &graph);
 
       virtual bool format_vertex(const Vertex &vertex);
 
       // Finishes the vertex scope.
-      virtual bool finish_vertices(const Graph &graph);
+      virtual bool finish_vertices(const SimpleGraph &graph);
 
       virtual bool format_edge(const Edge &edge);
 
       // Finishes a TikZ picture.
-      virtual bool finish_graph(const Graph &graph);
+      virtual bool finish_graph(const SimpleGraph &graph);
 
      private:
       // Styles for labeled and unlabeled vertices.

@@ -3,7 +3,7 @@
 namespace cavcom {
   namespace graph {
 
-    GraphAlgorithm::GraphAlgorithm(const Graph &graph) : graph_(graph), steps_(0), calls_(0) {}
+    GraphAlgorithm::GraphAlgorithm(const SimpleGraph &graph) : graph_(graph), steps_(0), calls_(0) {}
 
     GraphAlgorithm::Duration GraphAlgorithm::duration() const {
       Time tf = (completed() ? Clock::now() : end_);

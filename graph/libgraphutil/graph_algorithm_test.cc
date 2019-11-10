@@ -12,7 +12,7 @@ using namespace cavcom::graph;
 // A dummy algorithm.
 class DummyAlgorithm : public GraphAlgorithm {
  public:
-  DummyAlgorithm(const Graph &graph, bool status = true) : GraphAlgorithm(graph), status_(status) {}
+  DummyAlgorithm(const SimpleGraph &graph, bool status = true) : GraphAlgorithm(graph), status_(status) {}
 
  private:
   bool status_;
@@ -36,7 +36,7 @@ static const DummyAlgorithm::Time epoch;
 static bool is_epoch(const DummyAlgorithm::Time &t) { return (t == epoch); }
 
 TEST(successful_run) {
-  Graph graph(5);
+  SimpleGraph graph(5);
   DummyAlgorithm algo(graph);
 
   // Check the initialized state.

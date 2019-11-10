@@ -30,7 +30,7 @@ namespace cavcom {
       // Creates an empty graph with the specified number of unlabeled vertices (or the null graph if n = 0).
       explicit Graph(VertexNumber n = 0, bool directed = false, bool multiple = false, bool loops = false);
 
-      // Creates a graph with the specified vertices and edges.  The vertex number is the edge values correspond to
+      // Creates a graph with the specified vertices and edges.  The vertex numbers in the edge values correspond to
       // positions in the vertex list.
       Graph(const VertexValuesList &vertices, const EdgeValuesList &edges,
             bool directed = false, bool multiple = false, bool loops = false);
@@ -100,22 +100,17 @@ namespace cavcom {
       // Adds all of the specified edges.
       void join(const EdgeValuesList &values);
 
-      // Calculates the minimum and maximum degrees.  A synonym is provided for undirected graphs.  The results are
-      // not cached, so these calls should be considered expensive.
+      // Calculates the minimum and maximum degrees.  The results are not cached, so these calls should be
+      // considered expensive.
       Degree minindeg(void) const { return connections_.minindeg(); }
       Degree maxindeg(void) const { return connections_.maxindeg(); }
 
       Degree minoutdeg(void) const { return connections_.minoutdeg(); }
       Degree maxoutdeg(void) const { return connections_.maxoutdeg(); }
 
-      Degree mindeg(void) const { return minoutdeg(); }
-      Degree maxdeg(void) const { return maxoutdeg(); }
-
-      // Returns the degrees for a single vertex.  A synonym is provided for undirected graphs.  An invalid vertex
-      // number throws an out-of-range error.
+      // Returns the degrees for a single vertex.  An invalid vertex number throws an out-of-range error.
       Degree indeg(VertexNumber vertex) const { return connections_.indeg(vertex); }
       Degree outdeg(VertexNumber vertex) const { return connections_.outdeg(vertex); }
-      Degree degree(VertexNumber vertex) const { return outdeg(vertex); }
 
      private:
       // The vertices and edges.

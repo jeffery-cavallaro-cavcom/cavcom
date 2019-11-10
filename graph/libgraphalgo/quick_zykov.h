@@ -13,9 +13,9 @@ namespace cavcom {
     // current state of the graph is k-colorable.  The first such k found is the chromatic number.
     class QuickZykov : public GraphAlgorithm {
      public:
-      using GraphPtr = std::unique_ptr<Graph>;
+      using GraphPtr = std::unique_ptr<SimpleGraph>;
 
-      QuickZykov(const Graph &g);
+      QuickZykov(const SimpleGraph &g);
 
       // Returns the current k value.  If the algorithm is complete then this is the chromatic number.
       uint k() const { return k_; }
@@ -38,13 +38,7 @@ namespace cavcom {
 
       // Returns the final complete graph that represents a chromatic coloring of the original G, or null if the
       // algorithm has not yet completed.
-      const Graph &chromatic() const { return *chromatic_; }
-
-      // Called by the outer loop to check for a null graph.  Null graphs are by definition 0-colorable.
-      bool check_for_null(const GraphPtr &pg);
-
-      // Called by the outer loop to check for an empty graph.  Empty graphs are 1-colorable.
-      bool check_for_empty(const GraphPtr &pg);
+      const SimpleGraph &chromatic() const { return *chromatic_; }
 
      private:
       uint k_;

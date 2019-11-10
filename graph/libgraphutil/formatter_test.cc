@@ -15,12 +15,12 @@ class DummyFormatter : public Formatter<> {
  public:
   DummyFormatter(bool fail = false) : Formatter(&formatted_), fail_(fail) {}
 
-  virtual bool start_graph(const Graph &graph) {
+  virtual bool start_graph(const SimpleGraph &graph) {
     *out_ << "start graph" << std::endl;
     return out_->good();
   }
 
-  virtual bool start_vertices(const Graph &graph) {
+  virtual bool start_vertices(const SimpleGraph &graph) {
     *out_ << "start vertices" << std::endl;
     return out_->good();
   }
@@ -30,12 +30,12 @@ class DummyFormatter : public Formatter<> {
     return out_->good();
   }
 
-  virtual bool finish_vertices(const Graph &graph) {
+  virtual bool finish_vertices(const SimpleGraph &graph) {
     *out_ << "finish vertices" << std::endl;
     return out_->good();
   }
 
-  virtual bool start_edges(const Graph &graph) {
+  virtual bool start_edges(const SimpleGraph &graph) {
     if (fail_) return false;
     *out_ << "start edges" << std::endl;
     return out_->good();
@@ -46,12 +46,12 @@ class DummyFormatter : public Formatter<> {
     return out_->good();
   }
 
-  virtual bool finish_edges(const Graph &graph) {
+  virtual bool finish_edges(const SimpleGraph &graph) {
     *out_ << "finish edges" << std::endl;
     return out_->good();
   }
 
-  virtual bool finish_graph(const Graph &graph) {
+  virtual bool finish_graph(const SimpleGraph &graph) {
     *out_ << "finish graph" << std::endl;
     return out_->good();
   }
@@ -148,7 +148,7 @@ static const EdgeValuesList EDGES = {{0, 1, "e1"}};
 
 TEST(check_call_sequence) {
   // Use a graph with two vertices and one edge.
-  Graph graph(VERTICES, EDGES);
+  SimpleGraph graph(VERTICES, EDGES);
 
   // Run the formatter.
   DummyFormatter formatter;
@@ -168,7 +168,7 @@ TEST(check_call_sequence) {
 }
 
 TEST(check_failed_format) {
-  Graph graph(VERTICES, EDGES);
+  SimpleGraph graph(VERTICES, EDGES);
   DummyFormatter formatter(true);
   UNITTEST_ASSERT_FALSE(formatter.format(graph));
   UNITTEST_ASSERT_EQUAL(formatter.formatted(),
