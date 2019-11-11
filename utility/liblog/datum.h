@@ -11,16 +11,16 @@ namespace cavcom {
      public:
       using value_type = T;
 
-      // Creates a new piece of named data.
-      explicit Datum(const std::string &name, const value_type &value = value_type())
-        : name_(name), value_(value) {}
+      // Creates a new piece of named, value-initialized data.
+      explicit Datum(const std::string &name) : name_(name), value_() {}
 
       // Returns the name associated with the datum.
       const std::string &name(void) { return name_; }
 
-      // Gets/sets the data value.
-      const value_type &value() const { return value_; }
-      void value(const value_type &value) { value_ = value; }
+      // Gets/sets the data value.  Derived classes are allowed to override these when the stored form differs from
+      // the external form.
+      virtual const value_type &value(void) const { return value_; }
+      virtual void value(const value_type &value) { value_ = value; }
 
       // Resets the value back to an initialized state.
       void reset(void) { value_ = value_type(); }

@@ -1,7 +1,6 @@
 // Creates and writes to an output file.
 
 #include <filesystem>
-#include <string>
 
 #include <libunittest/all.hpp>
 
