@@ -9,19 +9,25 @@ namespace cavcom {
     // A simple piece of data.
     template <typename T> class Datum {
      public:
+      using value_type = T;
+
       // Creates a new piece of named data.
-      explicit Datum(const std::string &name, const T &value = T()) : name_(name), value_(value) {}
+      explicit Datum(const std::string &name, const value_type &value = value_type())
+        : name_(name), value_(value) {}
 
       // Returns the name associated with the datum.
       const std::string &name(void) { return name_; }
 
       // Gets/sets the data value.
-      const T &value() const { return value_; }
-      void value(const T &value) { value_ = value; }
+      const value_type &value() const { return value_; }
+      void value(const value_type &value) { value_ = value; }
+
+      // Resets the value back to an initialized state.
+      void reset(void) { value_ = value_type(); }
 
      private:
       const std::string name_;
-      T value_;
+      value_type value_;
     };
 
   }  // namespace utility

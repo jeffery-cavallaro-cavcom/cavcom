@@ -28,3 +28,12 @@ TEST(create_datum_with_value) {
   UNITTEST_ASSERT_EQUAL(datum.name(), NAME2);
   UNITTEST_ASSERT_EQUAL(datum.value(), VALUE2);
 }
+
+TEST(reset_datum_value) {
+  Datum<uint> datum(NAME1, VALUE1);
+  UNITTEST_ASSERT_EQUAL(datum.name(), NAME1);
+  UNITTEST_ASSERT_EQUAL(datum.value(), VALUE1);
+
+  datum.reset();
+  UNITTEST_ASSERT_EQUAL(datum.value(), 0);
+}
