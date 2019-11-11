@@ -1,14 +1,14 @@
-includes := outfile.h
+includes := datum.h outfile.h
 
 liblog_sources := outfile.cc
 
-test_sources :=	outfile_test.cc
+test_sources :=	datum_test.cc outfile_test.cc
 
 sources := $(liblog_sources) $(test_sources)
 
 libraries := liblog.a
 
-tests := outfile_test
+tests := datum_test outfile_test
 
 include ../../templates/Makefile.all.mk
 
@@ -22,6 +22,7 @@ LDLIBS += -lstdc++fs
 liblog.a: $(subst .cc,.o,$(liblog_sources))
 	$(make-library)
 
+datum_test:	datum_test.o $(libraries) $(TESTLIBS)
 outfile_test:	outfile_test.o $(libraries) $(TESTLIBS)
 
 -include $(subst .cc,.d,$(sources))
