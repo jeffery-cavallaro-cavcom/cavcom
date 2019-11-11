@@ -29,40 +29,44 @@ namespace cavcom {
       bool tracing(void) { return(formatter_ != nullptr); }
 
       // The number of times that the edge threshold test was applied and the number of hits.
-      ullong edge_threshold_tries() const { return edge_threshold_tries_; }
-      ullong edge_threshold_hits() const { return edge_threshold_hits_; }
+      ulong edge_threshold_tries() const { return edge_threshold_tries_; }
+      ulong edge_threshold_hits() const { return edge_threshold_hits_; }
 
       // The number of times that removal of vertices with degree < h has been attempted and the number of hits.
-      ullong small_degree_tries() const { return small_degree_tries_; }
-      ullong small_degree_hits() const { return small_degree_hits_; }
+      ulong small_degree_tries() const { return small_degree_tries_; }
+      ulong small_degree_hits() const { return small_degree_hits_; }
 
       // The number of times that the neighborhood subset test was applied and the number of hits.
-      ullong neighborhood_subset_tries() const { return neighborhood_subset_tries_; }
-      ullong neighborhood_subset_hits() const { return neighborhood_subset_hits_; }
+      ulong neighborhood_subset_tries() const { return neighborhood_subset_tries_; }
+      ulong neighborhood_subset_hits() const { return neighborhood_subset_hits_; }
 
       // The number of times that the common neighbor upper bound test was applied and the number of hits.
-      ullong common_neighbors_tries() const { return common_neighbors_tries_; }
-      ullong common_neighbors_hits() const { return common_neighbors_hits_; }
+      ulong common_neighbors_tries() const { return common_neighbors_tries_; }
+      ulong common_neighbors_hits() const { return common_neighbors_hits_; }
 
       // Returns the final complete graph that represents a chromatic coloring of the original G, or null if the
       // algorithm has not yet completed.
       const SimpleGraph &chromatic() const { return *chromatic_; }
 
+      // Returns the maximum call depth.
+      ulong maxdepth() const { return maxdepth_; }
+
      private:
       uint k_;
       GraphPtr chromatic_;
 
-      ullong edge_threshold_tries_;
-      ullong edge_threshold_hits_;
-      ullong small_degree_tries_;
-      ullong small_degree_hits_;
-      ullong neighborhood_subset_tries_;
-      ullong neighborhood_subset_hits_;
-      ullong common_neighbors_tries_;
-      ullong common_neighbors_hits_;
+      ulong edge_threshold_tries_;
+      ulong edge_threshold_hits_;
+      ulong small_degree_tries_;
+      ulong small_degree_hits_;
+      ulong neighborhood_subset_tries_;
+      ulong neighborhood_subset_hits_;
+      ulong common_neighbors_tries_;
+      ulong common_neighbors_hits_;
 
       TikzFormatter *formatter_;
-      uint depth_;
+      ulong depth_;
+      ulong maxdepth_;
 
       // Resets all the counters and runs the algorithm.
       virtual bool run();

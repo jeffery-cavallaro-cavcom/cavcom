@@ -6,7 +6,7 @@ namespace cavcom {
   namespace graph {
 
     QuickZykov::QuickZykov(const SimpleGraph &graph)
-      : GraphAlgorithm(graph), k_(0), formatter_(nullptr), depth_(0) {
+      : GraphAlgorithm(graph), k_(0), formatter_(nullptr), depth_(0), maxdepth_(0) {
       reset_counters();
     }
 
@@ -16,6 +16,7 @@ namespace cavcom {
       chromatic_.reset(nullptr);
       reset_counters();
       depth_ = 0;
+      maxdepth_ = 0;
 
       // Make a dynamic copy of the graph so that the algorithm can replace it with subgraphs.
       GraphPtr pg(new SimpleGraph(graph()));
@@ -412,6 +413,7 @@ namespace cavcom {
       GraphPtr recursive(new SimpleGraph(*pg, v1, v2));
       if (tracing()) formatter_->format(*recursive);
       ++depth_;
+      if (depth_ > maxdepth_) maxdepth_ = depth_;
       bool success = is_k_colorable(&recursive);
       --depth_;
       if (success) pg = std::move(recursive);
@@ -432,6 +434,7 @@ namespace cavcom {
       recursive->join(v1, v2);
       if (tracing()) formatter_->format(*recursive);
       ++depth_;
+      if (depth_ > maxdepth_) maxdepth_ = depth_;
       bool success = is_k_colorable(&recursive);
       --depth_;
       if (success) pg = std::move(recursive);
