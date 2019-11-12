@@ -4,7 +4,7 @@
 
 #include <libunittest/all.hpp>
 
-#include "outfile.h"
+#include "out_file.h"
 
 using namespace cavcom::utility;
 
@@ -17,7 +17,7 @@ static std::string make_path() {
   return path;
 }
 
-TEST(create_outfile) {
+TEST(create_out_file) {
   OutFile out(make_path());
   UNITTEST_ASSERT_FALSE(out.is_open());
   UNITTEST_ASSERT_TRUE(out.open(true));
@@ -28,7 +28,7 @@ TEST(create_outfile) {
   std::filesystem::remove(out.name());
 }
 
-TEST(write_outfile) {
+TEST(write_out_file) {
   OutFile out(make_path());
   UNITTEST_ASSERT_TRUE(out.open(true));
   out << DATA << std::endl;

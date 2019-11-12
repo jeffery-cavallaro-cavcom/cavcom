@@ -1,5 +1,5 @@
-#ifndef CAVCOM_UTILITY_LIBLOG_OUTFILE_H_
-#define CAVCOM_UTILITY_LIBLOG_OUTFILE_H_
+#ifndef CAVCOM_UTILITY_LIBLOG_OUT_FILE_H_
+#define CAVCOM_UTILITY_LIBLOG_OUT_FILE_H_
 
 #include <fstream>
 #include <string>
@@ -42,10 +42,9 @@ namespace cavcom {
      private:
       const std::string name_;
       std::ofstream out_;
-      bool stay_open_;
     };
 
   }  // namespace utility
 }  // namespace cavcom
 
-#endif  // CAVCOM_UTILITY_LIBLOG_OUTFILE_H_
+#endif  // CAVCOM_UTILITY_LIBLOG_OUT_FILE_H_
