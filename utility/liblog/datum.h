@@ -15,7 +15,7 @@ namespace cavcom {
       explicit Datum(const std::string &name) : name_(name), value_() {}
 
       // Returns the name associated with the datum.
-      const std::string &name(void) { return name_; }
+      const std::string &name(void) const { return name_; }
 
       // Gets/sets the data value.  Derived classes are allowed to override these when the stored form differs from
       // the external form.

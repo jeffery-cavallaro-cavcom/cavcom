@@ -3,41 +3,10 @@
 
 #include <vector>
 
-#include "out_file.h"
+#include "csv_field.h"
 
 namespace cavcom {
   namespace utility {
-    // The base class for a single field in a CSV file.  Derived classes add the datum semantics.
-    class CSVField {
-     public:
-      virtual void add_header(OutFile *out) const = 0;
-      virtual void add_data(OutFile *out) const = 0;
-      virtual void reset(void) = 0;
-    };
-
-    // A template to add the datum semantics to the base CSV field.  The backing datum must remain valid for the
-    // lifetime of CSV field.
-    template <typename T>
-    class CSVDatum : public CSVField {
-     public:
-      CSVDatum(T *datum) : datum_(datum) {}
-
-      CSVDatum(const CSVDatum &from) : datum_(from.datum_) {}
-
-      virtual void add_header(OutFile *out) const {
-        *out << datum_->name();
-      }
-
-      virtual void add_data(OutFile *out) const {
-        *out << datum_->value();
-      }
-
-      virtual void reset(void) { datum_->reset(); }
-
-     private:
-      T *datum_;
-    };
-
     // Implements a comma-separated values (CSV) file.  A CSV file is backed by a collection of CSV fields, each of
     // which is backed by a datum.
     class CSVFile : public OutFile {

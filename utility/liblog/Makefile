@@ -1,4 +1,4 @@
-includes := datum.h sum.h percent.h hit_counter.h sample.h out_file.h csv_file.h
+includes := datum.h sum.h percent.h hit_counter.h sample.h out_file.h csv_field.h csv_file.h
 
 liblog_sources := hit_counter.cc out_file.cc csv_file.cc
 
