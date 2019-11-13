@@ -90,6 +90,8 @@ int main(int argc, char *argv[]) {
     summary_file.close();
 
     for (uint ipct = P_START; ipct <= P_END; ipct += P_INCR) {
+      summary_file.reset_data();
+
       Statistics raw_data;
       CSVFile raw_file(make_raw_filename(n, ipct));
       raw_data.add_fields(&raw_file);
@@ -101,11 +103,15 @@ int main(int argc, char *argv[]) {
         raw_file.reset_data();
         RandomGraph rg(n, ipct/100.0);
         QuickZykov qz(rg);
-        //        qz.execute();
+        qz.execute();
         raw_data.gather_stats(n, ipct, qz);
+        summary_data.gather_stats(n, ipct, qz);
         raw_file.write_data();
         raw_file.close();
       }
+
+      summary_file.write_data();
+      summary_file.close();
     }
   }
 
