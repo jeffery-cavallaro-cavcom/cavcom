@@ -114,11 +114,4 @@ int main(int argc, char *argv[]) {
       summary_file.close();
     }
   }
-
-#if 0
-    if ((itrial > 0) && ((itrial + 1) % 10) == 0) {
-      std::cout << "Completed: " << itrial + 1 << " in " << t.sum() << std::endl;
-    }
-  }
-#endif
 }
