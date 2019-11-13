@@ -6,6 +6,8 @@
 
 namespace cavcom {
   namespace utility {
+    // Forward reference.
+    template <typename D> class CSVSampleFields;
 
     // Monitors the total, count, mean, min, and max of a sampled value.
     template <typename T> class Sample {
@@ -57,6 +59,8 @@ namespace cavcom {
       Datum<double> mean_;
       Datum<value_type> min_;
       Datum<value_type> max_;
+
+      friend class CSVSampleFields<T>;
     };
 
   }  // namespace utility

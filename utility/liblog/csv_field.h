@@ -16,7 +16,7 @@ namespace cavcom {
       virtual void reset_value(void) = 0;
     };
 
-    // A template to bind the datum semantics to the base CSV field.
+    // A template to bind the datum semantics to the base CSV field by composition.
     template <typename T> class CSVDatum : public CSVField {
      public:
       CSVDatum(const std::string &name) : datum_(name) {}
@@ -35,6 +35,27 @@ namespace cavcom {
 
      private:
       T datum_;
+    };
+
+    // A template to bind the datum semantics to the base CSV field by pointer.
+    template <typename T> class CSVDatumByPtr : public CSVField {
+     public:
+      CSVDatumByPtr(T *datum) : datum_(datum) {}
+
+      T &datum(void) { return *datum_; }
+
+      virtual void add_header(OutFile *out) const {
+        *out << datum_->name();
+      }
+
+      virtual void add_data(OutFile *out) const {
+        *out << datum_->value();
+      }
+
+      virtual void reset_value(void) { datum_->reset(); }
+
+     private:
+      T *datum_;
     };
 
     // Specializations for the common datum types.
@@ -61,4 +82,4 @@ namespace cavcom {
   }  // namespace utility
 }  // namespace cavcom
 
-#endif  // CAVCOM_UTILITY_LIBLOG_CSV_FILE_H_
+#endif  // CAVCOM_UTILITY_LIBLOG_CSV_FIELD_H_

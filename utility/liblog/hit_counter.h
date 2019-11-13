@@ -29,6 +29,8 @@ namespace cavcom {
       Counter tries_;
       Counter hits_;
       Percent percent_;
+
+      friend class CSVHitCounterFields;
     };
 
   }  // namespace utility
