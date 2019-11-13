@@ -26,6 +26,9 @@ namespace cavcom {
       // Writes the current data values to the file.
       void write_data(void);
 
+      // Resets the current data values.
+      void reset_data(void);
+
      private:
       using CSVFields = std::vector<CSVField *>;
       CSVFields fields_;

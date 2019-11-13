@@ -1,229 +1,111 @@
 // Executes the quick Zykov algorithm on a sequence of random graphs for a given order and edge probability.
 
-#include <cmath>
-#include <string>
-#include <iostream>
-#include <fstream>
 #include <sstream>
 
+#include "csv_sample_fields.h"
+#include "csv_hit_counter_fields.h"
+#include "csv_file.h"
 #include "random_graph.h"
 #include "quick_zykov.h"
 
+using namespace cavcom::utility;
 using namespace cavcom::graph;
-
-template <typename T>
-class Sample {
- public:
-  explicit Sample(const std::string &name) : name_(name), count_(0), min_(0), max_(0), sum_(0), sum2_(0) {}
-
-  const std::string &name(void) const { return name_; }
-  T sum() const { return sum_; }
-
-  void add(T value) {
-    sum_ += value;
-    sum2_ += (value*value);
-
-    if (count_ <= 0) {
-      min_ = value;
-      max_ = value;
-    } else {
-      if (value < min_) min_ = value;
-      if (value > max_) max_ = value;
-    }
-
-    ++count_;
-  }
-
-  void header(std::ostream *out) {
-    *out << name_ << "_mean," << name_ << "_stddev," << name_ << "_min," << name_ << "_max";
-  }
-
-  void data(std::ostream *out) {
-    double sample_mean = mean();
-    double sample_stddev = stddev(sample_mean);
-    *out << sample_mean << "," << sample_stddev << "," << min_ << "," << max_;
-  }
-
- private:
-  const std::string name_;
-  ulong count_;
-  T min_;
-  T max_;
-  T sum_;
-  T sum2_;
-
-  double mean(void) const { return sum_/count_; }
-
-  double stddev(double mean) const {
-    return sqrt((sum2_ - count_*mean*mean)/(count_ - 1.0));
-  }
-};
-
-class HitCounter {
- public:
-  HitCounter(const std::string &name) : name_(name), tries_(0), hits_(0) {}
-
-  const std::string &name(void) const { return name_; }
-  ulong tries(void) const { return tries_; }
-  ulong hits(void) const { return hits_; }
-
-  void add(ulong tries, ulong hits) {
-    tries_ += tries;
-    hits_ += hits;
-  }
-
-  void header(std::ostream *out) {
-    *out << name_ << "_tries," << name_ << "_hits," << name_ << "_percent";
-  }
-
-  void data(std::ostream *out) {
-    *out << tries_ << "," << hits_ << "," << percent();
-  }
-
- private:
-  const std::string name_;
-  ulong tries_;
-  ulong hits_;
-
-  double percent(void) {
-    if (tries_ == 0) return 0.0;
-    double p = static_cast<double>(hits_)/tries_;
-    ullong ip = 10000.0*p;
-    return ip/100.0;
-  }
-};
 
 class Statistics {
  public:
-  Statistics(void) : time("time"), steps("steps"), calls("calls"), depth("depth"),
-                     edge_threshold("edge_threshold"), small_degree("small_degree"),
-                     neighborhood_subset("neighborhood_subset"), common_neighbors("common_neighbors") {}
-  Sample<double> time;
-  Sample<ullong> steps;
-  Sample<ullong> calls;
-  Sample<ullong> depth;
-  HitCounter edge_threshold;
-  HitCounter small_degree;
-  HitCounter neighborhood_subset;
-  HitCounter common_neighbors;
+  Statistics(void) : order("n"), eprob("p"),
+                     time("time"), steps("steps"), calls("calls"), depth("depth"),
+                     edge_threshold("edge_threshold"),
+                     small_degree("small_degree"),
+                     neighborhood_subset("neighborhood_subset"),
+                     common_neighbors("common_neighbors") {}
+  CSVDatumField<VertexNumber> order;
+  CSVDatumField<uint> eprob;
+  CSVSampleFields<double> time;
+  CSVSampleFields<ullong> steps;
+  CSVSampleFields<ullong> calls;
+  CSVSampleFields<ullong> depth;
+  CSVHitCounterFields edge_threshold;
+  CSVHitCounterFields small_degree;
+  CSVHitCounterFields neighborhood_subset;
+  CSVHitCounterFields common_neighbors;
 
-  void raw_header(std::ostream *out) {
-    *out << "nodes,eprob,trial,"
-         << time.name() << ","
-         << steps.name() << ","
-         << calls.name() << ","
-         << depth.name() << ",";
-    edge_threshold.header(out);
-    *out << ",";
-    small_degree.header(out);
-    *out << ",";
-    neighborhood_subset.header(out);
-    *out << ",";
-    common_neighbors.header(out);
-    *out << std::endl;
+  void add_fields(CSVFile *csv) {
+    csv->add_field(&order);
+    csv->add_field(&eprob);
+    time.add_fields(csv);
+    steps.add_fields(csv);
+    calls.add_fields(csv);
+    depth.add_fields(csv);
+    edge_threshold.add_fields(csv);
+    small_degree.add_fields(csv);
+    neighborhood_subset.add_fields(csv);
+    common_neighbors.add_fields(csv);
   }
 
-  void raw_data(VertexNumber nodes, uint eprob, uint trial, std::ostream *out) {
-    *out << nodes << "," << eprob << "," << trial << ","
-         << time.sum() << ","
-         << steps.sum() << ","
-         << calls.sum() << ","
-         << depth.sum() << ",";
-    edge_threshold.data(out);
-    *out << ",";
-    small_degree.data(out);
-    *out << ",";
-    neighborhood_subset.data(out);
-    *out << ",";
-    common_neighbors.data(out);
-    *out << std::endl;
-  }
-
-  void summary_header(std::ostream *out) {
-    *out << "nodes,eprob,";
-    time.header(out);
-    *out << ",";
-    steps.header(out);
-    *out << ",";
-    calls.header(out);
-    *out << ",";
-    depth.header(out);
-    *out << ",";
-    edge_threshold.header(out);
-    *out << ",";
-    small_degree.header(out);
-    *out << ",";
-    neighborhood_subset.header(out);
-    *out << ",";
-    common_neighbors.header(out);
-    *out << std::endl;
-  }
-
-  void gather_stats(const QuickZykov &qz) {
+  void gather_stats(VertexNumber n, uint p, const QuickZykov &qz) {
+    order.datum().value(n);
+    eprob.datum().value(p);
     std::chrono::duration<double> dt = qz.duration();
-    time.add(dt.count());
-    steps.add(qz.steps());
-    calls.add(qz.calls());
-    depth.add(qz.maxdepth());
-    edge_threshold.add(qz.edge_threshold_tries(), qz.edge_threshold_hits());
-    small_degree.add(qz.small_degree_tries(), qz.small_degree_hits());
-    neighborhood_subset.add(qz.neighborhood_subset_tries(), qz.neighborhood_subset_hits());
-    common_neighbors.add(qz.common_neighbors_tries(), qz.common_neighbors_hits());
-  }
-
-  void add_stats(const Statistics &from) {
-    time.add(from.time.sum());
-    steps.add(from.steps.sum());
-    calls.add(from.calls.sum());
-    depth.add(from.depth.sum());
-    edge_threshold.add(from.edge_threshold.tries(), from.edge_threshold.hits());
-    small_degree.add(from.small_degree.tries(), from.small_degree.hits());
-    neighborhood_subset.add(from.neighborhood_subset.tries(), from.neighborhood_subset.hits());
-    common_neighbors.add(from.common_neighbors.tries(), from.common_neighbors.hits());
+    time.add_data(dt.count());
+    steps.add_data(qz.steps());
+    calls.add_data(qz.calls());
+    depth.add_data(qz.maxdepth());
+    edge_threshold.add_data(qz.edge_threshold_tries(), qz.edge_threshold_hits());
+    small_degree.add_data(qz.small_degree_tries(), qz.small_degree_hits());
+    neighborhood_subset.add_data(qz.neighborhood_subset_tries(), qz.neighborhood_subset_hits());
+    common_neighbors.add_data(qz.common_neighbors_tries(), qz.common_neighbors_hits());
   }
 };
 
+static std::string make_summary_filename(VertexNumber n) {
+  std::ostringstream name;
+  name << "data/summary_" << n << ".dat";
+  return name.str();
+}
+
+static std::string make_raw_filename(VertexNumber n, uint ipct) {
+  std::ostringstream name;
+  name << "data/raw_" << n << "_" << ipct << ".dat";
+  return name.str();
+}
+
 static constexpr uint TRIALS = 1000;
 
-static void make_summary_file(void) {
-  Statistics headers;
-  std::ostringstream fn;
-  fn << "data/summary.dat";
-  std::ofstream fd(fn.str(), std::ofstream::out|std::ofstream::trunc);
-  header.summary_header(&fd);
-  fd.close();
-}
+static constexpr VertexNumber N_START = 5;
+static constexpr VertexNumber N_END = 20;
+static constexpr VertexNumber N_INCR = 1;
 
-static void make_raw_file(VertexNumber n, uint ipct, const Statistics &data) {
-  std::ostringstream fn;
-  fn << "data/raw_" << n << "_" << ipct << ".dat";
-  std::ofstream fd(fn.str(), std::ofstream::out|std::ofstream::trunc);
-  data.raw_header(&fd);
-  fd.close();
-}
+static constexpr uint P_START = 10;
+static constexpr uint P_END = 90;
+static constexpr uint P_INCR = 10;
 
 int main(int argc, char *argv[]) {
-  make_summary_file();
+  for (VertexNumber n = N_START; n <= N_END; n += N_INCR) {
+    Statistics summary_data;
+    CSVFile summary_file(make_summary_filename(n));
+    summary_data.add_fields(&summary_file);
+    summary_file.open(true);
+    summary_file.write_header();
+    summary_file.close();
 
-  for (VertexNumber n = 5; n <= 20; ++n) {
-    for (uint ipct = 10; ipct <= 90; ipct += 10) {
-      Statistics data;
+    for (uint ipct = P_START; ipct <= P_END; ipct += P_INCR) {
+      Statistics raw_data;
+      CSVFile raw_file(make_raw_filename(n, ipct));
+      raw_data.add_fields(&raw_file);
+      raw_file.open(true);
+      raw_file.write_header();
+      raw_file.close();
 
-      
-      
       for (uint itrial = 0; itrial < TRIALS; ++itrial) {
+        raw_file.reset_data();
         RandomGraph rg(n, ipct/100.0);
         QuickZykov qz(rg);
         //        qz.execute();
-        Statistics current;
-        current.gather_stats(qz);
-        data.add_stats(current);
-        current.raw_data(n, ipct, itrial, &fdc);
+        raw_data.gather_stats(n, ipct, qz);
+        raw_file.write_data();
+        raw_file.close();
       }
-      fdc.close();
-      fn.str(std::string());
-      data.summary_header(&fds);
-      fds.close();
     }
   }
 

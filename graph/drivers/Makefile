@@ -14,10 +14,21 @@ tests :=
 
 include ../../templates/Makefile.all.mk
 
-CPPFLAGS += -I../libgraphalgo -I../libgraphutil -I../libgraphcore -I../../utility/libutil
-CXXFLAGS += -I../libgraphalgo -I../libgraphutil -I../libgraphcore -I../../utility/libutil
+CPPFLAGS +=	--std=c++17 \
+		-I../libgraphalgo \
+		-I../libgraphutil \
+		-I../libgraphcore \
+		-I../../utility/liblog \
+		-I../../utility/libutil
 
-LIBS += ../libgraphalgo/libgraphalgo.a ../libgraphutil/libgraphutil.a ../libgraphcore/libgraphcore.a
+CXXFLAGS = ${CPPFLAGS}
+
+LIBS +=	../libgraphalgo/libgraphalgo.a \
+	../libgraphutil/libgraphutil.a \
+	../libgraphcore/libgraphcore.a \
+	../../utility/liblog/liblog.a
+
+LDLIBS += -lstdc++fs
 
 qz:	qz.o $(LIBS)
 

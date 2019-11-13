@@ -59,7 +59,8 @@ static const std::string EXPECTED =
   "event_tries,event_hits,event_pct,"
   "sample_total,sample_count,sample_mean,sample_min,sample_max\n"
   "A,2.5,1,50,5,0,0,4,1,4,4,4\n"
-  "B,3.75,4,56.8,9,3,33.3,4,2,2,0,4\n";
+  "B,3.75,4,56.8,9,3,33.3,4,2,2,0,4\n"
+  "C,0,0,0,0,0,0,0,1,0,0,0\n";
 
 TEST(create_csv_file) {
   CSVFile csv(make_path());
@@ -70,6 +71,10 @@ TEST(create_csv_file) {
   csv.write_data();
 
   fields.set_data('B', 1.25, 3, 0.56789, 4, 3, 0);
+  csv.write_data();
+
+  csv.reset_data();
+  fields.set_data('C', 0, 0, 0, 0, 0, 0);
   csv.write_data();
 
   csv.close();

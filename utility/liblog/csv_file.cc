@@ -23,5 +23,11 @@ namespace cavcom {
       (*this) << std::endl;
     }
 
+    void CSVFile::reset_data(void) {
+      for (auto ifield = fields_.begin(); ifield != fields_.end(); ++ifield) {
+        (*ifield)->reset_value();
+      }
+    }
+
   }  // namespace utility
 }  // namespace cavcom
