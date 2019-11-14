@@ -13,7 +13,7 @@ using namespace cavcom::graph;
 
 class Statistics {
  public:
-  Statistics(void) : order("n"), eprob("p"),
+  Statistics(void) : order("n"), eprob("p"), edges("m"),
                      time("time"), steps("steps"), calls("calls"), depth("depth"),
                      edge_threshold("edge_threshold"),
                      small_degree("small_degree"),
@@ -21,6 +21,7 @@ class Statistics {
                      common_neighbors("common_neighbors") {}
   CSVDatumField<VertexNumber> order;
   CSVDatumField<uint> eprob;
+  CSVSampleFields<uint> edges;
   CSVSampleFields<double> time;
   CSVSampleFields<ullong> steps;
   CSVSampleFields<ullong> calls;
@@ -33,6 +34,7 @@ class Statistics {
   void add_fields(CSVFile *csv) {
     csv->add_field(&order);
     csv->add_field(&eprob);
+    edges.add_fields(csv);
     time.add_fields(csv);
     steps.add_fields(csv);
     calls.add_fields(csv);
@@ -46,6 +48,7 @@ class Statistics {
   void gather_stats(VertexNumber n, uint p, const QuickZykov &qz) {
     order.datum().value(n);
     eprob.datum().value(p);
+    edges.add_data(qz.graph().size());
     std::chrono::duration<double> dt = qz.duration();
     time.add_data(dt.count());
     steps.add_data(qz.steps());
@@ -73,7 +76,7 @@ static std::string make_raw_filename(VertexNumber n, uint ipct) {
 static constexpr uint TRIALS = 1000;
 
 static constexpr VertexNumber N_START = 5;
-static constexpr VertexNumber N_END = 20;
+static constexpr VertexNumber N_END = 30;
 static constexpr VertexNumber N_INCR = 1;
 
 static constexpr uint P_START = 10;
