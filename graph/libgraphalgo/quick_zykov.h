@@ -48,9 +48,6 @@ namespace cavcom {
       // algorithm has not yet completed.
       const SimpleGraph &chromatic() const { return *chromatic_; }
 
-      // Returns the maximum call depth.
-      ulong maxdepth() const { return maxdepth_; }
-
      private:
       uint k_;
       GraphPtr chromatic_;
@@ -65,8 +62,6 @@ namespace cavcom {
       ulong common_neighbors_hits_;
 
       TikzFormatter *formatter_;
-      ulong depth_;
-      ulong maxdepth_;
 
       // Resets all the counters and runs the algorithm.
       virtual bool run();
@@ -87,6 +82,9 @@ namespace cavcom {
       //
       // Each of these steps is counted.
       void outer_loop(GraphPtr *ppg);
+
+      // A wrapper for the recursive method to handle call/depth counting.
+      bool subroutine(GraphPtr *ppg);
 
       // The steps of the inner loop are as follows:
       //

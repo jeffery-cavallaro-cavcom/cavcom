@@ -2,7 +2,7 @@
 
 component := utility
 
-targets := libutil
+targets := libutil liblog
 
 include ../templates/Makefile.top.mk
 

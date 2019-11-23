@@ -5,8 +5,7 @@
 namespace cavcom {
   namespace graph {
 
-    QuickZykov::QuickZykov(const SimpleGraph &graph)
-      : GraphAlgorithm(graph), k_(0), formatter_(nullptr), depth_(0), maxdepth_(0) {
+    QuickZykov::QuickZykov(const SimpleGraph &graph) : GraphAlgorithm(graph), k_(0), formatter_(nullptr) {
       reset_counters();
     }
 
@@ -15,8 +14,6 @@ namespace cavcom {
       k_ = 0;
       chromatic_.reset(nullptr);
       reset_counters();
-      depth_ = 0;
-      maxdepth_ = 0;
 
       // Make a dynamic copy of the graph so that the algorithm can replace it with subgraphs.
       GraphPtr pg(new SimpleGraph(graph()));
@@ -56,7 +53,7 @@ namespace cavcom {
       // Determine if the graph in the current state is k-colorable.  Is so, then done - the current value of k is
       // the chromatic number.  Otherwise, try the next value of k.  This is guaranteed to terminate since at the
       // very worst k will reach n.  Note that a subgraph may be returned if not k-colorable.
-      while (!is_k_colorable(ppg)) {
+      while (!subroutine(ppg)) {
         add_step();
         ++k_;
         if (tracing()) *formatter_->out() << steps() << ". (outer) Incrementing: k=" << k_ << std::endl;
@@ -66,8 +63,14 @@ namespace cavcom {
       chromatic_ = std::move(pg);
     }
 
-    bool QuickZykov::is_k_colorable(GraphPtr *ppg) {
+    bool QuickZykov::subroutine(GraphPtr *ppg) {
       add_call();
+      bool success = is_k_colorable(ppg);
+      done_call();
+      return success;
+    }
+
+    bool QuickZykov::is_k_colorable(GraphPtr *ppg) {
       GraphPtr &pg = *ppg;
       Degree b = 0;
       VertexNumber v1 = 0, v2 = 0;
@@ -412,10 +415,7 @@ namespace cavcom {
       }
       GraphPtr recursive(new SimpleGraph(*pg, v1, v2));
       if (tracing()) formatter_->format(*recursive);
-      ++depth_;
-      if (depth_ > maxdepth_) maxdepth_ = depth_;
-      bool success = is_k_colorable(&recursive);
-      --depth_;
+      bool success = subroutine(&recursive);
       if (success) pg = std::move(recursive);
       return success;
     }
@@ -433,10 +433,7 @@ namespace cavcom {
       GraphPtr recursive(new SimpleGraph(*pg));
       recursive->join(v1, v2);
       if (tracing()) formatter_->format(*recursive);
-      ++depth_;
-      if (depth_ > maxdepth_) maxdepth_ = depth_;
-      bool success = is_k_colorable(&recursive);
-      --depth_;
+      bool success = subroutine(&recursive);
       if (success) pg = std::move(recursive);
       return success;
     }
@@ -446,7 +443,7 @@ namespace cavcom {
     }
 
     void QuickZykov::inner_prefix(void) {
-      *formatter_->out() << steps() << ". (inner-" << depth_ << ") ";
+      *formatter_->out() << steps() << ". (inner-" << depth() << ") ";
     }
 
     void QuickZykov::identify_vertex(const GraphPtr &pg, VertexNumber iv) {

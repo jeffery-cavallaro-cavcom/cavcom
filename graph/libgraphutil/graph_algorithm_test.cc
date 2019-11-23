@@ -29,6 +29,7 @@ class DummyAlgorithm : public GraphAlgorithm {
   void method_call(void) {
     add_call();
     std::this_thread::sleep_for(std::chrono::seconds(1));
+    done_call();
   }
 };
 
@@ -46,6 +47,8 @@ TEST(successful_run) {
   UNITTEST_ASSERT_FALSE(algo.completed());
   UNITTEST_ASSERT_EQUAL(algo.steps(), 0);
   UNITTEST_ASSERT_EQUAL(algo.calls(), 0);
+  UNITTEST_ASSERT_EQUAL(algo.depth(), 0);
+  UNITTEST_ASSERT_EQUAL(algo.maxdepth(), 0);
 
   // Run the algorithm.
   UNITTEST_ASSERT_TRUE(algo.execute());
@@ -57,4 +60,6 @@ TEST(successful_run) {
   UNITTEST_ASSERT_TRUE(algo.completed());
   UNITTEST_ASSERT_EQUAL(algo.steps(), 6);
   UNITTEST_ASSERT_EQUAL(algo.calls(), 3);
+  UNITTEST_ASSERT_EQUAL(algo.depth(), 0);
+  UNITTEST_ASSERT_EQUAL(algo.maxdepth(), 1);
 }

@@ -36,11 +36,14 @@ namespace cavcom {
       bool started(void) const;
       bool completed(void) const;
 
-      // Returns the number of counted steps/calls.  What constitutes a step or a call is determined by the derived
-      // class.  Usually a step is a major algorithm feature and a call is a recursive call.  Note that as long as
-      // recursive methods are defined in the derived class, they will have access to this context.
+      // Returns the number of counted steps.  What constitutes a step is determined by the derived class.  Usually
+      // a step is a major algorithm feature.
       ullong steps() const { return steps_; }
+
+      // Returns the number of recursive calls, the current call depth, and the maximum call depth.
       ullong calls() const { return calls_; }
+      ullong depth() const { return depth_; }
+      ullong maxdepth() const { return maxdepth_; }
 
       // Executes the algorithm.  All counters are reset to 0.  The start time is set to the current system time
       // and the end time is set to the epoch.  The derived classes run method is then called.  Once the run method
@@ -51,9 +54,14 @@ namespace cavcom {
       bool execute();
 
      protected:
-      // Increments the step/call counters.
-      void add_step(void) { ++steps_; }
-      void add_call(void) { ++calls_; }
+      // Adds a step count.
+      void add_step(void);
+
+      // Adds a recursive call count and adjusts the depth trackers.
+      void add_call(void);
+
+      // Marks a return from a recursive call.
+      void done_call(void);
 
       // The actual algorithm, provided by the derived algorithm class.
       virtual bool run() { return true; }
@@ -66,6 +74,8 @@ namespace cavcom {
 
       ullong steps_;
       ullong calls_;
+      ullong depth_;
+      ullong maxdepth_;
     };
 
   }  // namespace graph

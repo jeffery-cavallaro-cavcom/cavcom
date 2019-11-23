@@ -52,7 +52,7 @@ TEST(complete_graph) {
   UNITTEST_ASSERT_EQUAL(qz.steps(), 16);
   UNITTEST_ASSERT_EQUAL(qz.calls(), 4);
   UNITTEST_ASSERT_EQUAL(qz.k(), pg->order());
-  UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 1);
   UNITTEST_ASSERT_TRUE(qz.chromatic().complete());
 }
 
@@ -63,7 +63,7 @@ TEST(sample_graph) {
   UNITTEST_ASSERT_EQUAL(qz.steps(), 52);
   UNITTEST_ASSERT_EQUAL(qz.calls(), 5);
   UNITTEST_ASSERT_EQUAL(qz.k(), 3);
-  UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 1);
+  UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 2);
 
   const SimpleGraph &g = qz.chromatic();
   UNITTEST_ASSERT_EQUAL(g.order(), 3);
