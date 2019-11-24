@@ -34,16 +34,15 @@ static const VertexValuesList VERTICES = {{"a", NOCOLOR, 0, 2},
 static const EdgeValuesList EDGES = {{0, 1}, {0, 2}, {0, 3}, {0, 4},
                                      {1, 2}, {1, 3}, {1, 4}, {1, 6},
                                      {2, 3}, {2, 6},
-                                     {3, 5},
+                                     {3, 6},
                                      {4, 5}, {4, 6}, {4, 7},
                                      {5, 6}, {5, 7},
                                      {6, 7}};
 
 static const Bron1::Cliques CLIQUES = {{0, 1, 2, 3},
                                        {0, 1, 4},
-                                       {1, 2, 6},
+                                       {1, 2, 3, 6},
                                        {1, 4, 6},
-                                       {3, 5},
                                        {4, 5, 6, 7}};
 
 TEST(null_all) {
@@ -218,7 +217,7 @@ TEST(sample_all) {
   SimpleGraph g(VERTICES, EDGES);
   Bron1 b1(g);
   UNITTEST_ASSERT_TRUE(b1.execute());
-  UNITTEST_ASSERT_EQUAL(b1.calls(), 21);
+  UNITTEST_ASSERT_EQUAL(b1.calls(), 20);
   UNITTEST_ASSERT_EQUAL(b1.maxdepth(), 5);
   UNITTEST_ASSERT_EQUAL(b1.total(), CLIQUES.size());
   UNITTEST_ASSERT_EQUAL(b1.number(), CLIQUES[0].size());
@@ -232,7 +231,7 @@ TEST(sample_max) {
   SimpleGraph g(VERTICES, EDGES);
   Bron1All b1(g);
   UNITTEST_ASSERT_TRUE(b1.execute());
-  UNITTEST_ASSERT_EQUAL(b1.calls(), 21);
+  UNITTEST_ASSERT_EQUAL(b1.calls(), 20);
   UNITTEST_ASSERT_EQUAL(b1.maxdepth(), 5);
   UNITTEST_ASSERT_EQUAL(b1.total(), CLIQUES.size());
   UNITTEST_ASSERT_EQUAL(b1.number(), CLIQUES[0].size());
