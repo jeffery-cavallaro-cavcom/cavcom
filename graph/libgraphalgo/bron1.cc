@@ -3,35 +3,7 @@
 namespace cavcom {
   namespace graph {
 
-    const int Bron1::MODE_ALL;
-    const int Bron1::MODE_MAX;
-    const int Bron1::MODE_MAX_ONLY;
-
-    Bron1::Bron1(const SimpleGraph &graph, int mode) : GraphAlgorithm(graph), mode_(mode), total_(0), number_(0) {}
-
-    bool Bron1::run() {
-      // Reset the context.
-      current_.clear();
-      cliques_.clear();
-      total_ = 0;
-      number_ = 0;
-
-      // Guard against a null graph.
-      VertexNumber n = graph().order();
-      if (n <= 0) return true;
-
-      // At first, all vertices are candidates and nothing has been previously used.
-      VertexNumberList candidates, used;
-      candidates.reserve(n);
-      VertexNumber iv = n;
-      while (iv > 0) candidates.push_back(--iv);
-
-      // Run the algorithm.
-      extend(&candidates, &used);
-
-      // Always successful.
-      return true;
-    }
+    Bron1::Bron1(const SimpleGraph &graph, int mode) : Bron(graph, mode) {}
 
     void Bron1::extend(VertexNumberList *pcandidates, VertexNumberList *pused) {
       add_call();
@@ -42,8 +14,8 @@ namespace cavcom {
 
       // If only trying to determine the clique number then abandon branches that don't have enough candidates to
       // make a clique that exceeds the current maximum.
-      if (mode_ < 0) {
-        if (current_.size() + candidates.size() <= number_) {
+      if (mode() < 0) {
+        if (current_.size() + candidates.size() <= number()) {
           done_call();
           return;
         }
@@ -96,20 +68,7 @@ namespace cavcom {
       }
 
       // All the candidates for this level have been tried.  Accept the current clique if it is maximal.
-      if (used.empty()) {
-        VertexNumber n = current_.size();
-        if (mode_ > 0) {
-          cliques_.push_back(current_);
-        } else {
-          if (cliques_.empty() || (n > cliques_[0].size())) {
-            cliques_.clear();
-            cliques_.push_back(current_);
-          }
-        }
-        ++total_;
-        if (n > number_) number_ = n;
-        found(current_);
-      }
+      if (used.empty()) add_clique();
       done_call();
       return;
     }
