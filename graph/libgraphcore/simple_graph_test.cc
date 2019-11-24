@@ -54,7 +54,7 @@ static const EdgeValuesList EDGES = {{0, 1, "e1", 0, 1.0},
 
 static constexpr VertexNumber ORDER = 4;
 
-TEST(make_simple_empty) {
+TEST(make_empty) {
   SimpleGraph g(ORDER);
 
   UNITTEST_ASSERT_FALSE(g.directed());
@@ -87,7 +87,7 @@ TEST(make_simple_empty) {
   UNITTEST_ASSERT_THROW(std::out_of_range, [&](){ g.edge(0); });
 }
 
-TEST(make_simple_graph) {
+TEST(make_graph) {
   SimpleGraph g(VERTICES, EDGES);
 
   UNITTEST_ASSERT_FALSE(g.directed());
@@ -156,7 +156,56 @@ TEST(make_simple_graph) {
   UNITTEST_ASSERT_EQUAL(g.maxdeg(), 3);
 }
 
-TEST(make_simple_complete) {
+TEST(make_copy) {
+  SimpleGraph g(VERTICES, EDGES);
+  SimpleGraph cg(g);
+
+  UNITTEST_ASSERT_EQUAL(g.order(), cg.order());
+  UNITTEST_ASSERT_EQUAL(g.size(), cg.size());
+
+  UNITTEST_ASSERT_FALSE(cg.directed());
+  UNITTEST_ASSERT_FALSE(cg.multiple());
+  UNITTEST_ASSERT_FALSE(cg.loops());
+
+  for (VertexNumber iv = 0; iv < g.order(); ++iv) {
+    const Vertex &v = g.vertex(iv);
+    const Vertex &cv = cg.vertex(iv);
+    UNITTEST_ASSERT_EQUAL(v.id(), cv.id());
+    UNITTEST_ASSERT_EQUAL(v.label(), cv.label());
+    UNITTEST_ASSERT_EQUAL(v.color(), cv.color());
+    UNITTEST_ASSERT_EQUAL(v.xpos(), cv.xpos());
+    UNITTEST_ASSERT_EQUAL(v.ypos(), cv.ypos());
+  }
+
+  for (VertexNumber ie = 0; ie < g.size(); ++ie) {
+    const Edge &e = g.edge(ie);
+    const Edge &ce = cg.edge(ie);
+    UNITTEST_ASSERT_EQUAL(e.from(), ce.from());
+    UNITTEST_ASSERT_EQUAL(e.to(), ce.to());
+    UNITTEST_ASSERT_EQUAL(e.label(), ce.label());
+    UNITTEST_ASSERT_EQUAL(e.color(), ce.color());
+    UNITTEST_ASSERT_EQUAL(e.weight(), ce.weight());
+  }
+
+  for (VertexNumber iv = 0; iv < g.order(); ++iv) {
+    for (VertexNumber jv = 0; jv < g.order(); ++jv) {
+      if (g.adjacent(iv, jv)) {
+        UNITTEST_ASSERT_TRUE(cg.adjacent(iv, jv));
+      } else {
+        UNITTEST_ASSERT_FALSE(cg.adjacent(iv, jv));
+      }
+    }
+  }
+
+  UNITTEST_ASSERT_EQUAL(g.mindeg(), cg.mindeg());
+  UNITTEST_ASSERT_EQUAL(g.maxdeg(), cg.maxdeg());
+
+  for (VertexNumber iv = 0; iv < g.order(); ++iv) {
+    UNITTEST_ASSERT_EQUAL(g.degree(iv), cg.degree(iv));
+  }
+}
+
+TEST(make_complete) {
   SimpleGraph g(VERTICES, EDGES);
   UNITTEST_ASSERT_FALSE(g.complete());
   g.make_complete();
@@ -187,7 +236,60 @@ static const EdgeValuesList KE = {{0, 1, "e0"}, {0, 2, "e1"}, {0, 3, "e2"}, {0, 
                                   {2, 3, "e7"}, {2, 4, "e8"},
                                   {3, 4, "e9"}};
 
-TEST(make_simple_subgraph) {
+TEST(make_subgraph_keep) {
+  // Start with a complete graph.
+  SimpleGraph kg(KV, KE);
+  UNITTEST_ASSERT_EQUAL(kg.order(), KV.size());
+  UNITTEST_ASSERT_EQUAL(kg.size(), KE.size());
+  UNITTEST_ASSERT_EQUAL(kg.mindeg(), 4);
+  UNITTEST_ASSERT_EQUAL(kg.maxdeg(), 4);
+
+  // Keep only three of the vertices.
+  VertexNumbers vkeep = {1, 3, 4};
+  SimpleGraph sg(kg, vkeep);
+  UNITTEST_ASSERT_EQUAL(sg.order(), 3);
+  UNITTEST_ASSERT_EQUAL(sg.size(), 3);
+  UNITTEST_ASSERT_EQUAL(sg.mindeg(), 2);
+  UNITTEST_ASSERT_EQUAL(sg.maxdeg(), 2);
+
+  // Check the remaining.
+  for (VertexNumber iv = 0; iv < kg.order(); ++iv) {
+    const Vertex v = kg.vertex(iv);
+    VertexNumber found;
+    if (vkeep.find(v.id()) == vkeep.cend()) {
+      UNITTEST_ASSERT_FALSE(sg.find_vertex(v.id(), &found));
+    } else {
+      UNITTEST_ASSERT_TRUE(sg.find_vertex(v.id(), &found));
+      const Vertex &sv = sg.vertex(found);
+      UNITTEST_ASSERT_EQUAL(sv.id(), v.id());
+      UNITTEST_ASSERT_EQUAL(sv.label(), v.label());
+      UNITTEST_ASSERT_EQUAL(sv.color(), NOCOLOR);
+      UNITTEST_ASSERT_EQUAL(sv.xpos(), 0.0);
+      UNITTEST_ASSERT_EQUAL(sv.ypos(), 0.0);
+      UNITTEST_ASSERT_TRUE(sv.contracted().empty());
+    }
+  }
+
+  // Check the remaining adjacenies.
+  UNITTEST_ASSERT_FALSE(sg.adjacent(0, 0));
+  UNITTEST_ASSERT_TRUE(sg.adjacent(0, 1));
+  UNITTEST_ASSERT_TRUE(sg.adjacent(0, 2));
+
+  UNITTEST_ASSERT_TRUE(sg.adjacent(1, 0));
+  UNITTEST_ASSERT_FALSE(sg.adjacent(1, 1));
+  UNITTEST_ASSERT_TRUE(sg.adjacent(1, 2));
+
+  UNITTEST_ASSERT_TRUE(sg.adjacent(2, 0));
+  UNITTEST_ASSERT_TRUE(sg.adjacent(2, 1));
+  UNITTEST_ASSERT_FALSE(sg.adjacent(2, 2));
+
+  // Check the degrees.
+  UNITTEST_ASSERT_EQUAL(sg.degree(0), 2);
+  UNITTEST_ASSERT_EQUAL(sg.degree(1), 2);
+  UNITTEST_ASSERT_EQUAL(sg.degree(2), 2);
+}
+
+TEST(make_subgraph_remove) {
   // Start with a complete graph.
   SimpleGraph kg(KV, KE);
   UNITTEST_ASSERT_EQUAL(kg.order(), KV.size());
@@ -253,7 +355,7 @@ TEST(remove_all_vertices) {
 
   // Remove all of the vertices.
   const VertexNumbers out = {0, 4, 2, 3, 1};
-  SimpleGraph sg(kg, out);
+  SimpleGraph sg(kg, out, EdgeNumbers());
   UNITTEST_ASSERT_EQUAL(sg.order(), 0);
   UNITTEST_ASSERT_EQUAL(sg.size(), 0);
   UNITTEST_ASSERT_TRUE(sg.null());

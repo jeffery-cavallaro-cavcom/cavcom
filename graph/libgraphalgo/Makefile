@@ -1,6 +1,6 @@
-includes := quick_zykov.h bron.h bron1.h bron2.h
+includes := quick_zykov.h bron.h bron1.h bron2.h christofides.h
 
-libgraphalgo_sources := quick_zykov.cc bron.cc bron1.cc bron2.cc
+libgraphalgo_sources := quick_zykov.cc bron.cc bron1.cc bron2.cc christofides.cc
 
 test_sources := quick_zykov_test.cc bron1_test.cc bron2_test.cc
 

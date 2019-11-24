@@ -8,10 +8,11 @@ namespace cavcom {
 
     Vertices::Vertices(void) : next_(0), id_to_number_("vertex id"), label_to_number_("vertex label") {}
 
-    Vertices::Vertices(const Vertices &source, const VertexNumbers &remove) : Vertices() {
+    Vertices::Vertices(const Vertices &source, bool keep, const VertexNumbers &vertices) : Vertices() {
       VertexNumber n = source.size();
       for (VertexNumber iv = 0, ov = 0; iv < n; ++iv) {
-        if (remove.find(iv) != remove.cend()) continue;
+        bool found = (vertices.find(iv) != vertices.cend());
+        if ((keep && !found) || (!keep && found)) continue;
         const Vertex &v = source[iv];
         next_ = v.id();
         add(v.label(), v.color(), v.xpos(), v.ypos());
