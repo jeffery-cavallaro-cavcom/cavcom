@@ -1,15 +1,15 @@
 includes :=
 
 qz_sources := qz.cc
-b1_sources := b1.cc
+bron_sources := bron.cc
 
 test_sources := 
 
-sources := $(qz_sources) $(b1_sources) $(test_sources)
+sources := $(qz_sources) $(bron_sources) $(test_sources)
 
 libraries :=
 
-programs := qz b1
+programs := qz bron
 
 tests := 
 
@@ -32,6 +32,6 @@ LIBS +=	../libgraphalgo/libgraphalgo.a \
 LDLIBS += -lstdc++fs
 
 qz:	qz.o $(LIBS)
-b1:	b1.o $(LIBS)
+bron:	bron.o $(LIBS)
 
 -include $(subst .cc,.d,$(sources))

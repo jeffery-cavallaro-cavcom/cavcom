@@ -6,6 +6,7 @@
 #include "csv_file.h"
 #include "random_graph.h"
 #include "bron1.h"
+#include "bron2.h"
 
 using namespace cavcom::utility;
 using namespace cavcom::graph;
@@ -66,6 +67,8 @@ static constexpr uint P_START = 10;
 static constexpr uint P_END = 90;
 static constexpr uint P_INCR = 10;
 
+using BronVersion = Bron1;
+
 int main(int argc, char *argv[]) {
   for (VertexNumber n = N_START; n <= N_END; n += N_INCR) {
     Statistics summary_data;
@@ -88,10 +91,10 @@ int main(int argc, char *argv[]) {
       for (uint itrial = 0; itrial < TRIALS; ++itrial) {
         raw_file.reset_data();
         RandomGraph rg(n, ipct/100.0);
-        Bron1 b1(rg);
-        b1.execute();
-        raw_data.gather_stats(n, ipct, b1);
-        summary_data.gather_stats(n, ipct, b1);
+        BronVersion bron(rg);
+        bron.execute();
+        raw_data.gather_stats(n, ipct, bron);
+        summary_data.gather_stats(n, ipct, bron);
         raw_file.write_data();
         raw_file.close();
       }
