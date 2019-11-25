@@ -23,19 +23,32 @@ namespace cavcom {
       VertexNumbers &vertices_;
 
       virtual bool found(const Clique &mis) {
+        parent_->add_call();
+
+        // Use a new color for the current MIS.
         Coloring next_coloring(coloring_);
         next_coloring.resize(coloring_.size() + 1);
         next_coloring.back().insert(mis.cbegin(), mis.cend());
 
+        // If all the vertices have been used then the coloring is complete.
+        if (vertices_.size() + mis.size() >= graph_.order()) {
+          parent_->chromatic_ = next_coloring;
+          parent_->done_call();
+          return false;
+        }
+
+        // Add the current MIS to the set of used vertices.
         VertexNumbers next_vertices(vertices_);
         next_vertices.insert(mis.cbegin(), mis.cend());
 
-        SimpleGraph next_subgraph(SimpleGraph(graph_, next_vertices, EdgeNumbers()), true);
+        // Remove all used vertices from the original graph.
+        SimpleGraph next_subgraph(graph_, next_vertices, EdgeNumbers());
 
+        // Repeat with MISs from the next subgraph.
         ChristofidesNode next(parent_, graph_, next_coloring, next_vertices, next_subgraph);
-        next.execute();
-
-        return true;
+        bool more =  next.execute();
+        parent_->done_call();
+        return more;
       }
     };
 
@@ -44,10 +57,18 @@ namespace cavcom {
     bool Christofides::run() {
       chromatic_.clear();
 
+      // Guard against a null graph.
+      if (graph.order() == 0) return;
+
+      // A MIS in a graph G is a clique in the complement of G.
+      SimpleGraph complement(graph(), true);
+
+      // Start with an empty coloring.
       Coloring start;
       VertexNumbers none;
-      SimpleGraph all(graph(), true);
-      ChristofidesNode root(this, graph(), start, none, all);
+
+      // Execute the Bron algorithm to add MISs until all vertices are used.
+      ChristofidesNode root(this, complement, start, none, complement);
       root.execute();
 
       return true;
