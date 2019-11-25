@@ -291,7 +291,7 @@ namespace cavcom {
         }
       }
       if (x.empty()) return false;
-      pg.reset(new SimpleGraph(*pg, x));
+      pg.reset(new SimpleGraph(*pg, x, EdgeNumbers()));
       if (tracing()) formatter_->format(*pg);
       return true;
     }
@@ -374,7 +374,7 @@ namespace cavcom {
       }
       VertexNumbers x;
       x.insert(v1);
-      pg.reset(new SimpleGraph(*pg, x));
+      pg.reset(new SimpleGraph(*pg, x, EdgeNumbers()));
       if (tracing()) formatter_->format(*pg);
     }
 

@@ -14,7 +14,7 @@ namespace cavcom {
       Bron2(const SimpleGraph &graph, int mode = MODE_ALL);
 
      private:
-      virtual void extend(VertexNumberList *pcandidates, VertexNumberList *pused);
+      virtual bool extend(VertexNumberList *pcandidates, VertexNumberList *pused);
     };
 
   }  // namespace graph

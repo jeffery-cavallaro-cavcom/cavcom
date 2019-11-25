@@ -27,13 +27,10 @@ namespace cavcom {
       while (iv > 0) candidates.push_back(--iv);
 
       // Run the algorithm.
-      extend(&candidates, &used);
-
-      // Always successful.
-      return true;
+      return extend(&candidates, &used);
     }
 
-    void Bron::add_clique(void) {
+    bool Bron::add_clique(void) {
       VertexNumber n = current_.size();
       if (mode() > 0) {
         cliques_.push_back(current_);
@@ -45,7 +42,7 @@ namespace cavcom {
       }
       ++total_;
       if (n > number_) number_ = n;
-      found(current_);
+      return found(current_);
     }
 
   }  // namespace graph

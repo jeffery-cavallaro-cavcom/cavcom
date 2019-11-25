@@ -5,7 +5,7 @@ namespace cavcom {
 
     Bron2::Bron2(const SimpleGraph &graph, int mode) : Bron(graph, mode) {}
 
-    void Bron2::extend(VertexNumberList *pcandidates, VertexNumberList *pused) {
+    bool Bron2::extend(VertexNumberList *pcandidates, VertexNumberList *pused) {
       add_call();
 
       const SimpleGraph &g = graph();
@@ -17,7 +17,7 @@ namespace cavcom {
       if (mode() < 0) {
         if (current_.size() + candidates.size() <= number()) {
           done_call();
-          return;
+          return true;
         }
       }
 
@@ -55,7 +55,7 @@ namespace cavcom {
       // never be able to construct a maximal clique.
       if ((nu > 0) && (count == 0)) {
         done_call();
-        return;
+        return true;
       }
 
       // See if there are any candidates with even less adjacencies.  Be sure to count the fact that a vertex is not
@@ -122,7 +122,7 @@ namespace cavcom {
         }
 
         // Find all maximal cliques that extend the current clique.
-        extend(&next_candidates, &next_used);
+        if (!extend(&next_candidates, &next_used)) return false;
 
         // All done with the current selected vertex.  Move it to the used list.
         current_.pop_back();
@@ -143,9 +143,9 @@ namespace cavcom {
       }
 
       // All the candidates for this level have been tried.  Accept the current clique if it is maximal.
-      if (used.empty()) add_clique();
+      bool success = (used.empty() ? add_clique() : true);
       done_call();
-      return;
+      return success;
     }
 
   }  // namespace graph

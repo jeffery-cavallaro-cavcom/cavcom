@@ -16,8 +16,9 @@ class Bron2All : public Bron2 {
   const Cliques &all(void) const { return all_; }
 
  protected:
-  virtual void found(const Clique &clique) {
+  virtual bool found(const Clique &clique) {
     all_.push_back(clique);
+    return true;
   }
 
  private:

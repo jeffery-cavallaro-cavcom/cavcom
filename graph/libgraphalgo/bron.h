@@ -45,11 +45,12 @@ namespace cavcom {
       // The current clique accumulator.
       Clique current_;
 
-      // A method that is called as each maximal click is identified.
-      virtual void found(const Clique &clique) {}
+      // A method that is called as each maximal click is identified.  A false return terminates the algorithm.
+      virtual bool found(const Clique &clique) { return true; }
 
       // Adds the current clique to the found clique list (depending on the mode) and calls the found method.
-      void add_clique(void);
+      // Returns the return value from the found method.
+      bool add_clique(void);
 
      private:
       // All found cliques, if being saved.  Otherwise, the first maximum clique found.
@@ -69,8 +70,8 @@ namespace cavcom {
 
       // Works through the specified list of candidate vertices attempting to construct maximal cliques using the
       // current state of the clique accumulator.  The used vertex list tracks vertices already used to ensure that
-      // all found cliques are maximal.
-      virtual void extend(VertexNumberList *pcandidates, VertexNumberList *pused) = 0;
+      // all found cliques are maximal.  Returns false if terminated by a found method.
+      virtual bool extend(VertexNumberList *pcandidates, VertexNumberList *pused) = 0;
     };
 
   }  // namespace graph

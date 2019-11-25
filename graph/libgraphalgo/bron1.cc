@@ -5,7 +5,7 @@ namespace cavcom {
 
     Bron1::Bron1(const SimpleGraph &graph, int mode) : Bron(graph, mode) {}
 
-    void Bron1::extend(VertexNumberList *pcandidates, VertexNumberList *pused) {
+    bool Bron1::extend(VertexNumberList *pcandidates, VertexNumberList *pused) {
       add_call();
 
       const SimpleGraph &g = graph();
@@ -17,7 +17,7 @@ namespace cavcom {
       if (mode() < 0) {
         if (current_.size() + candidates.size() <= number()) {
           done_call();
-          return;
+          return true;
         }
       }
 
@@ -35,7 +35,7 @@ namespace cavcom {
           }
           if (all_adj) {
             done_call();
-            return;
+            return true;
           }
         }
 
@@ -60,7 +60,7 @@ namespace cavcom {
         }
 
         // Find all maximal cliques that extend the current clique.
-        extend(&next_candidates, &next_used);
+        if (!extend(&next_candidates, &next_used)) return false;
 
         // All done with the current selected vertex, so mark it used.
         current_.pop_back();
@@ -68,9 +68,9 @@ namespace cavcom {
       }
 
       // All the candidates for this level have been tried.  Accept the current clique if it is maximal.
-      if (used.empty()) add_clique();
+      bool success = (used.empty() ? add_clique() : true);
       done_call();
-      return;
+      return success;
     }
 
   }  // namespace graph
