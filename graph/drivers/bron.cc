@@ -11,6 +11,8 @@
 using namespace cavcom::utility;
 using namespace cavcom::graph;
 
+using BronVersion = Bron2;
+
 class Statistics {
  public:
   Statistics(void) : order("n"), eprob("p"), edges("m"),
@@ -33,7 +35,7 @@ class Statistics {
     cliques.add_fields(csv);
   }
 
-  void gather_stats(VertexNumber n, uint p, const Bron1 &b1) {
+  void gather_stats(VertexNumber n, uint p, const Bron &b1) {
     order.datum().value(n);
     eprob.datum().value(p);
     edges.add_data(b1.graph().size());
@@ -66,8 +68,6 @@ static constexpr VertexNumber N_INCR = 1;
 static constexpr uint P_START = 10;
 static constexpr uint P_END = 90;
 static constexpr uint P_INCR = 10;
-
-using BronVersion = Bron1;
 
 int main(int argc, char *argv[]) {
   for (VertexNumber n = N_START; n <= N_END; n += N_INCR) {
