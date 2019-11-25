@@ -8,7 +8,7 @@ namespace cavcom {
     SimpleGraph::SimpleGraph(const VertexValuesList &vertices, const EdgeValuesList &edges)
       : Graph(vertices, edges, false, false, false) {}
 
-    SimpleGraph::SimpleGraph(const SimpleGraph &source) : Graph(source) {}
+    SimpleGraph::SimpleGraph(const SimpleGraph &source, bool complement) : Graph(source) {}
 
     SimpleGraph::SimpleGraph(const SimpleGraph &source, const VertexNumbers &vkeep) : Graph(source, vkeep) {}
 

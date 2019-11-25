@@ -270,7 +270,7 @@ TEST(make_subgraph_keep) {
     }
   }
 
-  // Check the remaining adjacenies.
+  // Check the remaining adjacencies.
   UNITTEST_ASSERT_FALSE(sg.adjacent(0, 0));
   UNITTEST_ASSERT_TRUE(sg.adjacent(0, 1));
   UNITTEST_ASSERT_TRUE(sg.adjacent(0, 2));
