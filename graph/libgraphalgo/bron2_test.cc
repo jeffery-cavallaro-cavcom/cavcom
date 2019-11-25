@@ -11,18 +11,19 @@ using namespace cavcom::graph;
 // A derived Bron-2 class that includes a clique hook to record each found clique.
 class Bron2All : public Bron2 {
  public:
-  Bron2All(const SimpleGraph &graph) : Bron2(graph, Bron2::MODE_MAX) {}
+  Bron2All(const SimpleGraph &graph, bool fail = false) : Bron2(graph, Bron2::MODE_MAX), fail_(fail) {}
 
   const Cliques &all(void) const { return all_; }
 
  protected:
   virtual bool found(const Clique &clique) {
     all_.push_back(clique);
-    return true;
+    return (!fail_ || (all_.size() < 2));
   }
 
  private:
   Cliques all_;
+  bool fail_;
 };
 
 static const VertexValuesList VERTICES = {{"a", NOCOLOR, 0, 2},
@@ -276,4 +277,25 @@ TEST(sample_max_only) {
   Bron2::Clique sorted(b2.cliques()[0]);
   std::sort(sorted.begin(), sorted.end());
   UNITTEST_ASSERT_EQUAL_CONTAINERS(sorted, CLIQUES.back());
+}
+
+TEST(early_stop) {
+  SimpleGraph g(VERTICES, EDGES);
+  Bron2All b2(g, true);
+  UNITTEST_ASSERT_FALSE(b2.execute());
+  UNITTEST_ASSERT_EQUAL(b2.calls(), 6);
+  UNITTEST_ASSERT_EQUAL(b2.maxdepth(), 5);
+  UNITTEST_ASSERT_EQUAL(b2.total(), 2);
+  UNITTEST_ASSERT_EQUAL(b2.number(), CLIQUES.back().size());
+  UNITTEST_ASSERT_EQUAL(b2.cliques().size(), 1);
+  Bron2::Clique sorted(b2.cliques()[0]);
+  std::sort(sorted.begin(), sorted.end());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(sorted, CLIQUES.back());
+  UNITTEST_ASSERT_EQUAL(b2.all().size(), 2);
+  sorted = b2.all()[0];
+  std::sort(sorted.begin(), sorted.end());
+  UNITTEST_ASSERT_IN_CONTAINER(sorted, CLIQUES);
+  sorted = b2.all()[1];
+  std::sort(sorted.begin(), sorted.end());
+  UNITTEST_ASSERT_IN_CONTAINER(sorted, CLIQUES);
 }

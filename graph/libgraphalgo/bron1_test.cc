@@ -9,18 +9,19 @@ using namespace cavcom::graph;
 // A derived Bron-1 class that includes a clique hook to record each found clique.
 class Bron1All : public Bron1 {
  public:
-  Bron1All(const SimpleGraph &graph) : Bron1(graph, Bron1::MODE_MAX) {}
+  Bron1All(const SimpleGraph &graph, bool fail = false) : Bron1(graph, Bron1::MODE_MAX), fail_(fail) {}
 
   const Cliques &all(void) const { return all_; }
 
  protected:
   virtual bool found(const Clique &clique) {
     all_.push_back(clique);
-    return true;
+    return (!fail_ || (all_.size() < 2));
   }
 
  private:
   Cliques all_;
+  bool fail_;
 };
 
 static const VertexValuesList VERTICES = {{"a", NOCOLOR, 0, 2},
@@ -254,4 +255,19 @@ TEST(sample_max_only) {
   UNITTEST_ASSERT_EQUAL(b1.number(), CLIQUES[0].size());
   UNITTEST_ASSERT_EQUAL(b1.cliques().size(), 1);
   UNITTEST_ASSERT_EQUAL_CONTAINERS(b1.cliques()[0], CLIQUES[0]);
+}
+
+TEST(early_stop) {
+  SimpleGraph g(VERTICES, EDGES);
+  Bron1All b1(g, true);
+  UNITTEST_ASSERT_FALSE(b1.execute());
+  UNITTEST_ASSERT_EQUAL(b1.calls(), 7);
+  UNITTEST_ASSERT_EQUAL(b1.maxdepth(), 5);
+  UNITTEST_ASSERT_EQUAL(b1.total(), 2);
+  UNITTEST_ASSERT_EQUAL(b1.number(), CLIQUES[0].size());
+  UNITTEST_ASSERT_EQUAL(b1.cliques().size(), 1);
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(b1.cliques()[0], CLIQUES[0]);
+  UNITTEST_ASSERT_EQUAL(b1.all().size(), 2);
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(b1.all()[0], CLIQUES[0]);
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(b1.all()[1], CLIQUES[1]);
 }
