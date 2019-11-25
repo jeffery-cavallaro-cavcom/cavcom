@@ -8,7 +8,16 @@ namespace cavcom {
     SimpleGraph::SimpleGraph(const VertexValuesList &vertices, const EdgeValuesList &edges)
       : Graph(vertices, edges, false, false, false) {}
 
-    SimpleGraph::SimpleGraph(const SimpleGraph &source, bool complement) : Graph(source) {}
+    SimpleGraph::SimpleGraph(const SimpleGraph &source, bool complement) : Graph(source, complement) {
+      VertexNumber n = order();
+      if (!complement || (n < 2)) return;
+      VertexNumber last = n - 1;
+      for (VertexNumber i = 0; i < last; ++i) {
+        for (VertexNumber j = i + 1; j < n; ++j) {
+          if (!source.adjacent(i, j)) join(i, j);
+        }
+      }
+    }
 
     SimpleGraph::SimpleGraph(const SimpleGraph &source, const VertexNumbers &vkeep) : Graph(source, vkeep) {}
 

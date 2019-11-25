@@ -160,8 +160,8 @@ TEST(make_copy) {
   SimpleGraph g(VERTICES, EDGES);
   SimpleGraph cg(g);
 
-  UNITTEST_ASSERT_EQUAL(g.order(), cg.order());
-  UNITTEST_ASSERT_EQUAL(g.size(), cg.size());
+  UNITTEST_ASSERT_EQUAL(cg.order(), g.order());
+  UNITTEST_ASSERT_EQUAL(cg.size(), g.size());
 
   UNITTEST_ASSERT_FALSE(cg.directed());
   UNITTEST_ASSERT_FALSE(cg.multiple());
@@ -504,4 +504,43 @@ TEST(contract_vertices) {
 
   // Trying to contract a single vertex throws an exception.
   UNITTEST_ASSERT_THROW(SameVertexContractError, [&](){ SimpleGraph cg5(cg4, 0, 0); });
+}
+
+TEST(complement_null) {
+  SimpleGraph g(0);
+  SimpleGraph cg(g, true);
+  UNITTEST_ASSERT_TRUE(cg.null());
+}
+
+TEST(complement_trivial) {
+  SimpleGraph g(1);
+  SimpleGraph cg(g, true);
+  UNITTEST_ASSERT_EQUAL(cg.order(), g.order());
+  UNITTEST_ASSERT_EQUAL(cg.size(), g.size());
+}
+
+TEST(complement_empty) {
+  SimpleGraph g(10);
+  SimpleGraph cg(g, true);
+  UNITTEST_ASSERT_EQUAL(cg.order(), g.order());
+  UNITTEST_ASSERT_EQUAL(cg.size(), g.order()*(g.order() - 1)/2);
+  UNITTEST_ASSERT_TRUE(cg.complete());
+}
+
+TEST(complement_graph) {
+  SimpleGraph g(VERTICES, EDGES);
+  SimpleGraph cg(g, true);
+
+  UNITTEST_ASSERT_EQUAL(cg.order(), g.order());
+  UNITTEST_ASSERT_EQUAL(cg.size(), 3);
+
+  for (VertexNumber iv = 0; iv < g.order() - 1; ++iv) {
+    for (VertexNumber jv = iv + 1; jv < g.order(); ++jv) {
+      if (g.adjacent(iv, jv)) {
+        UNITTEST_ASSERT_FALSE(cg.adjacent(iv, jv));
+      } else {
+        UNITTEST_ASSERT_TRUE(cg.adjacent(iv, jv));
+      }
+    }
+  }
 }

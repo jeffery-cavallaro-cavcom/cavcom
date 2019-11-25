@@ -22,7 +22,18 @@ namespace cavcom {
       join(edges);
     }
 
-    Graph::Graph(const Graph &source) : Graph(source, VertexNumbers(), EdgeNumbers()) {}
+    Graph::Graph(const Graph &source, bool noedges)
+      : vertices_(source.vertices_, false, VertexNumbers()),
+        connections_(source.order(), source.directed(), source.multiple(), source.loops()) {
+      EdgeNumber m = (noedges ? 0 : source.size());
+      for (EdgeNumber ie = 0; ie < m; ++ie) {
+        const Edge &e = source.edge(ie);
+        VertexNumber from, to;
+        if (find_vertex(e.from(), &from) && find_vertex(e.to(), &to)) {
+          join(from, to, e.label(), e.color(), e.weight());
+        }
+      }
+    }
 
     Graph::Graph(const Graph &source, const VertexNumbers &vkeep)
       : vertices_(source.vertices_, true, vkeep),

@@ -35,8 +35,8 @@ namespace cavcom {
       Graph(const VertexValuesList &vertices, const EdgeValuesList &edges,
             bool directed = false, bool multiple = false, bool loops = false);
 
-      // Creates an exact copy of the specified graph.
-      Graph(const Graph &source);
+      // Creates a copy of the specified graph with the same vertex set and with or without the edges.
+      Graph(const Graph &source, bool noedges = false);
 
       // Creates an induced subgraph of the specified graph by keeping only the specified vertices and their
       // incident edges.
