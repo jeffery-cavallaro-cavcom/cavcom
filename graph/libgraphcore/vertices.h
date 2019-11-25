@@ -26,8 +26,8 @@ namespace cavcom {
       // Creates a new, empty vertex table.
       Vertices(void);
 
-      // Copies a vertex table, omitting any vertices in the specified remove array.  Used for subgraphs.
-      Vertices(const Vertices &source, const VertexNumbers &remove);
+      // Copies a vertex table, either keeping or removing the vertices in the specified list.
+      Vertices(const Vertices &source, bool keep, const VertexNumbers &vertices);
 
       // Returns the number of vertices in the table.
       VertexNumber size(void) const { return vertices_.size(); }

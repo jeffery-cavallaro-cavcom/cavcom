@@ -171,6 +171,30 @@ TEST(reuse_duplicate_label) {
   UNITTEST_ASSERT_EQUAL(vertices.size(), VALUES.size());
 }
 
+TEST(copy_and_keep_vertices) {
+  // Make the starting table.
+  Vertices vertices;
+  add_vertices(&vertices);
+
+  // Keep some vertices.
+  VertexNumbers vkeep = {0, 3, 6, 8, 9};
+  Vertices kept(vertices, true, vkeep);
+
+  // Check what is left.
+  UNITTEST_ASSERT_EQUAL(kept.size(), vkeep.size());
+
+  for (VertexNumber iv = 0; iv < vertices.size(); ++iv) {
+    const Vertex &v = vertices[iv];
+    VertexNumber found;
+    if (find(vkeep.cbegin(), vkeep.cend(), iv) == vkeep.cend()) {
+      UNITTEST_ASSERT_FALSE(kept.find(v.id(), &found));
+    } else {
+      UNITTEST_ASSERT_TRUE(kept.find(v.id(), &found));
+      check_vertex(kept[found], v.id(), VALUES[iv]);
+    }
+  }
+}
+
 TEST(copy_and_remove_vertices) {
   // Make the starting table.
   Vertices vertices;
@@ -178,7 +202,7 @@ TEST(copy_and_remove_vertices) {
 
   // Remove some vertices.
   VertexNumbers vremove = {0, 3, 6, 8, 9};
-  Vertices removed(vertices, vremove);
+  Vertices removed(vertices, false, vremove);
 
   // Check what is left.
   VertexNumber n = vertices.size() - vremove.size();

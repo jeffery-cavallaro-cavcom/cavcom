@@ -35,9 +35,15 @@ namespace cavcom {
       Graph(const VertexValuesList &vertices, const EdgeValuesList &edges,
             bool directed = false, bool multiple = false, bool loops = false);
 
-      // Creates a subgraph of the specified graph by removing the specified vertices and/or edges.
-      Graph(const Graph &source,
-            const VertexNumbers &vremove = VertexNumbers(), const EdgeNumbers &eremove = EdgeNumbers());
+      // Creates an exact copy of the specified graph.
+      Graph(const Graph &source);
+
+      // Creates an induced subgraph of the specified graph by keeping only the specified vertices and their
+      // incident edges.
+      Graph(const Graph &source, const VertexNumbers &vkeep);
+
+      // Creates a subgraph of the specified graph by removing the specified vertices and edges.
+      Graph(const Graph &source, const VertexNumbers &vremove, const EdgeNumbers &eremove);
 
       // Creates a copy of the specified graph, but with the two specified vertices contracted.  The contracted
       // vertex will be a new vertex with a new vertex ID and will have the label, color, and position of the "to"

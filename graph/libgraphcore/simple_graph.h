@@ -14,9 +14,15 @@ namespace cavcom {
       // Creates a simple graph with the specified vertices and edges.
       SimpleGraph(const VertexValuesList &vertices, const EdgeValuesList &edges);
 
+      // Creates an exact copy or a complement of the specified simple graph.
+      SimpleGraph(const SimpleGraph &source, bool complement = false);
+
+      // Creates an induced subgraph of the specified simple graph by keeping only the specified vertices and their
+      // incident edges.
+      SimpleGraph(const SimpleGraph &source, const VertexNumbers &vkeep);
+
       // Creates a subgraph of the specified simple graph by removing the specified vertices and/or edges.
-      SimpleGraph(const SimpleGraph &source,
-                  const VertexNumbers &vremove = VertexNumbers(), const EdgeNumbers &eremove = EdgeNumbers());
+      SimpleGraph(const SimpleGraph &source, const VertexNumbers &vremove, const EdgeNumbers &eremove);
 
       // Creates a copy of the specified simple graph, but with the two specified vertices contracted.
       SimpleGraph(const SimpleGraph &source, VertexNumber from, VertexNumber to);
