@@ -44,8 +44,8 @@ namespace cavcom {
       ulong common_neighbors_tries() const { return common_neighbors_tries_; }
       ulong common_neighbors_hits() const { return common_neighbors_hits_; }
 
-      // Returns the final complete graph that represents a chromatic coloring of the original G, or null if the
-      // algorithm has not yet completed.
+      // Returns the final complete graph that represents the termination condition of the algorithm.  Note that it
+      // may have less vertices than the chromatic number.  It is mainly for testing and tracing purposes.
       const SimpleGraph &chromatic() const { return *chromatic_; }
 
      private:

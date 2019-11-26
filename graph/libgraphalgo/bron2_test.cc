@@ -33,7 +33,8 @@ static const VertexValuesList VERTICES = {{"a", NOCOLOR, 0, 2},
                                           {"e", NOCOLOR, 4, 2},
                                           {"f", NOCOLOR, 6, 1},
                                           {"g", NOCOLOR, 4, 0},
-                                          {"h", NOCOLOR, 8, 1}};
+                                          {"h", NOCOLOR, 8, 1},
+                                          {"i", NOCOLOR, 10, 1}};
 
 static const EdgeValuesList EDGES = {{0, 1}, {0, 2}, {0, 3}, {0, 4},
                                      {1, 2}, {1, 3}, {1, 4}, {1, 6},
@@ -41,13 +42,15 @@ static const EdgeValuesList EDGES = {{0, 1}, {0, 2}, {0, 3}, {0, 4},
                                      {3, 6},
                                      {4, 5}, {4, 6}, {4, 7},
                                      {5, 6}, {5, 7},
-                                     {6, 7}};
+                                     {6, 7},
+                                     {7, 8}};
 
 static const Bron2::Cliques CLIQUES = {{0, 1, 2, 3},
                                        {0, 1, 4},
                                        {1, 2, 3, 6},
                                        {1, 4, 6},
-                                       {4, 5, 6, 7}};
+                                       {4, 5, 6, 7},
+                                       {7, 8}};
 
 TEST(null_all) {
   SimpleGraph g;
@@ -230,7 +233,7 @@ TEST(sample_all) {
   SimpleGraph g(VERTICES, EDGES);
   Bron2 b2(g);
   UNITTEST_ASSERT_TRUE(b2.execute());
-  UNITTEST_ASSERT_EQUAL(b2.calls(), 15);
+  UNITTEST_ASSERT_EQUAL(b2.calls(), 17);
   UNITTEST_ASSERT_EQUAL(b2.maxdepth(), 5);
   UNITTEST_ASSERT_EQUAL(b2.total(), CLIQUES.size());
   UNITTEST_ASSERT_EQUAL(b2.number(), CLIQUES[0].size());
@@ -249,14 +252,14 @@ TEST(sample_max) {
   SimpleGraph g(VERTICES, EDGES);
   Bron2All b2(g);
   UNITTEST_ASSERT_TRUE(b2.execute());
-  UNITTEST_ASSERT_EQUAL(b2.calls(), 15);
+  UNITTEST_ASSERT_EQUAL(b2.calls(), 17);
   UNITTEST_ASSERT_EQUAL(b2.maxdepth(), 5);
   UNITTEST_ASSERT_EQUAL(b2.total(), CLIQUES.size());
-  UNITTEST_ASSERT_EQUAL(b2.number(), CLIQUES.back().size());
+  UNITTEST_ASSERT_EQUAL(b2.number(), CLIQUES[4].size());
   UNITTEST_ASSERT_EQUAL(b2.cliques().size(), 1);
   Bron2::Clique sorted(b2.cliques()[0]);
   std::sort(sorted.begin(), sorted.end());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(sorted, CLIQUES.back());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(sorted, CLIQUES[4]);
   UNITTEST_ASSERT_EQUAL(b2.all().size(), CLIQUES.size());
   for (Bron2::Cliques::size_type ic = 0; ic < CLIQUES.size(); ++ic) {
     sorted = b2.all()[ic];
@@ -269,14 +272,14 @@ TEST(sample_max_only) {
   SimpleGraph g(VERTICES, EDGES);
   Bron2 b2(g, Bron2::MODE_MAX_ONLY);
   UNITTEST_ASSERT_TRUE(b2.execute());
-  UNITTEST_ASSERT_EQUAL(b2.calls(), 12);
+  UNITTEST_ASSERT_EQUAL(b2.calls(), 13);
   UNITTEST_ASSERT_EQUAL(b2.maxdepth(), 5);
   UNITTEST_ASSERT_EQUAL(b2.total(), 1);
-  UNITTEST_ASSERT_EQUAL(b2.number(), CLIQUES.back().size());
+  UNITTEST_ASSERT_EQUAL(b2.number(), CLIQUES[4].size());
   UNITTEST_ASSERT_EQUAL(b2.cliques().size(), 1);
   Bron2::Clique sorted(b2.cliques()[0]);
   std::sort(sorted.begin(), sorted.end());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(sorted, CLIQUES.back());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(sorted, CLIQUES[4]);
 }
 
 TEST(early_stop) {
@@ -286,11 +289,11 @@ TEST(early_stop) {
   UNITTEST_ASSERT_EQUAL(b2.calls(), 6);
   UNITTEST_ASSERT_EQUAL(b2.maxdepth(), 5);
   UNITTEST_ASSERT_EQUAL(b2.total(), 2);
-  UNITTEST_ASSERT_EQUAL(b2.number(), CLIQUES.back().size());
+  UNITTEST_ASSERT_EQUAL(b2.number(), CLIQUES[4].size());
   UNITTEST_ASSERT_EQUAL(b2.cliques().size(), 1);
   Bron2::Clique sorted(b2.cliques()[0]);
   std::sort(sorted.begin(), sorted.end());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(sorted, CLIQUES.back());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(sorted, CLIQUES[4]);
   UNITTEST_ASSERT_EQUAL(b2.all().size(), 2);
   sorted = b2.all()[0];
   std::sort(sorted.begin(), sorted.end());

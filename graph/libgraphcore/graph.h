@@ -1,6 +1,7 @@
 #ifndef CAVCOM_GRAPH_LIBGRAPHCORE_GRAPH_H_
 #define CAVCOM_GRAPH_LIBGRAPHCORE_GRAPH_H_
 
+#include <algorithm>
 #include <set>
 #include <vector>
 
@@ -79,9 +80,25 @@ namespace cavcom {
       Vertex &vertex(VertexNumber number) { return vertices_[number]; }
       const Vertex &vertex(VertexNumber number) const { return vertices_[number]; }
 
-      // Gets a vertex number by vertex ID or label.  Returns true if found.
-      bool find_vertex(VertexID id, VertexNumber *found) const { return vertices_.find(id, found); }
-      bool find_vertex(Label label, VertexNumber *found) const { return vertices_.find(label, found); }
+      // Gets a vertex number by vertex ID or label.  Returns true if found.  Throws a lookup error if not found
+      // and errors are enabled.
+      bool find_vertex(VertexID id, VertexNumber *found, bool errors = false) const {
+        return vertices_.find(id, found, errors);
+      }
+
+      bool find_vertex(Label label, VertexNumber *found, bool errors = false) const {
+        return vertices_.find(label, found, errors);
+      }
+
+      // Converts a container of vertex IDs to vertex numbers and adds the vertex numbers to the specified vertex
+      // number set.  Throws a lookup error for any unknown vertex error.
+      template <typename T> void ids_to_numbers(const T &ids, VertexNumbers *numbers) const {
+        for_each(ids.cbegin(), ids.cend(), [&](VertexID id){
+                                             VertexNumber number;
+                                             find_vertex(id, &number, true);
+                                             numbers->insert(number);
+                                           });
+      }
 
       // Gets an edge by edge number.  An invalid vertex number throws an out-of-range error.
       Edge &edge(EdgeNumber number) { return edges_.at(number); }

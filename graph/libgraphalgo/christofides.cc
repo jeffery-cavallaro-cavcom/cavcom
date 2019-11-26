@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "bron2.h"
 
 #include "christofides.h"
@@ -7,46 +9,53 @@ namespace cavcom {
 
     class ChristofidesNode : public Bron2 {
      public:
-      using Coloring = Christofides::Coloring;
-
-      ChristofidesNode(Christofides *parent,
-                       const SimpleGraph &graph,
-                       const Coloring &coloring,
-                       VertexNumbers &vertices,
-                       const SimpleGraph &subgraph)
-        : Bron2(subgraph), parent_(parent), graph_(graph), coloring_(coloring), vertices_(vertices) {}
+      ChristofidesNode(Christofides *parent, const Christofides::Chromatic &chromatic, const SimpleGraph &subgraph)
+        : Bron2(subgraph), parent_(parent), chromatic_(chromatic) {}
 
      private:
       Christofides *parent_;
-      const SimpleGraph &graph_;
-      const Coloring &coloring_;
-      VertexNumbers &vertices_;
+      const Christofides::Chromatic &chromatic_;
 
       virtual bool found(const Clique &mis) {
         parent_->add_call();
 
-        // Use a new color for the current MIS.
-        Coloring next_coloring(coloring_);
-        next_coloring.resize(coloring_.size() + 1);
-        next_coloring.back().insert(mis.cbegin(), mis.cend());
+        // The current MIS is in terms of vertex numbers relative to the current subgraph.  Convert it to vertex IDs.
+        Christofides::IDs mis_ids;
+        for_each(mis.cbegin(), mis.cend(), [&](VertexNumber iv){ mis_ids.insert(graph().vertex(iv).id()); });
 
-        // If all the vertices have been used then the coloring is complete.
-        if (vertices_.size() + mis.size() >= graph_.order()) {
-          parent_->chromatic_ = next_coloring;
-          parent_->done_call();
-          return false;
+        // Use a new color for the current MIS.
+        parent_->next_->push_back(chromatic_);
+        Christofides::Colorings::iterator next_chromatic = --parent_->next_->end();
+        next_chromatic->coloring_.push_back(mis_ids);
+        next_chromatic->vertices_.insert(mis_ids.cbegin(), mis_ids.cend());
+
+        // Reject subsets.
+        Christofides::Colorings::iterator ic = parent_->next_->begin();
+        while (ic != next_chromatic) {
+          Christofides::IDs::size_type shared = 0;
+          for_each(next_chromatic->vertices_.cbegin(), next_chromatic->vertices_.cend(), [&](VertexID id){
+              if (ic->vertices_.find(id) != ic->vertices_.cend()) ++shared;
+            });
+          if (shared == next_chromatic->vertices_.size()) {
+            parent_->next_->erase(next_chromatic);
+            parent_->done_call();
+            return true;
+          } else if (shared == ic->vertices_.size()) {
+            Christofides::Colorings::iterator i = ic;
+            ++ic;
+            parent_->next_->erase(i);
+          } else {
+            ++ic;
+          }
         }
 
-        // Add the current MIS to the set of used vertices.
-        VertexNumbers next_vertices(vertices_);
-        next_vertices.insert(mis.cbegin(), mis.cend());
+        // If all the vertices have been used then the coloring is complete.
+        bool more = true;
+        if (next_chromatic->vertices_.size() >= parent_->graph().order()) {
+          parent_->chromatic_ = next_chromatic->coloring_;
+          more = false;
+        }
 
-        // Remove all used vertices from the original graph.
-        SimpleGraph next_subgraph(graph_, next_vertices, EdgeNumbers());
-
-        // Repeat with MISs from the next subgraph.
-        ChristofidesNode next(parent_, graph_, next_coloring, next_vertices, next_subgraph);
-        bool more =  next.execute();
         parent_->done_call();
         return more;
       }
@@ -55,21 +64,43 @@ namespace cavcom {
     Christofides::Christofides(const SimpleGraph &graph) : GraphAlgorithm(graph) {}
 
     bool Christofides::run() {
+      current_.reset();
+      next_.reset();
       chromatic_.clear();
 
       // Guard against a null graph.
-      if (graph.order() == 0) return;
+      if (graph().order() == 0) return true;
 
-      // A MIS in a graph G is a clique in the complement of G.
+      // A MIS in a graph is a clique in the complement.
       SimpleGraph complement(graph(), true);
 
-      // Start with an empty coloring.
-      Coloring start;
-      VertexNumbers none;
+      // Seed the algorithm with an empty coloring.
+      current_.reset(new Colorings);
+      current_->emplace_back(Coloring(), IDs());
 
-      // Execute the Bron algorithm to add MISs until all vertices are used.
-      ChristofidesNode root(this, complement, start, none, complement);
-      root.execute();
+      // Continue extending each current chromatic coloring until the first occasion when all vertices are used.
+      bool more = true;
+      while (more) {
+        next_.reset(new Colorings);
+
+        for (Colorings::const_iterator ic = current_->cbegin(); more && (ic != current_->cend()); ++ic) {
+          // Construct the subgraph from which the subsequent MISs will be extracted to extend the current
+          // k-chromatic coloring.
+          VertexNumbers vremove;
+          complement.ids_to_numbers(ic->vertices_, &vremove);
+          SimpleGraph subgraph(complement, vremove, EdgeNumbers());
+
+          // Process all MISs for the current subgraph.
+          ChristofidesNode node(this, *ic, subgraph);
+          more = node.execute();
+        }
+
+        current_ = std::move(next_);
+      }
+
+      // The chromatic coloring has been saved, so release the context.
+      current_.reset();
+      next_.reset();
 
       return true;
     }

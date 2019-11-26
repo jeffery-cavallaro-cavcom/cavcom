@@ -33,6 +33,18 @@ TEST(null_graph) {
   UNITTEST_ASSERT_TRUE(qz.chromatic().null());
 }
 
+TEST(trivial_graph) {
+  QuickZykov::GraphPtr pg(new SimpleGraph(1));
+  QuickZykov qz(*pg);
+  UNITTEST_ASSERT_TRUE(qz.execute());
+  UNITTEST_ASSERT_EQUAL(qz.steps(), 2);
+  UNITTEST_ASSERT_EQUAL(qz.calls(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.k(), 1);
+  UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.chromatic().order(), 1);
+  UNITTEST_ASSERT_EQUAL(qz.chromatic().size(), 0);
+}
+
 TEST(empty_graph) {
   QuickZykov::GraphPtr pg(new SimpleGraph(5));
   QuickZykov qz(*pg);
@@ -41,7 +53,8 @@ TEST(empty_graph) {
   UNITTEST_ASSERT_EQUAL(qz.calls(), 0);
   UNITTEST_ASSERT_EQUAL(qz.k(), 1);
   UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 0);
-  UNITTEST_ASSERT_TRUE(qz.chromatic().empty());
+  UNITTEST_ASSERT_EQUAL(qz.chromatic().order(), 5);
+  UNITTEST_ASSERT_EQUAL(qz.chromatic().size(), 0);
 }
 
 TEST(complete_graph) {
@@ -90,5 +103,43 @@ TEST(sample_graph) {
   UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_tries(), 3);
   UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_hits(), 1);
   UNITTEST_ASSERT_EQUAL(qz.common_neighbors_tries(), 2);
+  UNITTEST_ASSERT_EQUAL(qz.common_neighbors_hits(), 0);
+}
+
+static const VertexValuesList VERTICES2 = {{"a", NOCOLOR, 0, 2},
+                                           {"b", NOCOLOR, 2, 2},
+                                           {"c", NOCOLOR, 2, 0},
+                                           {"d", NOCOLOR, 0, 0},
+                                           {"e", NOCOLOR, 4, 2},
+                                           {"f", NOCOLOR, 6, 1},
+                                           {"g", NOCOLOR, 4, 0},
+                                           {"h", NOCOLOR, 8, 1},
+                                           {"i", NOCOLOR, 10, 1}};
+
+static const EdgeValuesList EDGES2 = {{0, 1}, {0, 2}, {0, 3}, {0, 4},
+                                      {1, 2}, {1, 3}, {1, 4}, {1, 6},
+                                      {2, 3}, {2, 6},
+                                      {3, 6},
+                                      {4, 5}, {4, 6}, {4, 7},
+                                      {5, 6}, {5, 7},
+                                      {6, 7},
+                                      {7, 8}};
+
+TEST(sample_graph_2) {
+  QuickZykov::GraphPtr pg(new SimpleGraph(VERTICES2, EDGES2));
+  QuickZykov qz(*pg);
+  UNITTEST_ASSERT_TRUE(qz.execute());
+  UNITTEST_ASSERT_EQUAL(qz.steps(), 105);
+  UNITTEST_ASSERT_EQUAL(qz.calls(), 9);
+  UNITTEST_ASSERT_EQUAL(qz.k(), 4);
+  UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 4);
+
+  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_tries(), 15);
+  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_hits(), 5);
+  UNITTEST_ASSERT_EQUAL(qz.small_degree_tries(), 10);
+  UNITTEST_ASSERT_EQUAL(qz.small_degree_hits(), 2);
+  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_tries(), 8);
+  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_hits(), 5);
+  UNITTEST_ASSERT_EQUAL(qz.common_neighbors_tries(), 3);
   UNITTEST_ASSERT_EQUAL(qz.common_neighbors_hits(), 0);
 }

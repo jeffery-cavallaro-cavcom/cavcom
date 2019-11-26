@@ -64,6 +64,22 @@ TEST(add_and_find_vertices) {
   add_vertices(&vertices);
 }
 
+TEST(id_label_not_found) {
+  Vertices vertices;
+  add_vertices(&vertices);
+  VertexNumber found;
+  UNITTEST_ASSERT_FALSE(vertices.find(10, &found));
+  UNITTEST_ASSERT_FALSE(vertices.find("vertex-X", &found));
+}
+
+TEST(id_label_not_found_errors) {
+  Vertices vertices;
+  add_vertices(&vertices);
+  VertexNumber found;
+  UNITTEST_ASSERT_THROW(Vertices::IDs::NotFoundLookupError, [&](){ vertices.find(10, &found, true); });
+  UNITTEST_ASSERT_THROW(Vertices::Labels::NotFoundLookupError, [&](){ vertices.find("vertex-X", &found, true); });
+}
+
 TEST(unlabeled_to_unlabeled) {
   Vertices vertices;
   add_vertices(&vertices);

@@ -45,8 +45,8 @@ namespace cavcom {
       for_each(values.cbegin(), values.cend(), [this](const VertexValues &vertex){ add(vertex); });
     }
 
-    bool Vertices::find(VertexID id, VertexNumber *number) const {
-      const VertexNumber *found = id_to_number_.find(id);
+    bool Vertices::find(VertexID id, VertexNumber *number, bool errors) const {
+      const VertexNumber *found = id_to_number_.find(id, errors);
       if (!found) {
         *number = 0;
         return false;
@@ -55,8 +55,8 @@ namespace cavcom {
       return true;
     }
 
-    bool Vertices::find(Label label, VertexNumber *number) const {
-      const VertexNumber *found = label_to_number_.find(label);
+    bool Vertices::find(Label label, VertexNumber *number, bool errors) const {
+      const VertexNumber *found = label_to_number_.find(label, errors);
       if (!found) {
         *number = 0;
         return false;
