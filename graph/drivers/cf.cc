@@ -1,29 +1,23 @@
-// Executes the Bron-1 algorithm on a sequence of random graphs for a given order and edge probability.
+// Executes the Christofides algorithm on a sequence of random graphs for a given order and edge probability.
 
 #include <sstream>
 
 #include "csv_sample_fields.h"
 #include "csv_file.h"
 #include "random_graph.h"
-#include "bron1.h"
-#include "bron2.h"
+#include "christofides.h"
 
 using namespace cavcom::utility;
 using namespace cavcom::graph;
 
-using BronVersion = Bron2;
-
 class Statistics {
  public:
-  Statistics(void) : order("n"), eprob("p"), edges("m"),
-                     time("time"), calls("calls"), depth("depth"), cliques("cliques") {}
+  Statistics(void) : order("n"), eprob("p"), edges("m"), time("time"), calls("calls") {}
   CSVDatumField<VertexNumber> order;
   CSVDatumField<uint> eprob;
   CSVSampleFields<uint> edges;
   CSVSampleFields<double> time;
   CSVSampleFields<ullong> calls;
-  CSVSampleFields<ullong> depth;
-  CSVSampleFields<ullong> cliques;
 
   void add_fields(CSVFile *csv) {
     csv->add_field(&order);
@@ -31,19 +25,15 @@ class Statistics {
     edges.add_fields(csv);
     time.add_fields(csv);
     calls.add_fields(csv);
-    depth.add_fields(csv);
-    cliques.add_fields(csv);
   }
 
-  void gather_stats(VertexNumber n, uint p, const Bron &b1) {
+  void gather_stats(VertexNumber n, uint p, const Christofides &cf) {
     order.datum().value(n);
     eprob.datum().value(p);
-    edges.add_data(b1.graph().size());
-    std::chrono::duration<double> dt = b1.duration();
+    edges.add_data(cf.graph().size());
+    std::chrono::duration<double> dt = cf.duration();
     time.add_data(dt.count());
-    calls.add_data(b1.calls());
-    depth.add_data(b1.maxdepth());
-    cliques.add_data(b1.cliques().size());
+    calls.add_data(cf.calls());
   }
 };
 
@@ -91,10 +81,10 @@ int main(int argc, char *argv[]) {
       for (uint itrial = 0; itrial < TRIALS; ++itrial) {
         raw_file.reset_data();
         RandomGraph rg(n, ipct/100.0);
-        BronVersion bron(rg);
-        bron.execute();
-        raw_data.gather_stats(n, ipct, bron);
-        summary_data.gather_stats(n, ipct, bron);
+        Christofides cf(rg);
+        cf.execute();
+        raw_data.gather_stats(n, ipct, cf);
+        summary_data.gather_stats(n, ipct, cf);
         raw_file.write_data();
         raw_file.close();
       }

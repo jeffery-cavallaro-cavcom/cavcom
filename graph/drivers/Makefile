@@ -2,14 +2,15 @@ includes :=
 
 qz_sources := qz.cc
 bron_sources := bron.cc
+cf_source := cf.cc
 
 test_sources := 
 
-sources := $(qz_sources) $(bron_sources) $(test_sources)
+sources := $(qz_sources) $(bron_sources) $(cf_sources) $(test_sources)
 
 libraries :=
 
-programs := qz bron
+programs := qz bron cf
 
 tests := 
 
@@ -33,5 +34,6 @@ LDLIBS += -lstdc++fs
 
 qz:	qz.o $(LIBS)
 bron:	bron.o $(LIBS)
+cf:	cf.o $(LIBS)
 
 -include $(subst .cc,.d,$(sources))
