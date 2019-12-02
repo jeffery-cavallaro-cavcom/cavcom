@@ -1,14 +1,14 @@
-includes := quick_zykov.h bron.h bron1.h bron2.h christofides.h
+includes := clique_edwards.h quick_zykov.h bron.h bron1.h bron2.h christofides.h
 
-libgraphalgo_sources := quick_zykov.cc bron.cc bron1.cc bron2.cc christofides.cc
+libgraphalgo_sources := clique_edwards.cc quick_zykov.cc bron.cc bron1.cc bron2.cc christofides.cc
 
-test_sources := quick_zykov_test.cc bron1_test.cc bron2_test.cc christofides_test.cc
+test_sources := clique_edwards_test.cc quick_zykov_test.cc bron1_test.cc bron2_test.cc christofides_test.cc
 
 sources := $(libgraphalgo_sources) $(test_sources)
 
 libraries := libgraphalgo.a
 
-tests := quick_zykov_test bron1_test bron2_test christofides_test
+tests := clique_edwards_test quick_zykov_test bron1_test bron2_test christofides_test
 
 include ../../templates/Makefile.all.mk
 
@@ -20,6 +20,7 @@ TESTLIBS += ../libgraphutil/libgraphutil.a ../libgraphcore/libgraphcore.a
 libgraphalgo.a: $(subst .cc,.o,$(libgraphalgo_sources))
 	$(make-library)
 
+clique_edwards_test:	clique_edwards_test.o $(libraries) $(TESTLIBS)
 quick_zykov_test:	quick_zykov_test.o $(libraries) $(TESTLIBS)
 bron1_test:	bron1_test.o $(libraries) $(TESTLIBS)
 bron2_test:	bron2_test.o $(libraries) $(TESTLIBS)

@@ -1,4 +1,4 @@
-includes := formatter.h tikz_formatter.h random_graph.h graph_algorithm.h
+includes := formatter.h tikz_formatter.h random_graph.h graph_algorithm.h clique_algorithm.h
 
 libgraphutil_sources := tikz_formatter.cc random_graph.cc graph_algorithm.cc
 
