@@ -30,7 +30,7 @@ TEST(null_graph) {
   CliqueEdwards ce(g);
   UNITTEST_ASSERT_TRUE(ce.execute());
   UNITTEST_ASSERT_EQUAL(ce.steps(), 0);
-  UNITTEST_ASSERT_TRUE(ce.clique().empty());
+  UNITTEST_ASSERT_EQUAL(ce.number(), 0);
 }
 
 TEST(trivial_graph) {
@@ -38,9 +38,7 @@ TEST(trivial_graph) {
   CliqueEdwards ce(g);
   UNITTEST_ASSERT_TRUE(ce.execute());
   UNITTEST_ASSERT_EQUAL(ce.steps(), 2);
-  UNITTEST_ASSERT_EQUAL(ce.clique().size(), 1);
-  VertexNumbers expected = {0};
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(ce.clique(), expected);
+  UNITTEST_ASSERT_EQUAL(ce.number(), 1);
 }
 
 TEST(empty_graph) {
@@ -49,9 +47,7 @@ TEST(empty_graph) {
   CliqueEdwards ce(g);
   UNITTEST_ASSERT_TRUE(ce.execute());
   UNITTEST_ASSERT_EQUAL(ce.steps(), 20);
-  UNITTEST_ASSERT_EQUAL(ce.clique().size(), 1);
-  VertexNumbers expected = {0};
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(ce.clique(), expected);
+  UNITTEST_ASSERT_EQUAL(ce.number(), 1);
 }
 
 TEST(complete_graph) {
@@ -61,10 +57,7 @@ TEST(complete_graph) {
   CliqueEdwards ce(g);
   UNITTEST_ASSERT_TRUE(ce.execute());
   UNITTEST_ASSERT_EQUAL(ce.steps(), 110);
-  UNITTEST_ASSERT_EQUAL(ce.clique().size(), ORDER);
-  VertexNumbers expected;
-  for (VertexNumber iv = 0; iv < ORDER; ++iv) expected.insert(iv);
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(ce.clique(), expected);
+  UNITTEST_ASSERT_EQUAL(ce.number(), ORDER);
 }
 
 TEST(sample_all) {
@@ -72,7 +65,5 @@ TEST(sample_all) {
   CliqueEdwards ce(g);
   UNITTEST_ASSERT_TRUE(ce.execute());
   UNITTEST_ASSERT_EQUAL(ce.steps(), 40);
-  VertexNumbers expected = {1, 2, 3, 6};
-  UNITTEST_ASSERT_EQUAL(ce.clique().size(), expected.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(ce.clique(), expected);
+  UNITTEST_ASSERT_EQUAL(ce.number(), 4);
 }

@@ -11,7 +11,7 @@ namespace cavcom {
     // as soon as possible.
     class Bron2 : public Bron {
      public:
-      Bron2(const SimpleGraph &graph, int mode = MODE_ALL);
+      Bron2(const SimpleGraph &graph, int mode = MODE_ALL, bool save = true);
 
      private:
       virtual bool extend(VertexNumberList *pcandidates, VertexNumberList *pused);

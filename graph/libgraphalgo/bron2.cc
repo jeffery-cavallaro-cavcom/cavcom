@@ -3,7 +3,7 @@
 namespace cavcom {
   namespace graph {
 
-    Bron2::Bron2(const SimpleGraph &graph, int mode) : Bron(graph, mode) {}
+    Bron2::Bron2(const SimpleGraph &graph, int mode, bool save) : Bron(graph, mode, save) {}
 
     bool Bron2::extend(VertexNumberList *pcandidates, VertexNumberList *pused) {
       add_call();
@@ -143,9 +143,13 @@ namespace cavcom {
       }
 
       // All the candidates for this level have been tried.  Accept the current clique if it is maximal.
-      bool success = (used.empty() ? add_clique() : true);
+      bool status = true;
+      if (used.empty()) {
+        VertexNumbers clique(current_.cbegin(), current_.cend());
+        status = add_clique(clique);
+      }
       done_call();
-      return success;
+      return status;
     }
 
   }  // namespace graph

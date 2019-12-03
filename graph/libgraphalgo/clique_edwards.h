@@ -1,13 +1,13 @@
 #ifndef CAVCOM_GRAPH_LIBGRAPHALGO_CLIQUE_EDWARDS_H_
 #define CAVCOM_GRAPH_LIBGRAPHALGO_CLIQUE_EDWARDS_H_
 
-#include "clique_algorithm.h"
+#include "clique_number_algorithm.h"
 
 namespace cavcom {
   namespace graph {
 
     // Executes the Edwards/Elphick algorithm to determine a lower bound for the clique number of a graph.
-    class CliqueEdwards : public CliqueAlgorithm {
+    class CliqueEdwards : public CliqueNumberAlgorithm {
      public:
       // Creates a algorithm instance for the specified graph.
       explicit CliqueEdwards(const SimpleGraph &graph);
@@ -15,6 +15,9 @@ namespace cavcom {
      protected:
       // Calls the base class method and then runs the algorithm.
       virtual bool run();
+
+     private:
+      VertexNumbers clique_;
     };
 
   }  // namespace graph

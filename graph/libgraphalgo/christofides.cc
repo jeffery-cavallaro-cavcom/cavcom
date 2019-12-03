@@ -10,13 +10,13 @@ namespace cavcom {
     class ChristofidesNode : public Bron2 {
      public:
       ChristofidesNode(Christofides *parent, const Christofides::Chromatic &chromatic, const SimpleGraph &subgraph)
-        : Bron2(subgraph), parent_(parent), chromatic_(chromatic) {}
+        : Bron2(subgraph, MODE_ALL, false), parent_(parent), chromatic_(chromatic) {}
 
      private:
       Christofides *parent_;
       const Christofides::Chromatic &chromatic_;
 
-      virtual bool found(const Clique &mis) {
+      virtual bool found(const VertexNumbers &mis) {
         parent_->add_call();
 
         // The current MIS is in terms of vertex numbers relative to the current subgraph.  Convert it to vertex IDs.

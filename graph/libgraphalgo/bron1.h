@@ -9,7 +9,7 @@ namespace cavcom {
     // Version 1 of the Bron-Kerbocsh-Schell algorithm for finding all of the maximal cliques in a graph.
     class Bron1 : public Bron {
      public:
-      Bron1(const SimpleGraph &graph, int mode = MODE_ALL);
+      Bron1(const SimpleGraph &graph, int mode = MODE_ALL, bool save = true);
 
      private:
       virtual bool extend(VertexNumberList *pcandidates, VertexNumberList *pused);

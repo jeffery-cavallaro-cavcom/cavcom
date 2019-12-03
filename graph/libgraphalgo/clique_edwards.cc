@@ -5,11 +5,12 @@
 namespace cavcom {
   namespace graph {
 
-    CliqueEdwards::CliqueEdwards(const SimpleGraph &graph) : CliqueAlgorithm(graph) {}
+    CliqueEdwards::CliqueEdwards(const SimpleGraph &graph) : CliqueNumberAlgorithm(graph) {}
 
     bool CliqueEdwards::run() {
-      // Initialize the base context.
-      if (!CliqueAlgorithm::run()) return false;
+      // Initialize the base and derived contexts.
+      CliqueNumberAlgorithm::run();
+      clique_.clear();
 
       // Guard against the null graph.
       VertexNumber n = graph().order();
@@ -46,6 +47,7 @@ namespace cavcom {
       }
 
       // Return the found clique.
+      number_ = clique_.size();
       return true;
     }
 

@@ -22,6 +22,7 @@ class DummyAlgorithm : public GraphAlgorithm {
       add_step();
       method_call();
       add_step();
+      if ((!status_) && (i >= 1)) break;
     }
     return status_;
   }
@@ -38,28 +39,48 @@ static bool is_epoch(const DummyAlgorithm::Time &t) { return (t == epoch); }
 
 TEST(successful_run) {
   SimpleGraph graph(5);
-  DummyAlgorithm algo(graph);
+  DummyAlgorithm ga(graph);
 
   // Check the initialized state.
-  UNITTEST_ASSERT_TRUE(is_epoch(algo.start()));
-  UNITTEST_ASSERT_TRUE(is_epoch(algo.end()));
-  UNITTEST_ASSERT_FALSE(algo.started());
-  UNITTEST_ASSERT_FALSE(algo.completed());
-  UNITTEST_ASSERT_EQUAL(algo.steps(), 0);
-  UNITTEST_ASSERT_EQUAL(algo.calls(), 0);
-  UNITTEST_ASSERT_EQUAL(algo.depth(), 0);
-  UNITTEST_ASSERT_EQUAL(algo.maxdepth(), 0);
+  UNITTEST_ASSERT_TRUE(is_epoch(ga.start()));
+  UNITTEST_ASSERT_TRUE(is_epoch(ga.end()));
+  UNITTEST_ASSERT_FALSE(ga.started());
+  UNITTEST_ASSERT_FALSE(ga.completed());
+  std::chrono::duration<double> d = ga.duration();
+  UNITTEST_ASSERT_EQUAL(d.count(), 0);
+  UNITTEST_ASSERT_EQUAL(ga.steps(), 0);
+  UNITTEST_ASSERT_EQUAL(ga.calls(), 0);
+  UNITTEST_ASSERT_EQUAL(ga.depth(), 0);
+  UNITTEST_ASSERT_EQUAL(ga.maxdepth(), 0);
 
   // Run the algorithm.
-  UNITTEST_ASSERT_TRUE(algo.execute());
+  UNITTEST_ASSERT_TRUE(ga.execute());
 
   // Check the end state.
-  UNITTEST_ASSERT_FALSE(is_epoch(algo.start()));
-  UNITTEST_ASSERT_TRUE(algo.start() < algo.end());
-  UNITTEST_ASSERT_TRUE(algo.started());
-  UNITTEST_ASSERT_TRUE(algo.completed());
-  UNITTEST_ASSERT_EQUAL(algo.steps(), 6);
-  UNITTEST_ASSERT_EQUAL(algo.calls(), 3);
-  UNITTEST_ASSERT_EQUAL(algo.depth(), 0);
-  UNITTEST_ASSERT_EQUAL(algo.maxdepth(), 1);
+  UNITTEST_ASSERT_FALSE(is_epoch(ga.start()));
+  UNITTEST_ASSERT_TRUE(ga.start() < ga.end());
+  UNITTEST_ASSERT_TRUE(ga.started());
+  UNITTEST_ASSERT_TRUE(ga.completed());
+  d = ga.duration();
+  UNITTEST_ASSERT_GREATER_EQUAL(d.count(), 3);
+  UNITTEST_ASSERT_EQUAL(ga.steps(), 6);
+  UNITTEST_ASSERT_EQUAL(ga.calls(), 3);
+  UNITTEST_ASSERT_EQUAL(ga.depth(), 0);
+  UNITTEST_ASSERT_EQUAL(ga.maxdepth(), 1);
+}
+
+TEST(failed_run) {
+  SimpleGraph graph(5);
+  DummyAlgorithm ga(graph, false);
+  UNITTEST_ASSERT_FALSE(ga.execute());
+  UNITTEST_ASSERT_FALSE(is_epoch(ga.start()));
+  UNITTEST_ASSERT_TRUE(ga.start() < ga.end());
+  UNITTEST_ASSERT_TRUE(ga.started());
+  UNITTEST_ASSERT_TRUE(ga.completed());
+  std::chrono::duration<double> d = ga.duration();
+  UNITTEST_ASSERT_LESSER(d.count(), 3);
+  UNITTEST_ASSERT_EQUAL(ga.steps(), 4);
+  UNITTEST_ASSERT_EQUAL(ga.calls(), 2);
+  UNITTEST_ASSERT_EQUAL(ga.depth(), 0);
+  UNITTEST_ASSERT_EQUAL(ga.maxdepth(), 1);
 }
