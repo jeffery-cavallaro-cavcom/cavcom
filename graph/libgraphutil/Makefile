@@ -4,14 +4,18 @@ includes := \
 	random_graph.h \
 	graph_algorithm.h \
 	clique_number_algorithm.h \
-	clique_algorithm.h
+	clique_algorithm.h \
+	chromatic_number_algorithm.h \
+	vertex_coloring_algorithm.h
 
 libgraphutil_sources := \
 	tikz_formatter.cc \
 	random_graph.cc \
 	graph_algorithm.cc \
 	clique_number_algorithm.cc \
-	clique_algorithm.cc
+	clique_algorithm.cc \
+	chromatic_number_algorithm.cc \
+	vertex_coloring_algorithm.cc
 
 test_sources := \
 	formatter_test.cc \

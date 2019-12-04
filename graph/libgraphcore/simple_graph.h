@@ -1,6 +1,8 @@
 #ifndef CAVCOM_GRAPH_LIBGRAPHCORE_SIMPLE_GRAPH_H_
 #define CAVCOM_GRAPH_LIBGRAPHCORE_SIMPLE_GRAPH_H_
 
+#include <vector>
+
 #include "graph.h"
 
 namespace cavcom {

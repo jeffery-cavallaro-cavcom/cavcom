@@ -6,7 +6,7 @@
 #include <set>
 #include <vector>
 
-#include "graph_algorithm.h"
+#include "vertex_coloring_algorithm.h"
 
 namespace cavcom {
   namespace graph {
@@ -14,38 +14,35 @@ namespace cavcom {
     // The Christofides algorithm for finding the chromatic number of a graph.  This algorithm is based on the
     // fact that a k-chromatic subgraph S of a graph G can be constructed from a (k-1)-chromatic subgraph and a
     // maximal independent set of vertices from G-V(S).
-    class Christofides : public GraphAlgorithm {
+    class Christofides : public VertexColoringAlgorithm {
      public:
-      using IDs = std::set<VertexID>;
-      using Coloring = std::vector<IDs>;
+      using ColoringByIDs = std::vector<VertexIDs>;
 
       // Create a new Christofides algorithm instance for the specified graph.
       Christofides(const SimpleGraph &graph);
-
-      // Returns the first found chromatic coloring.
-      const Coloring &chromatic(void) const { return chromatic_; }
-
-      // Returns the chromatic number of the graph.
-      Coloring::size_type number(void) const { return chromatic_.size(); }
 
      private:
       // A k-chromatic coloring that is to be extended to a (k+1)-chromatic coloring.  Note that all vertices are
       // identified by vertex ID, since vertex position will change as subgraphs are constructed.  A flat copy of
       // the vertices in the coloring is maintained for easier subset determination.
       struct Chromatic {
-        Chromatic(const Coloring &coloring, const IDs &vertices) : coloring_(coloring), vertices_(vertices) {}
+        Chromatic(const ColoringByIDs &coloring, const VertexIDs &vertices)
+          : coloring_(coloring), vertices_(vertices) {}
 
-        Coloring coloring_;
-        IDs vertices_;
+        ColoringByIDs coloring_;
+        VertexIDs vertices_;
       };
       using Colorings = std::list<Chromatic>;
       using ColoringsPtr = std::unique_ptr<Colorings>;
 
       ColoringsPtr current_;
       ColoringsPtr next_;
-      Coloring chromatic_;
 
+      // Calls the base class method and then runs the algorithm.
       virtual bool run();
+
+      // Converts the found coloring from IDs to numbers for return.
+      void ids_to_numbers(const ColoringByIDs &coloring);
 
       friend class ChristofidesNode;
     };

@@ -24,7 +24,7 @@ namespace cavcom {
       static const int MODE_FIRST_MAX = -1;
 
       // Creates a new instance of a clique algorithm for the specified graph.
-      CliqueAlgorithm(const SimpleGraph &graph, int mode = MODE_ALL, bool save = true);
+      explicit CliqueAlgorithm(const SimpleGraph &graph, int mode = MODE_ALL, bool save = true);
 
       // Returns all found cliques, if cliques are being saved.  Otherwise, the list will contain a single entry
       // that is the first found maximum clique.

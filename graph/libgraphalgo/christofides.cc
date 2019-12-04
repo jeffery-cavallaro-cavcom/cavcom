@@ -20,7 +20,7 @@ namespace cavcom {
         parent_->add_call();
 
         // The current MIS is in terms of vertex numbers relative to the current subgraph.  Convert it to vertex IDs.
-        Christofides::IDs mis_ids;
+        VertexIDs mis_ids;
         for_each(mis.cbegin(), mis.cend(), [&](VertexNumber iv){ mis_ids.insert(graph().vertex(iv).id()); });
 
         // Use a new color for the current MIS.
@@ -32,7 +32,7 @@ namespace cavcom {
         // Reject subsets.
         Christofides::Colorings::iterator ic = parent_->next_->begin();
         while (ic != next_chromatic) {
-          Christofides::IDs::size_type shared = 0;
+          VertexIDs::size_type shared = 0;
           for_each(next_chromatic->vertices_.cbegin(), next_chromatic->vertices_.cend(), [&](VertexID id){
               if (ic->vertices_.find(id) != ic->vertices_.cend()) ++shared;
             });
@@ -52,7 +52,7 @@ namespace cavcom {
         // If all the vertices have been used then the coloring is complete.
         bool more = true;
         if (next_chromatic->vertices_.size() >= parent_->graph().order()) {
-          parent_->chromatic_ = next_chromatic->coloring_;
+          parent_->ids_to_numbers(next_chromatic->coloring_);
           more = false;
         }
 
@@ -61,12 +61,11 @@ namespace cavcom {
       }
     };
 
-    Christofides::Christofides(const SimpleGraph &graph) : GraphAlgorithm(graph) {}
+    Christofides::Christofides(const SimpleGraph &graph) : VertexColoringAlgorithm(graph) {}
 
     bool Christofides::run() {
       current_.reset();
       next_.reset();
-      chromatic_.clear();
 
       // Guard against a null graph.
       if (graph().order() == 0) return true;
@@ -76,7 +75,7 @@ namespace cavcom {
 
       // Seed the algorithm with an empty coloring.
       current_.reset(new Colorings);
-      current_->emplace_back(Coloring(), IDs());
+      current_->emplace_back(ColoringByIDs(), VertexIDs());
 
       // Continue extending each current chromatic coloring until the first occasion when all vertices are used.
       bool more = true;
@@ -103,6 +102,16 @@ namespace cavcom {
       next_.reset();
 
       return true;
+    }
+
+    void Christofides::ids_to_numbers(const ColoringByIDs &coloring) {
+      coloring_.clear();
+      for_each(coloring.cbegin(), coloring.cend(),
+               [&](const VertexIDs &ids){
+                 coloring_.resize(coloring_.size() + 1);
+                 graph().ids_to_numbers(ids, &coloring_.back());
+               });
+      number_ = coloring_.size();
     }
 
   }  // namespace graph
