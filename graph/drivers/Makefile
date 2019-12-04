@@ -1,16 +1,17 @@
 includes :=
 
-qz_sources := qz.cc
+edwards_sources := edwards.cc
 bron_sources := bron.cc
 cf_source := cf.cc
+qz_sources := qz.cc
 
-test_sources := 
+test_sources := $(edwards_sources) $(bron_sources) $(cf_sources) $(qz_sources)
 
-sources := $(qz_sources) $(bron_sources) $(cf_sources) $(test_sources)
+sources := $(test_sources)
 
 libraries :=
 
-programs := qz bron cf
+programs := edwards bron cf qz
 
 tests := 
 
@@ -32,8 +33,9 @@ LIBS +=	../libgraphalgo/libgraphalgo.a \
 
 LDLIBS += -lstdc++fs
 
-qz:	qz.o $(LIBS)
+edwards:	edwards.o $(LIBS)
 bron:	bron.o $(LIBS)
 cf:	cf.o $(LIBS)
+qz:	qz.o $(LIBS)
 
 -include $(subst .cc,.d,$(sources))

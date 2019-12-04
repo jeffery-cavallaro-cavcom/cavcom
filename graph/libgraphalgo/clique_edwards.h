@@ -6,13 +6,19 @@
 namespace cavcom {
   namespace graph {
 
-    // Executes the Edwards/Elphick algorithm to determine a lower bound for the clique number of a graph.
+    // Executes the Edwards Elphick algorithm to determine a lower bound for the clique number of a graph.
     class CliqueEdwards : public CliqueNumberAlgorithm {
      public:
       // Creates a algorithm instance for the specified graph.
-      explicit CliqueEdwards(const SimpleGraph &graph);
+      explicit CliqueEdwards(const SimpleGraph &graph, bool smart = true);
+
+      // Returns true if vertices are selected by highest degree as opposed to lowest index.
+      bool smart(void) const { return smart_; }
 
      protected:
+      // If true then vertices are added by highest degree instead of lowest index.
+      bool smart_;
+
       // Calls the base class method and then runs the algorithm.
       virtual bool run();
 

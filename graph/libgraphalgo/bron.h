@@ -6,8 +6,8 @@
 namespace cavcom {
   namespace graph {
 
-    // The base class for the Bron-Kerbocsh-Schell algorithm for finding all of the maximal cliques in a graph.
-    // It contains all common context for the two versions of the algorithm.
+    // The base class for the Bron Kerbosch algorithm for finding all of the maximal cliques in a graph.  It
+    // contains all common context for the two versions of the algorithm.
     class Bron : public CliqueAlgorithm {
      public:
       // Creates a new instance of a Bron algorithm for the specified graph.
