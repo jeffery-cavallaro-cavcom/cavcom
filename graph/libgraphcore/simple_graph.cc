@@ -48,5 +48,19 @@ namespace cavcom {
       }
     }
 
+    bool SimpleGraph::proper(void) const {
+      VertexNumber n = order();
+      VertexNumber last = n - 1;
+      if (vertex(last).color() == NOCOLOR) return false;
+      for (VertexNumber i = 0; i < last; ++i) {
+        Color ci = vertex(i).color();
+        if (ci == NOCOLOR) return false;
+        for (VertexNumber j = i + 1; j < n; ++j) {
+          if (adjacent(i, j) && (ci == vertex(j).color())) return false;
+        }
+      }
+      return true;
+    }
+
   }  // namespace graph
 }  // namespace cavcom

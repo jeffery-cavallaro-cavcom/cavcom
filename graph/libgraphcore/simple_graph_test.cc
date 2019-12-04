@@ -546,22 +546,22 @@ TEST(complement_graph) {
 }
 
 TEST(id_label_not_found) {
-  Graph g(VERTICES, EDGES);
+  SimpleGraph g(VERTICES, EDGES);
   VertexNumber found;
   UNITTEST_ASSERT_FALSE(g.find_vertex(5, &found));
   UNITTEST_ASSERT_FALSE(g.find_vertex("v5", &found));
 }
 
 TEST(id_label_not_found_errors) {
-  Graph g(VERTICES, EDGES);
+  SimpleGraph g(VERTICES, EDGES);
   VertexNumber found;
   UNITTEST_ASSERT_THROW(Vertices::IDs::NotFoundLookupError, [&](){ g.find_vertex(5, &found, true); });
   UNITTEST_ASSERT_THROW(Vertices::Labels::NotFoundLookupError, [&](){ g.find_vertex("v5", &found, true); });
 }
 
 TEST(convert_ids_to_numbers) {
-  Graph g(VERTICES, EDGES);
-  Graph sg(g, {0}, EdgeNumbers());
+  SimpleGraph g(VERTICES, EDGES);
+  SimpleGraph sg(g, {0}, EdgeNumbers());
   std::vector<VertexID> ids = {1, 3};
 
   VertexNumbers numbers;
@@ -579,10 +579,37 @@ TEST(convert_ids_to_numbers) {
 }
 
 TEST(convert_ids_to_numbers_error) {
-  Graph g(VERTICES, EDGES);
-  Graph sg(g, {0}, EdgeNumbers());
+  SimpleGraph g(VERTICES, EDGES);
+  SimpleGraph sg(g, {0}, EdgeNumbers());
   std::vector<VertexID> ids = {1, 5};
 
   VertexNumbers numbers;
   UNITTEST_ASSERT_THROW(Vertices::IDs::NotFoundLookupError, [&](){ sg.ids_to_numbers(ids, &numbers); });
+}
+
+TEST(coloring_nocolor) {
+  SimpleGraph g(VERTICES, EDGES);
+  g.vertex(0).color(1);
+  g.vertex(1).color(2);
+  g.vertex(2).color(3);
+  g.vertex(3).color(NOCOLOR);
+  UNITTEST_ASSERT_FALSE(g.proper());
+}
+
+TEST(coloring_proper) {
+  SimpleGraph g(VERTICES, EDGES);
+  g.vertex(0).color(1);
+  g.vertex(1).color(2);
+  g.vertex(2).color(2);
+  g.vertex(3).color(2);
+  UNITTEST_ASSERT_TRUE(g.proper());
+}
+
+TEST(coloring_improper) {
+  SimpleGraph g(VERTICES, EDGES);
+  g.vertex(0).color(1);
+  g.vertex(1).color(2);
+  g.vertex(2).color(2);
+  g.vertex(3).color(1);
+  UNITTEST_ASSERT_FALSE(g.proper());
 }

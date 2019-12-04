@@ -36,6 +36,10 @@ namespace cavcom {
       // Makes the graph complete by adding any missing edges.
       void make_complete(void);
 
+      // Returns true if the vertex coloring is proper.  In order to be proper, no vertices can have a color of
+      // NOCOLOR and all adjacent vertices must have different colors.
+      bool proper(void) const;
+
       // Calculates the minimum and maximum vertex degrees.  These values are not cached, so these calls should be
       // considered expensive.
       Degree mindeg(void) const { return minoutdeg(); }
