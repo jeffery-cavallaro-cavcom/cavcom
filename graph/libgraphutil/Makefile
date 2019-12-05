@@ -22,7 +22,8 @@ test_sources := \
 	tikz_formatter_test.cc \
 	random_graph_test.cc \
 	graph_algorithm_test.cc \
-	clique_algorithm_test.cc
+	clique_algorithm_test.cc \
+	vertex_coloring_algorithm_test.cc
 
 sources := $(libgraphutil_sources) $(test_sources)
 
@@ -33,7 +34,8 @@ tests := \
 	tikz_formatter_test \
 	random_graph_test \
 	graph_algorithm_test \
-	clique_algorithm_test
+	clique_algorithm_test \
+	vertex_coloring_algorithm_test
 
 include ../../templates/Makefile.all.mk
 
@@ -50,5 +52,6 @@ tikz_formatter_test:	tikz_formatter_test.o $(libraries) $(TESTLIBS)
 random_graph_test:	random_graph_test.o $(libraries) $(TESTLIBS)
 graph_algorithm_test:	graph_algorithm_test.o $(libraries) $(TESTLIBS)
 clique_algorithm_test:	clique_algorithm_test.o $(libraries) $(TESTLIBS)
+vertex_coloring_algorithm_test:	vertex_coloring_algorithm_test.o $(libraries) $(TESTLIBS)
 
 -include $(subst .cc,.d,$(sources))

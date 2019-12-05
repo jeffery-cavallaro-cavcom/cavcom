@@ -4,6 +4,9 @@
 
 #include "clique_edwards.h"
 
+#include "random_graph.h"
+#include "bron2.h"
+
 using namespace cavcom::graph;
 
 static const VertexValuesList VERTICES = {{"a", NOCOLOR, 0, 2},
@@ -109,4 +112,17 @@ TEST(sample_graph_smart) {
   UNITTEST_ASSERT_TRUE(ce.execute());
   UNITTEST_ASSERT_EQUAL(ce.steps(), 46);
   UNITTEST_ASSERT_EQUAL(ce.number(), 3);
+}
+
+TEST(random_graphs) {
+  const VertexNumber ORDER = 10;
+  for (uint ip = 10; ip <= 90; ip += 10) {
+    RandomGraph g(ORDER, ip/100.0);
+    CliqueEdwards ce(g);
+    UNITTEST_ASSERT_TRUE(ce.execute());
+    Bron2 b(g);
+    UNITTEST_ASSERT_TRUE(b.execute());
+    UNITTEST_ASSERT_GREATER(ce.number(), 0);
+    UNITTEST_ASSERT_LESSER_EQUAL(ce.number(), b.number());
+  }
 }

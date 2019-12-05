@@ -6,6 +6,8 @@
 
 #include "christofides.h"
 
+#include "random_graph.h"
+
 using namespace cavcom::graph;
 
 TEST(null_graph) {
@@ -122,4 +124,16 @@ TEST(sample_graph_2) {
   std::sort(found.begin(), found.end());
   UNITTEST_ASSERT_EQUAL(found.size(), COLORING2.size());
   UNITTEST_ASSERT_EQUAL_CONTAINERS(found, COLORING2);
+}
+
+TEST(random_graphs) {
+  const VertexNumber ORDER = 10;
+  for (uint ip = 10; ip <= 90; ip += 10) {
+    RandomGraph g(ORDER, ip/100.0);
+    Christofides c(g);
+    UNITTEST_ASSERT_TRUE(c.execute());
+    UNITTEST_ASSERT_FALSE(g.proper());
+    c.apply(&g);
+    UNITTEST_ASSERT_TRUE(g.proper());
+  }
 }
