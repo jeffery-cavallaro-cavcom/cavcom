@@ -62,7 +62,7 @@ TEST(empty_graph) {
   SimpleGraph g(ORDER);
   CliqueEdwards ce(g, false);
   UNITTEST_ASSERT_TRUE(ce.execute());
-  UNITTEST_ASSERT_EQUAL(ce.steps(), 11);
+  UNITTEST_ASSERT_EQUAL(ce.steps(), 20);
   UNITTEST_ASSERT_EQUAL(ce.number(), 1);
 }
 
@@ -71,7 +71,7 @@ TEST(empty_graph_smart) {
   SimpleGraph g(ORDER);
   CliqueEdwards ce(g);
   UNITTEST_ASSERT_TRUE(ce.execute());
-  UNITTEST_ASSERT_EQUAL(ce.steps(), 11);
+  UNITTEST_ASSERT_EQUAL(ce.steps(), 20);
   UNITTEST_ASSERT_EQUAL(ce.number(), 1);
 }
 
@@ -81,7 +81,7 @@ TEST(complete_graph) {
   g.make_complete();
   CliqueEdwards ce(g, false);
   UNITTEST_ASSERT_TRUE(ce.execute());
-  UNITTEST_ASSERT_EQUAL(ce.steps(), 211);
+  UNITTEST_ASSERT_EQUAL(ce.steps(), 220);
   UNITTEST_ASSERT_EQUAL(ce.number(), ORDER);
 }
 
@@ -91,7 +91,7 @@ TEST(complete_graph_smart) {
   g.make_complete();
   CliqueEdwards ce(g);
   UNITTEST_ASSERT_TRUE(ce.execute());
-  UNITTEST_ASSERT_EQUAL(ce.steps(), 331);
+  UNITTEST_ASSERT_EQUAL(ce.steps(), 340);
   UNITTEST_ASSERT_EQUAL(ce.number(), ORDER);
 }
 
@@ -99,7 +99,7 @@ TEST(sample_graph) {
   SimpleGraph g(VERTICES, EDGES);
   CliqueEdwards ce(g, false);
   UNITTEST_ASSERT_TRUE(ce.execute());
-  UNITTEST_ASSERT_EQUAL(ce.steps(), 42);
+  UNITTEST_ASSERT_EQUAL(ce.steps(), 44);
   UNITTEST_ASSERT_EQUAL(ce.number(), 4);
 }
 
@@ -107,6 +107,6 @@ TEST(sample_graph_smart) {
   SimpleGraph g(VERTICES, EDGES);
   CliqueEdwards ce(g);
   UNITTEST_ASSERT_TRUE(ce.execute());
-  UNITTEST_ASSERT_EQUAL(ce.steps(), 46);
+  UNITTEST_ASSERT_EQUAL(ce.steps(), 48);
   UNITTEST_ASSERT_EQUAL(ce.number(), 3);
 }

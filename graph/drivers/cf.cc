@@ -51,7 +51,7 @@ static std::string make_raw_filename(VertexNumber n, uint ipct) {
 
 static constexpr uint TRIALS = 1000;
 
-static constexpr VertexNumber N_START = 5;
+static constexpr VertexNumber N_START = 17;
 static constexpr VertexNumber N_END = 50;
 static constexpr VertexNumber N_INCR = 1;
 
@@ -78,7 +78,8 @@ int main(int argc, char *argv[]) {
       raw_file.write_header();
       raw_file.close();
 
-      for (uint itrial = 0; itrial < TRIALS; ++itrial) {
+      uint ntrials = (n < 20) ? TRIALS : TRIALS/10;
+      for (uint itrial = 0; itrial < ntrials; ++itrial) {
         raw_file.reset_data();
         RandomGraph rg(n, ipct/100.0);
         Christofides cf(rg);

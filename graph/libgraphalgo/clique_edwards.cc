@@ -18,13 +18,14 @@ namespace cavcom {
       if (n <= 0) return true;
 
       // Select the first vertex with maximum degree.
-      Degree maxdeg = graph().maxdeg();
       VertexNumber selected = 0;
+      Degree maxdeg = 0;
       for (VertexNumber iv = 0; iv < n; ++iv) {
         add_step();
-        if (graph().degree(iv) >= maxdeg) {
+        Degree vd = graph().degree(iv);
+        if (vd > maxdeg) {
           selected = iv;
-          break;
+          maxdeg = vd;
         }
       }
       clique_.insert(selected);

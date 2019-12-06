@@ -12,6 +12,8 @@ using namespace cavcom::utility;
 using namespace cavcom::graph;
 
 using BronVersion = Bron2;
+static const uint MODE = Bron::MODE_FIRST_MAX;
+static const bool SAVE = false;
 
 class Statistics {
  public:
@@ -91,7 +93,7 @@ int main(int argc, char *argv[]) {
       for (uint itrial = 0; itrial < TRIALS; ++itrial) {
         raw_file.reset_data();
         RandomGraph rg(n, ipct/100.0);
-        BronVersion bron(rg);
+        BronVersion bron(rg, MODE, SAVE);
         bron.execute();
         raw_data.gather_stats(n, ipct, bron);
         summary_data.gather_stats(n, ipct, bron);
