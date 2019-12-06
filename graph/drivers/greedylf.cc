@@ -1,19 +1,16 @@
-// Executes the Edwards Elphick algorithm on a sequence of random graphs for a given order and edge probability.
+// Executes the Greedy Last First vertex coloring algorithm on a sequence of random graphs for a given order and
+// edge probability.
 
 #include <sstream>
 
 #include "csv_sample_fields.h"
 #include "csv_file.h"
 #include "random_graph.h"
-#include "clique_edwards.h"
-#include "bron2.h"
+#include "greedy_coloring_lf.h"
+#include "christofides.h"
 
 using namespace cavcom::utility;
 using namespace cavcom::graph;
-
-using BronVersion = Bron2;
-
-static const bool SMART = true;
 
 class Statistics {
  public:
@@ -39,16 +36,16 @@ class Statistics {
     differ.add_fields(csv);
   }
 
-  void gather_stats(VertexNumber n, uint p, Degree cn, const CliqueEdwards &ce) {
+  void gather_stats(VertexNumber n, uint p, Color cn, const GreedyColoringLF &glf) {
     order.datum().value(n);
     eprob.datum().value(p);
-    edges.add_data(ce.graph().size());
-    std::chrono::duration<double> dt = ce.duration();
+    edges.add_data(glf.graph().size());
+    std::chrono::duration<double> dt = glf.duration();
     time.add_data(dt.count());
-    steps.add_data(ce.steps());
-    found.add_data(ce.number());
+    steps.add_data(glf.steps());
+    found.add_data(glf.number());
     actual.add_data(cn);
-    differ.add_data(cn - ce.number());
+    differ.add_data(glf.number() - cn);
   }
 };
 
@@ -64,11 +61,11 @@ static std::string make_raw_filename(VertexNumber n, uint ipct) {
   return name.str();
 }
 
-static constexpr uint TRIALS = 1000;
+static constexpr uint TRIALS = 10;
 
 static constexpr VertexNumber N_START = 5;
 static constexpr VertexNumber N_END = 50;
-static constexpr VertexNumber N_INCR = 1;
+static constexpr VertexNumber N_INCR = 5;
 
 static constexpr uint P_START = 10;
 static constexpr uint P_END = 90;
@@ -96,12 +93,12 @@ int main(int argc, char *argv[]) {
       for (uint itrial = 0; itrial < TRIALS; ++itrial) {
         raw_file.reset_data();
         RandomGraph rg(n, ipct/100.0);
-        BronVersion bron(rg, Bron::MODE_FIRST_MAX, false);
-        bron.execute();
-        CliqueEdwards ce(rg, SMART);
-        ce.execute();
-        raw_data.gather_stats(n, ipct, bron.number(), ce);
-        summary_data.gather_stats(n, ipct, bron.number(), ce);
+        GreedyColoringLF glf(rg);
+        glf.execute();
+        Christofides ca(rg);
+        ca.execute();
+        raw_data.gather_stats(n, ipct, ca.number(), glf);
+        summary_data.gather_stats(n, ipct, ca.number(), glf);
         raw_file.write_data();
         raw_file.close();
       }
