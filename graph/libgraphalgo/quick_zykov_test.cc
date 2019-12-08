@@ -6,6 +6,93 @@
 
 using namespace cavcom::graph;
 
+TEST(null_graph) {
+  SimpleGraph g;
+  QuickZykov qz(g);
+  UNITTEST_ASSERT_TRUE(qz.execute());
+  UNITTEST_ASSERT_EQUAL(qz.lower_bound(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.upper_bound(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.steps(), 3);
+  UNITTEST_ASSERT_EQUAL(qz.calls(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.number(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 0);
+
+  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.small_degree_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.small_degree_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.common_neighbors_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.common_neighbors_hits(), 0);
+}
+
+TEST(trivial_graph) {
+  SimpleGraph g(1);
+  QuickZykov qz(g);
+  UNITTEST_ASSERT_TRUE(qz.execute());
+  UNITTEST_ASSERT_EQUAL(qz.lower_bound(), 1);
+  UNITTEST_ASSERT_EQUAL(qz.upper_bound(), 1);
+  UNITTEST_ASSERT_EQUAL(qz.steps(), 3);
+  UNITTEST_ASSERT_EQUAL(qz.calls(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.number(), 1);
+  UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 0);
+
+  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.small_degree_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.small_degree_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.common_neighbors_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.common_neighbors_hits(), 0);
+}
+
+TEST(empty_graph) {
+  constexpr VertexNumber ORDER = 10;
+  SimpleGraph g(ORDER);
+  QuickZykov qz(g);
+  UNITTEST_ASSERT_TRUE(qz.execute());
+  UNITTEST_ASSERT_EQUAL(qz.lower_bound(), 1);
+  UNITTEST_ASSERT_EQUAL(qz.upper_bound(), 1);
+  UNITTEST_ASSERT_EQUAL(qz.steps(), 3);
+  UNITTEST_ASSERT_EQUAL(qz.calls(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.number(), 1);
+  UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 0);
+
+  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.small_degree_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.small_degree_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.common_neighbors_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.common_neighbors_hits(), 0);
+}
+
+TEST(complete_graph) {
+  constexpr VertexNumber ORDER = 10;
+  SimpleGraph g(ORDER);
+  g.make_complete();
+  QuickZykov qz(g);
+  UNITTEST_ASSERT_TRUE(qz.execute());
+  UNITTEST_ASSERT_EQUAL(qz.lower_bound(), ORDER);
+  UNITTEST_ASSERT_EQUAL(qz.upper_bound(), ORDER);
+  UNITTEST_ASSERT_EQUAL(qz.steps(), 3);
+  UNITTEST_ASSERT_EQUAL(qz.calls(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.number(), ORDER);
+  UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 0);
+
+  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.small_degree_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.small_degree_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.common_neighbors_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.common_neighbors_hits(), 0);
+}
+
 static const VertexValuesList VERTICES = {{"a", NOCOLOR, 2, 6},
                                           {"b", NOCOLOR, 0, 4},
                                           {"c", NOCOLOR, 4, 4},
@@ -22,87 +109,24 @@ static const EdgeValuesList EDGES = {{0, 1}, {0, 2}, {0, 5},
                                      {4, 5},
                                      {5, 6}, {5, 7}};
 
-TEST(null_graph) {
-  QuickZykov::GraphPtr pg(new SimpleGraph);
-  QuickZykov qz(*pg);
-  UNITTEST_ASSERT_TRUE(qz.execute());
-  UNITTEST_ASSERT_EQUAL(qz.steps(), 1);
-  UNITTEST_ASSERT_EQUAL(qz.calls(), 0);
-  UNITTEST_ASSERT_EQUAL(qz.k(), 0);
-  UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 0);
-  UNITTEST_ASSERT_TRUE(qz.chromatic().null());
-}
-
-TEST(trivial_graph) {
-  QuickZykov::GraphPtr pg(new SimpleGraph(1));
-  QuickZykov qz(*pg);
-  UNITTEST_ASSERT_TRUE(qz.execute());
-  UNITTEST_ASSERT_EQUAL(qz.steps(), 2);
-  UNITTEST_ASSERT_EQUAL(qz.calls(), 0);
-  UNITTEST_ASSERT_EQUAL(qz.k(), 1);
-  UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 0);
-  UNITTEST_ASSERT_EQUAL(qz.chromatic().order(), 1);
-  UNITTEST_ASSERT_EQUAL(qz.chromatic().size(), 0);
-}
-
-TEST(empty_graph) {
-  QuickZykov::GraphPtr pg(new SimpleGraph(5));
-  QuickZykov qz(*pg);
-  UNITTEST_ASSERT_TRUE(qz.execute());
-  UNITTEST_ASSERT_EQUAL(qz.steps(), 2);
-  UNITTEST_ASSERT_EQUAL(qz.calls(), 0);
-  UNITTEST_ASSERT_EQUAL(qz.k(), 1);
-  UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 0);
-  UNITTEST_ASSERT_EQUAL(qz.chromatic().order(), 5);
-  UNITTEST_ASSERT_EQUAL(qz.chromatic().size(), 0);
-}
-
-TEST(complete_graph) {
-  QuickZykov::GraphPtr pg(new SimpleGraph(5));
-  pg->make_complete();
-  QuickZykov qz(*pg);
-  UNITTEST_ASSERT_TRUE(qz.execute());
-  UNITTEST_ASSERT_EQUAL(qz.steps(), 16);
-  UNITTEST_ASSERT_EQUAL(qz.calls(), 4);
-  UNITTEST_ASSERT_EQUAL(qz.k(), pg->order());
-  UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 1);
-  UNITTEST_ASSERT_TRUE(qz.chromatic().complete());
-}
-
 TEST(sample_graph) {
-  QuickZykov::GraphPtr pg(new SimpleGraph(VERTICES, EDGES));
-  QuickZykov qz(*pg);
+  SimpleGraph g(VERTICES, EDGES);
+  QuickZykov qz(g);
   UNITTEST_ASSERT_TRUE(qz.execute());
-  UNITTEST_ASSERT_EQUAL(qz.steps(), 52);
-  UNITTEST_ASSERT_EQUAL(qz.calls(), 5);
-  UNITTEST_ASSERT_EQUAL(qz.k(), 3);
+  UNITTEST_ASSERT_EQUAL(qz.lower_bound(), 3);
+  UNITTEST_ASSERT_EQUAL(qz.upper_bound(), 4);
+  UNITTEST_ASSERT_EQUAL(qz.steps(), 25);
+  UNITTEST_ASSERT_EQUAL(qz.calls(), 2);
+  UNITTEST_ASSERT_EQUAL(qz.number(), 3);
   UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 2);
 
-  const SimpleGraph &g = qz.chromatic();
-  UNITTEST_ASSERT_EQUAL(g.order(), 3);
-  UNITTEST_ASSERT_EQUAL(g.size(), 3);
-
-  const Vertex &v0 = g.vertex(0);
-  UNITTEST_ASSERT_EQUAL(v0.id(), 2);
-  UNITTEST_ASSERT_TRUE(v0.contracted().empty());
-
-  const Vertex &v1 = g.vertex(1);
-  UNITTEST_ASSERT_EQUAL(v1.id(), 4);
-  UNITTEST_ASSERT_TRUE(v1.contracted().empty());
-
-  const Vertex &v2 = g.vertex(2);
-  UNITTEST_ASSERT_EQUAL(v2.id(), 8);
-  UNITTEST_ASSERT_EQUAL(v2.contracted().size(), 2);
-  UNITTEST_ASSERT_EQUAL(v2.contracted()[0], 0);
-  UNITTEST_ASSERT_EQUAL(v2.contracted()[1], 3);
-
-  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_tries(), 7);
-  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_hits(), 2);
-  UNITTEST_ASSERT_EQUAL(qz.small_degree_tries(), 5);
+  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_tries(), 3);
+  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.small_degree_tries(), 3);
   UNITTEST_ASSERT_EQUAL(qz.small_degree_hits(), 2);
-  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_tries(), 3);
-  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_hits(), 1);
-  UNITTEST_ASSERT_EQUAL(qz.common_neighbors_tries(), 2);
+  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_tries(), 1);
+  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.common_neighbors_tries(), 1);
   UNITTEST_ASSERT_EQUAL(qz.common_neighbors_hits(), 0);
 }
 
@@ -126,20 +150,22 @@ static const EdgeValuesList EDGES2 = {{0, 1}, {0, 2}, {0, 3}, {0, 4},
                                       {7, 8}};
 
 TEST(sample_graph_2) {
-  QuickZykov::GraphPtr pg(new SimpleGraph(VERTICES2, EDGES2));
-  QuickZykov qz(*pg);
+  SimpleGraph g(VERTICES2, EDGES2);
+  QuickZykov qz(g);
   UNITTEST_ASSERT_TRUE(qz.execute());
-  UNITTEST_ASSERT_EQUAL(qz.steps(), 105);
-  UNITTEST_ASSERT_EQUAL(qz.calls(), 9);
-  UNITTEST_ASSERT_EQUAL(qz.k(), 4);
-  UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 4);
+  UNITTEST_ASSERT_EQUAL(qz.lower_bound(), 4);
+  UNITTEST_ASSERT_EQUAL(qz.upper_bound(), 4);
+  UNITTEST_ASSERT_EQUAL(qz.steps(), 3);
+  UNITTEST_ASSERT_EQUAL(qz.calls(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.number(), 4);
+  UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 0);
 
-  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_tries(), 15);
-  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_hits(), 5);
-  UNITTEST_ASSERT_EQUAL(qz.small_degree_tries(), 10);
-  UNITTEST_ASSERT_EQUAL(qz.small_degree_hits(), 2);
-  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_tries(), 8);
-  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_hits(), 5);
-  UNITTEST_ASSERT_EQUAL(qz.common_neighbors_tries(), 3);
+  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.edge_threshold_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.small_degree_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.small_degree_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_tries(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_hits(), 0);
+  UNITTEST_ASSERT_EQUAL(qz.common_neighbors_tries(), 0);
   UNITTEST_ASSERT_EQUAL(qz.common_neighbors_hits(), 0);
 }

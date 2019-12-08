@@ -1,73 +1,112 @@
 #include <utility>
 
+#include "bron2.h"
+#include "greedy_coloring_lf.h"
+
 #include "quick_zykov.h"
 
 namespace cavcom {
   namespace graph {
 
-    QuickZykov::QuickZykov(const SimpleGraph &graph) : GraphAlgorithm(graph), k_(0), formatter_(nullptr) {
+    void QuickZykov::reset_counters() {
+      edge_threshold_tries_ = 0;
+      edge_threshold_hits_ = 0;
+      small_degree_tries_ = 0;
+      small_degree_hits_ = 0;
+      neighborhood_subset_tries_ = 0;
+      neighborhood_subset_hits_ = 0;
+      common_neighbors_tries_ = 0;
+      common_neighbors_hits_ = 0;
+    }
+
+    QuickZykov::QuickZykov(const SimpleGraph &graph)
+      : ChromaticNumberAlgorithm(graph), lower_bound_(0), upper_bound_(0), formatter_(nullptr) {
       reset_counters();
     }
 
     bool QuickZykov::run() {
-      // Reset all of the derived context.
-      k_ = 0;
-      chromatic_.reset(nullptr);
+      // Reset the base and all derived context.
+      ChromaticNumberAlgorithm::run();
+      lower_bound_ = 0;
+      upper_bound_ = 0;
       reset_counters();
 
       // Make a dynamic copy of the graph so that the algorithm can replace it with subgraphs.
       GraphPtr pg(new SimpleGraph(graph()));
 
+      // If tracing then set up a formatter and output the initial graph.
       if (tracing()) {
         *formatter_->out() << "Initial graph" << std::endl;
         formatter_->format(*pg);
       }
 
-      // Call the outer loop.  Note that the algorithm is always successful.
+      // Call the outer loop, which is guaranteed to return with an answer.
       outer_loop(&pg);
 
+      // If tracing then output the final state of the graph.
       if (tracing())  {
         *formatter_->out() << "Final graph" << std::endl;
-        formatter_->format(*chromatic_);
+        formatter_->format(*pg);
       }
 
+      // An answer is guaranteed.
       return true;
     }
 
-    void QuickZykov::outer_loop(GraphPtr *ppg) {
-      GraphPtr &pg = *ppg;
-
-      // Null graphs (n=0) are by definition 0-colorable.
-      add_step();
-      if (check_for_null(ppg)) return;
-
-      // Empty graphs (m=0) are 1-colorable.
-      add_step();
-      if (check_for_empty(ppg)) return;
-
-      // All other graphs are 2 or more colorable.
-      add_step();
-      k_ = 2;
-      if (tracing()) *formatter_->out() << steps() << ". (outer) Initialized: k=" << k_ << std::endl;
-
-      // Determine if the graph in the current state is k-colorable.  Is so, then done - the current value of k is
-      // the chromatic number.  Otherwise, try the next value of k.  This is guaranteed to terminate since at the
-      // very worst k will reach n.  Note that a subgraph may be returned if not k-colorable.
-      while (!subroutine(ppg)) {
-        add_step();
-        ++k_;
-        if (tracing()) *formatter_->out() << steps() << ". (outer) Incrementing: k=" << k_ << std::endl;
-      }
-
-      // Return the final graph.
-      chromatic_ = std::move(pg);
+    void QuickZykov::calculate_lower() {
+      Bron2 bron(graph(), Bron::MODE_FIRST_MAX, false);
+      bron.execute();
+      lower_bound_ = bron.number();
     }
 
-    bool QuickZykov::subroutine(GraphPtr *ppg) {
-      add_call();
-      bool success = is_k_colorable(ppg);
-      done_call();
-      return success;
+    void QuickZykov::calculate_upper() {
+      GreedyColoringLF greedy(graph());
+      greedy.execute();
+      upper_bound_ = greedy.number();
+    }
+
+    void QuickZykov::outer_loop(GraphPtr *ppg) {
+      // Determine the lower and upper bounds.
+      add_step();
+      calculate_lower();
+      if (tracing()) {
+        outer_prefix();
+        *formatter_->out() << "Lower bound: kmin=" << lower_bound_ << std::endl;
+      }
+
+      add_step();
+      calculate_upper();
+      if (tracing()) {
+        outer_prefix();
+        *formatter_->out() << "Upper bound: kmax=" << upper_bound_ << std::endl;
+      }
+
+      // Start with the lower bound.
+      add_step();
+      number_ = lower_bound_;
+      if (tracing()) {
+        outer_prefix();
+        *formatter_->out() << "Initialized: k=" << number_ << std::endl;
+      }
+
+      // Determine if the graph in the current state is k-colorable.  This can be because either the upper bound
+      // has be reached of the called subroutine indicates k-colorability.  If so, then done - the current value of
+      // k is the chromatic number.  Otherwise, try the next value of k.  Note that a subgraph may be returned.
+      while (number_ < upper_bound_) {
+        // Check for k-colorability.
+        add_call();
+        bool success = is_k_colorable(ppg);
+        done_call();
+        if (success) break;
+
+        // No, so try the next value of k.
+        add_step();
+        ++number_;
+        if (tracing()) {
+          outer_prefix();
+          *formatter_->out() << steps() << "Incrementing: k=" << number_ << std::endl;
+        }
+      }
     }
 
     bool QuickZykov::is_k_colorable(GraphPtr *ppg) {
@@ -126,7 +165,7 @@ namespace cavcom {
           continue;
         } else {
           if (tracing()) {
-            inner_prefix();
+            sub_prefix();
             *formatter_->out() << "No neighborhood subsets found" << std::endl;
           }
         }
@@ -134,7 +173,7 @@ namespace cavcom {
         // Mark the two vertices with the smallest number of common neighbors.
         add_step();
         if (tracing()) {
-          inner_prefix();
+          sub_prefix();
           *formatter_->out() << "Smallest common neighbors: ";
           identify_vertex(pg, v1);
           *formatter_->out() << " and ";
@@ -171,52 +210,9 @@ namespace cavcom {
       // The graph is not k-colorable.
       add_step();
       if (tracing()) {
-        inner_prefix();
-        *formatter_->out() << "Not " << k_ << "-colorable" << std::endl;
+        sub_prefix();
+        *formatter_->out() << "Not " << number_ << "-colorable" << std::endl;
       }
-      return false;
-    }
-
-    void QuickZykov::reset_counters() {
-      edge_threshold_tries_ = 0;
-      edge_threshold_hits_ = 0;
-      small_degree_tries_ = 0;
-      small_degree_hits_ = 0;
-      neighborhood_subset_tries_ = 0;
-      neighborhood_subset_hits_ = 0;
-      common_neighbors_tries_ = 0;
-      common_neighbors_hits_ = 0;
-    }
-
-    bool QuickZykov::check_for_null(GraphPtr *ppg) {
-      GraphPtr &pg = *ppg;
-      if (tracing()) {
-        outer_prefix();
-        *formatter_->out() << "Null check: n=" << pg->order() << ": ";
-      }
-      if (pg->null()) {
-        chromatic_ = std::move(pg);
-        k_ = 0;
-        if (tracing()) *formatter_->out() << "null graph is 0-colorable" << std::endl;
-        return true;
-      }
-      if (tracing()) *formatter_->out() << "not a null graph" << std::endl;
-      return false;
-    }
-
-    bool QuickZykov::check_for_empty(GraphPtr *ppg) {
-      GraphPtr &pg = *ppg;
-      if (tracing()) {
-        outer_prefix();
-        *formatter_->out() << "Empty check: m=" << pg->size() << ": ";
-      }
-      if (pg->empty()) {
-        chromatic_ = std::move(pg);
-        k_ = 1;
-        if (tracing()) *formatter_->out() << "empty graph is 1-colorable" << std::endl;
-        return true;
-      }
-      if (tracing()) *formatter_->out() << "not an empty graph" << std::endl;
       return false;
     }
 
@@ -224,11 +220,11 @@ namespace cavcom {
       GraphPtr &pg = *ppg;
       VertexNumber n = pg->order();
       if (tracing()) {
-        inner_prefix();
-        *formatter_->out() << "Success check: n=" << n << ", k=" << k_ << ": ";
+        sub_prefix();
+        *formatter_->out() << "Success check: n=" << n << ", k=" << number_ << ": ";
       }
-      if (n <= k_) {
-        if (tracing()) *formatter_->out() << "graph is " << k_ << "-colorable" << std::endl;
+      if (n <= number_) {
+        if (tracing()) *formatter_->out() << "graph is " << number_ << "-colorable" << std::endl;
         return true;
       }
       if (tracing()) *formatter_->out() << "continue" << std::endl;
@@ -238,10 +234,10 @@ namespace cavcom {
     double QuickZykov::max_edge_threshold(GraphPtr *ppg) {
       GraphPtr &pg = *ppg;
       double n = static_cast<double>(pg->order());
-      double k = static_cast<double>(k_);
+      double k = static_cast<double>(number_);
       double a = n*n*(k - 1)/(2*k);
       if (tracing()) {
-        inner_prefix();
+        sub_prefix();
         *formatter_->out() << "Maximum edge threshold: a=" << a << std::endl;
       }
       return a;
@@ -251,11 +247,11 @@ namespace cavcom {
       GraphPtr &pg = *ppg;
       double m = static_cast<double>(pg->size());
       if (tracing()) {
-        inner_prefix();
+        sub_prefix();
         *formatter_->out() << "Compare: m=" << m << ", a=" << a << ": ";
       }
       if (m > a) {
-        if (tracing()) *formatter_->out() << "not " << k_ << "-colorable" << std::endl;
+        if (tracing()) *formatter_->out() << "not " << number_ << "-colorable" << std::endl;
         return false;
       }
       if (tracing()) *formatter_->out() << "continue" << std::endl;
@@ -266,12 +262,12 @@ namespace cavcom {
       GraphPtr &pg = *ppg;
       VertexNumber n = pg->order();
       if (tracing()) {
-        inner_prefix();
-        *formatter_->out() << "Finding degree < " << k_ << ": found ";
+        sub_prefix();
+        *formatter_->out() << "Finding degree < " << number_ << ": found ";
       }
       x->clear();
       for (VertexNumber i = 0; i < n; ++i) {
-        if (pg->degree(i) < k_) x->insert(i);
+        if (pg->degree(i) < number_) x->insert(i);
       }
       if (tracing()) *formatter_->out() << x->size() << std::endl;
     }
@@ -279,7 +275,7 @@ namespace cavcom {
     bool QuickZykov::remove_small_vertices(GraphPtr *ppg, const VertexNumbers &x) {
       GraphPtr &pg = *ppg;
       if (tracing()) {
-        inner_prefix();
+        sub_prefix();
         *formatter_->out() << "Removing vertices:";
         if (x.empty()) {
           *formatter_->out() << " none" << std::endl;
@@ -306,7 +302,7 @@ namespace cavcom {
       GraphPtr &pg = *ppg;
 
       if (tracing()) {
-        inner_prefix();
+        sub_prefix();
         *formatter_->out() << "Calculating common neighbors" << std::endl;
       }
 
@@ -363,7 +359,7 @@ namespace cavcom {
     void QuickZykov::remove_subset(GraphPtr *ppg, VertexNumber v1, VertexNumber v2) {
       GraphPtr &pg = *ppg;
       if (tracing()) {
-        inner_prefix();
+        sub_prefix();
         *formatter_->out() << "N(";
         identify_vertex(pg, v1);
         *formatter_->out() << ") in N(";
@@ -381,10 +377,10 @@ namespace cavcom {
     double QuickZykov::min_common_ub(GraphPtr *ppg) {
       GraphPtr &pg = *ppg;
       double n = static_cast<double>(pg->order());
-      double k = static_cast<double>(k_);
+      double k = static_cast<double>(number_);
       double c = n - 2 - (n - 2)/(k - 1);
       if (tracing()) {
-        inner_prefix();
+        sub_prefix();
         *formatter_->out() << "Minimum common neighbors upper bound: c = " << c << std::endl;
       }
       return c;
@@ -392,11 +388,11 @@ namespace cavcom {
 
     bool QuickZykov::check_common_ub(double b, double c) {
       if (tracing()) {
-        inner_prefix();
+        sub_prefix();
         *formatter_->out() << "Compare: b=" << b << ", c=" << c << ": ";
       }
       if (b > c) {
-        if (tracing()) *formatter_->out() << "not " << k_ << "-colorable" << std::endl;
+        if (tracing()) *formatter_->out() << "not " << number_ << "-colorable" << std::endl;
         return false;
       }
       if (tracing()) *formatter_->out() << "continue" << std::endl;
@@ -406,7 +402,7 @@ namespace cavcom {
     bool QuickZykov::contract_vertices(GraphPtr *ppg, VertexNumber v1, VertexNumber v2) {
       GraphPtr &pg = *ppg;
       if (tracing()) {
-        inner_prefix();
+        sub_prefix();
         *formatter_->out() << "Contracting: ";
         identify_vertex(pg, v1);
         *formatter_->out() << " and ";
@@ -415,7 +411,9 @@ namespace cavcom {
       }
       GraphPtr recursive(new SimpleGraph(*pg, v1, v2));
       if (tracing()) formatter_->format(*recursive);
-      bool success = subroutine(&recursive);
+      add_call();
+      bool success = is_k_colorable(&recursive);
+      done_call();
       if (success) pg = std::move(recursive);
       return success;
     }
@@ -423,7 +421,7 @@ namespace cavcom {
     bool QuickZykov::add_edge(GraphPtr *ppg, VertexNumber v1, VertexNumber v2) {
       GraphPtr &pg = *ppg;
       if (tracing()) {
-        inner_prefix();
+        sub_prefix();
         *formatter_->out() << "Adding edge: ";
         identify_vertex(pg, v1);
         *formatter_->out() << " and ";
@@ -433,7 +431,9 @@ namespace cavcom {
       GraphPtr recursive(new SimpleGraph(*pg));
       recursive->join(v1, v2);
       if (tracing()) formatter_->format(*recursive);
-      bool success = subroutine(&recursive);
+      add_call();
+      bool success = is_k_colorable(&recursive);
+      done_call();
       if (success) pg = std::move(recursive);
       return success;
     }
@@ -442,8 +442,8 @@ namespace cavcom {
       *formatter_->out() << steps() << ". (outer) ";
     }
 
-    void QuickZykov::inner_prefix(void) {
-      *formatter_->out() << steps() << ". (inner-" << depth() << ") ";
+    void QuickZykov::sub_prefix(void) {
+      *formatter_->out() << steps() << ". (sub-" << depth() << ") ";
     }
 
     void QuickZykov::identify_vertex(const GraphPtr &pg, VertexNumber iv) {

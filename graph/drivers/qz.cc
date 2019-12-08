@@ -15,6 +15,7 @@ class Statistics {
  public:
   Statistics(void) : order("n"), eprob("p"), edges("m"),
                      time("time"), steps("steps"), calls("calls"), depth("depth"),
+                     lower_bound("lower_bound"), upper_bound("upper_bound"), number("number"), match("match"),
                      edge_threshold("edge_threshold"),
                      small_degree("small_degree"),
                      neighborhood_subset("neighborhood_subset"),
@@ -26,6 +27,10 @@ class Statistics {
   CSVSampleFields<ullong> steps;
   CSVSampleFields<ullong> calls;
   CSVSampleFields<ullong> depth;
+  CSVSampleFields<ullong> lower_bound;
+  CSVSampleFields<ullong> upper_bound;
+  CSVSampleFields<ullong> number;
+  CSVHitCounterFields match;
   CSVHitCounterFields edge_threshold;
   CSVHitCounterFields small_degree;
   CSVHitCounterFields neighborhood_subset;
@@ -39,6 +44,10 @@ class Statistics {
     steps.add_fields(csv);
     calls.add_fields(csv);
     depth.add_fields(csv);
+    lower_bound.add_fields(csv);
+    upper_bound.add_fields(csv);
+    number.add_fields(csv);
+    match.add_fields(csv);
     edge_threshold.add_fields(csv);
     small_degree.add_fields(csv);
     neighborhood_subset.add_fields(csv);
@@ -54,6 +63,10 @@ class Statistics {
     steps.add_data(qz.steps());
     calls.add_data(qz.calls());
     depth.add_data(qz.maxdepth());
+    lower_bound.add_data(qz.lower_bound());
+    upper_bound.add_data(qz.upper_bound());
+    number.add_data(qz.number());
+    match.add_data(1, (qz.lower_bound() == qz.upper_bound()) ? 1 : 0);
     edge_threshold.add_data(qz.edge_threshold_tries(), qz.edge_threshold_hits());
     small_degree.add_data(qz.small_degree_tries(), qz.small_degree_hits());
     neighborhood_subset.add_data(qz.neighborhood_subset_tries(), qz.neighborhood_subset_hits());
@@ -73,11 +86,11 @@ static std::string make_raw_filename(VertexNumber n, uint ipct) {
   return name.str();
 }
 
-static constexpr uint TRIALS = 1000;
+static constexpr uint TRIALS = 100;
 
 static constexpr VertexNumber N_START = 5;
-static constexpr VertexNumber N_END = 30;
-static constexpr VertexNumber N_INCR = 1;
+static constexpr VertexNumber N_END = 50;
+static constexpr VertexNumber N_INCR = 5;
 
 static constexpr uint P_START = 10;
 static constexpr uint P_END = 90;

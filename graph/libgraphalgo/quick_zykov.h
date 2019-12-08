@@ -2,31 +2,34 @@
 #define CAVCOM_GRAPH_LIBGRAPHALGO_QUICK_ZYKOV_H_
 
 #include <memory>
-#include <ostream>
 
 #include "tikz_formatter.h"
-#include "graph_algorithm.h"
+#include "chromatic_number_algorithm.h"
 
 namespace cavcom {
   namespace graph {
 
-    // A modified version of aZykov algorithm to determine the chromatic number of a graph.  The algorithm is
-    // composed of an outer method that loops on increasing values of k and a called method that determines if the
-    // current state of the graph is k-colorable.  The first such k found is the chromatic number.
-    class QuickZykov : public GraphAlgorithm {
+    // A modified version of a Zykov algorithm to determine the chromatic number of a graph.  The algorithm is
+    // composed of an outer loop on increasing values of k and a called recursive subroutine that determines if the
+    // current state of the graph is k-colorable.  The first such k found is the chromatic number.  The first k
+    // attempted (lower bound) is equal to the click number of the graph as determined by the Bron Kerbosch
+    // algorithm.  The last possible k (upper bound) is determine by a last-first sequential (greedy) algorithm.
+    class QuickZykov : public ChromaticNumberAlgorithm {
      public:
-      using GraphPtr = std::unique_ptr<SimpleGraph>;
-
+      // Creates a new algorithm instance for the specified graph.
       explicit QuickZykov(const SimpleGraph &g);
 
-      // Returns the current k value.  If the algorithm is complete then this is the chromatic number.
-      uint k() const { return k_; }
-
       // Enables a trace using the specified formatter.  Null disables tracing (default).  Information is output
-      // describing each step, whether the step is in the outer loop or the called method, the depth of the called
-      // method, and all graph mutations.
+      // describing each step, whether the step is in the outer loop (outer) or the called subroutine (sub), the
+      // depth of the recursive called subroutine level, and all graph mutations.
       void trace(TikzFormatter *formatter) { formatter_ = formatter; }
       bool tracing(void) { return(formatter_ != nullptr); }
+
+      // Returns calculated lower and upper bounds for the chromatic number.  The lower bound is the clique number
+      // as determined by the Bron Kerbosch algorithm.  The upper bound is determined by a sequential (greedy)
+      // last-first algorithm.
+      Color lower_bound(void) const { return lower_bound_; }
+      Color upper_bound(void) const { return upper_bound_; }
 
       // The number of times that the edge threshold test was applied and the number of hits.
       ulong edge_threshold_tries() const { return edge_threshold_tries_; }
@@ -44,13 +47,11 @@ namespace cavcom {
       ulong common_neighbors_tries() const { return common_neighbors_tries_; }
       ulong common_neighbors_hits() const { return common_neighbors_hits_; }
 
-      // Returns the final complete graph that represents the termination condition of the algorithm.  Note that it
-      // may have less vertices than the chromatic number.  It is mainly for testing and tracing purposes.
-      const SimpleGraph &chromatic() const { return *chromatic_; }
-
      private:
-      uint k_;
-      GraphPtr chromatic_;
+      using GraphPtr = std::unique_ptr<SimpleGraph>;
+
+      Color lower_bound_;
+      Color upper_bound_;
 
       ulong edge_threshold_tries_;
       ulong edge_threshold_hits_;
@@ -63,28 +64,28 @@ namespace cavcom {
 
       TikzFormatter *formatter_;
 
-      // Resets all the counters and runs the algorithm.
+      // Calls the base method, resets all derived context, and runs the algorithm.
       virtual bool run();
 
       // The steps of the outer loop are as follows:
       //
-      //  1. Check for a null graph (n=0) condition.  If so, stop with k = 0.
+      //  1. Use the Bron Kerbosch algorithm to calculate the click number of the graph and use this value as the
+      //     lower bound for the chromatic number: kmin.
       //
-      //  2. Check for an empty graph (m=0) condition.  If so, stop with k = 1.
+      //  2. Use the sequential last-first algorithm to calculate an upper bound for the chromatic number: kmax.
       //
-      //  3. Initialize k to 2.
+      //  3. Initialize k to kmin.
       //
-      //  4. Call the method to determine if the current state of G is k-colorable, for the current value of k.  If
-      //     so, then return with the current value of k.  If not, then the method will return a subgraph replacement
-      //     for G to be used for the remainder of the algorithm (see the called method for details).
+      //  4. If k = kmax then return this value.
       //
-      //  5. Increment k and go to step 4.
+      //  5. Call the subroutine to determine if the current state of G is k-colorable for the current value of k.
+      //     If so, then return with the current value of k.  If not, then the method will return a subgraph
+      //     replacement for G to be used for the remainder of the algorithm.
+      //
+      //  6. Increment k and go to step 4.
       //
       // Each of these steps is counted.
       void outer_loop(GraphPtr *ppg);
-
-      // A wrapper for the recursive method to handle call/depth counting.
-      bool subroutine(GraphPtr *ppg);
 
       // The steps of the inner loop are as follows:
       //
@@ -122,11 +123,12 @@ namespace cavcom {
       // Resets all the derived-class counters.
       void reset_counters();
 
-      // Checks for a null graph.
-      bool check_for_null(GraphPtr *ppg);
+      // Calculates a lower bound for the chromatic number using the Bron Kerbosch algorithm to find the clique
+      // number of the graph.
+      void calculate_lower();
 
-      // Checks for an empty graph.
-      bool check_for_empty(GraphPtr *ppg);
+      // Calculates an upper bound for the chromatic number using the sequential last-first algorithm.
+      void calculate_upper();
 
       // Returns true if n <= k.
       bool check_for_success(GraphPtr *ppg);
@@ -169,8 +171,8 @@ namespace cavcom {
       // Constructs a prefix for outer loop trace messages.
       void outer_prefix(void);
 
-      // Constructs a prefix for called method trace messages.
-      void inner_prefix(void);
+      // Constructs a prefix for called subroutine trace messages.
+      void sub_prefix(void);
 
       // Identifies a vertex by number.  Either the label or vertex ID will be used.
       void identify_vertex(const GraphPtr &pg, VertexNumber iv);
