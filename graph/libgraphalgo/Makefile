@@ -1,4 +1,5 @@
 includes := \
+	mycielski.h \
 	clique_edwards.h \
 	bron.h \
 	bron1.h \
@@ -8,6 +9,7 @@ includes := \
 	quick_zykov.h
 
 libgraphalgo_sources := \
+	mycielski.cc \
 	clique_edwards.cc \
 	bron.cc \
 	bron1.cc \
@@ -17,6 +19,7 @@ libgraphalgo_sources := \
 	quick_zykov.cc
 
 test_sources := \
+	mycielski_test.cc \
 	clique_edwards_test.cc \
 	greedy_coloring_lf_test.cc \
 	bron_test.cc \
@@ -28,6 +31,7 @@ sources := $(libgraphalgo_sources) $(test_sources)
 libraries := libgraphalgo.a
 
 tests := \
+	mycielski_test \
 	clique_edwards_test \
 	greedy_coloring_lf_test \
 	bron_test \
@@ -44,6 +48,7 @@ TESTLIBS += ../libgraphutil/libgraphutil.a ../libgraphcore/libgraphcore.a
 libgraphalgo.a: $(subst .cc,.o,$(libgraphalgo_sources))
 	$(make-library)
 
+mycielski_test:	mycielski_test.o $(libraries) $(TESTLIBS)
 clique_edwards_test:	clique_edwards_test.o $(libraries) $(TESTLIBS)
 greedy_coloring_lf_test:	greedy_coloring_lf_test.o $(libraries) $(TESTLIBS)
 bron_test:	bron_test.o $(libraries) $(TESTLIBS)
