@@ -7,7 +7,7 @@
 #include "csv_file.h"
 #include "random_graph.h"
 #include "greedy_coloring_lf.h"
-#include "christofides.h"
+#include "quick_zykov.h"
 
 using namespace cavcom::utility;
 using namespace cavcom::graph;
@@ -95,10 +95,10 @@ int main(int argc, char *argv[]) {
         RandomGraph rg(n, ipct/100.0);
         GreedyColoringLF glf(rg);
         glf.execute();
-        Christofides ca(rg);
-        ca.execute();
-        raw_data.gather_stats(n, ipct, ca.number(), glf);
-        summary_data.gather_stats(n, ipct, ca.number(), glf);
+        QuickZykov qz(rg);
+        qz.execute();
+        raw_data.gather_stats(n, ipct, qz.number(), glf);
+        summary_data.gather_stats(n, ipct, qz.number(), glf);
         raw_file.write_data();
         raw_file.close();
       }

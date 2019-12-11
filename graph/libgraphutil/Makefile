@@ -3,6 +3,8 @@ includes := \
 	tikz_formatter.h \
 	random_graph.h \
 	graph_algorithm.h \
+	component_number_algorithm.h \
+	component_algorithm.h \
 	clique_number_algorithm.h \
 	clique_algorithm.h \
 	chromatic_number_algorithm.h \
@@ -12,6 +14,8 @@ libgraphutil_sources := \
 	tikz_formatter.cc \
 	random_graph.cc \
 	graph_algorithm.cc \
+	component_number_algorithm.cc \
+	component_algorithm.cc \
 	clique_number_algorithm.cc \
 	clique_algorithm.cc \
 	chromatic_number_algorithm.cc \
@@ -22,6 +26,7 @@ test_sources := \
 	tikz_formatter_test.cc \
 	random_graph_test.cc \
 	graph_algorithm_test.cc \
+	component_algorithm_test.cc \
 	clique_algorithm_test.cc \
 	vertex_coloring_algorithm_test.cc
 
@@ -34,6 +39,7 @@ tests := \
 	tikz_formatter_test \
 	random_graph_test \
 	graph_algorithm_test \
+	component_algorithm_test \
 	clique_algorithm_test \
 	vertex_coloring_algorithm_test
 
@@ -51,6 +57,7 @@ formatter_test:	formatter_test.o $(libraries) $(TESTLIBS)
 tikz_formatter_test:	tikz_formatter_test.o $(libraries) $(TESTLIBS)
 random_graph_test:	random_graph_test.o $(libraries) $(TESTLIBS)
 graph_algorithm_test:	graph_algorithm_test.o $(libraries) $(TESTLIBS)
+component_algorithm_test:	component_algorithm_test.o $(libraries) $(TESTLIBS)
 clique_algorithm_test:	clique_algorithm_test.o $(libraries) $(TESTLIBS)
 vertex_coloring_algorithm_test:	vertex_coloring_algorithm_test.o $(libraries) $(TESTLIBS)
 

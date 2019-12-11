@@ -47,7 +47,7 @@ namespace cavcom {
       // Calls the base class method and resets the derived state.
       virtual bool run();
 
-      // A method that is called as each maximal click is identified.  A false return terminates the algorithm.
+      // A method that is called as each maximal clique is identified.  A false return terminates the algorithm.
       virtual bool found(const VertexNumbers &clique) { return true; }
 
       // This method is called by derived classes to call the found method for a found maximal clique and to add
