@@ -1,7 +1,7 @@
 #include <utility>
 
 #include "bron2.h"
-#include "greedy_coloring_lf.h"
+#include "greedy_coloring.h"
 
 #include "quick_zykov.h"
 
@@ -60,7 +60,7 @@ namespace cavcom {
     }
 
     void QuickZykov::calculate_upper() {
-      GreedyColoringLF greedy(graph());
+      GreedyColoring greedy(graph());
       greedy.execute();
       upper_bound_ = greedy.number();
     }

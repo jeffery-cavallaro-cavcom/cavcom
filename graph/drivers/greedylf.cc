@@ -6,7 +6,7 @@
 #include "csv_sample_fields.h"
 #include "csv_file.h"
 #include "random_graph.h"
-#include "greedy_coloring_lf.h"
+#include "greedy_coloring.h"
 #include "quick_zykov.h"
 
 using namespace cavcom::utility;
@@ -36,16 +36,16 @@ class Statistics {
     differ.add_fields(csv);
   }
 
-  void gather_stats(VertexNumber n, uint p, Color cn, const GreedyColoringLF &glf) {
+  void gather_stats(VertexNumber n, uint p, Color cn, const GreedyColoring &gc) {
     order.datum().value(n);
     eprob.datum().value(p);
-    edges.add_data(glf.graph().size());
-    std::chrono::duration<double> dt = glf.duration();
+    edges.add_data(gc.graph().size());
+    std::chrono::duration<double> dt = gc.duration();
     time.add_data(dt.count());
-    steps.add_data(glf.steps());
-    found.add_data(glf.number());
+    steps.add_data(gc.steps());
+    found.add_data(gc.number());
     actual.add_data(cn);
-    differ.add_data(glf.number() - cn);
+    differ.add_data(gc.number() - cn);
   }
 };
 
@@ -93,12 +93,12 @@ int main(int argc, char *argv[]) {
       for (uint itrial = 0; itrial < TRIALS; ++itrial) {
         raw_file.reset_data();
         RandomGraph rg(n, ipct/100.0);
-        GreedyColoringLF glf(rg);
-        glf.execute();
+        GreedyColoring gc(rg);
+        gc.execute();
         QuickZykov qz(rg);
         qz.execute();
-        raw_data.gather_stats(n, ipct, qz.number(), glf);
-        summary_data.gather_stats(n, ipct, qz.number(), glf);
+        raw_data.gather_stats(n, ipct, qz.number(), gc);
+        summary_data.gather_stats(n, ipct, qz.number(), gc);
         raw_file.write_data();
         raw_file.close();
       }

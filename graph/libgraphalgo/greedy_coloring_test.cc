@@ -1,8 +1,8 @@
-// Runs the last-first greedy coloring algorithm.
+// Runs the default last-first greedy coloring algorithm.
 
 #include <libunittest/all.hpp>
 
-#include "greedy_coloring_lf.h"
+#include "greedy_coloring.h"
 
 #include "random_graph.h"
 
@@ -10,53 +10,53 @@ using namespace cavcom::graph;
 
 TEST(null_graph) {
   SimpleGraph g(0);
-  GreedyColoringLF glf(g);
-  UNITTEST_ASSERT_TRUE(glf.execute());
-  UNITTEST_ASSERT_EQUAL(glf.steps(), 0);
-  UNITTEST_ASSERT_EQUAL(glf.number(), 0);
-  UNITTEST_ASSERT_EQUAL(glf.coloring().size(), 0);
+  GreedyColoring gc(g);
+  UNITTEST_ASSERT_TRUE(gc.execute());
+  UNITTEST_ASSERT_EQUAL(gc.steps(), 0);
+  UNITTEST_ASSERT_EQUAL(gc.number(), 0);
+  UNITTEST_ASSERT_EQUAL(gc.coloring().size(), 0);
 }
 
 TEST(trivial_graph) {
   SimpleGraph g(1);
-  GreedyColoringLF glf(g);
-  UNITTEST_ASSERT_TRUE(glf.execute());
-  UNITTEST_ASSERT_EQUAL(glf.steps(), 0);
-  UNITTEST_ASSERT_EQUAL(glf.number(), 1);
-  GreedyColoringLF::Coloring expected = {{0}};
-  UNITTEST_ASSERT_EQUAL(glf.coloring().size(), expected.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(glf.coloring(), expected);
+  GreedyColoring gc(g);
+  UNITTEST_ASSERT_TRUE(gc.execute());
+  UNITTEST_ASSERT_EQUAL(gc.steps(), 0);
+  UNITTEST_ASSERT_EQUAL(gc.number(), 1);
+  GreedyColoring::Coloring expected = {{0}};
+  UNITTEST_ASSERT_EQUAL(gc.coloring().size(), expected.size());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(gc.coloring(), expected);
 }
 
 TEST(empty_graph) {
   const VertexNumber ORDER = 10;
   SimpleGraph g(ORDER);
-  GreedyColoringLF glf(g);
-  UNITTEST_ASSERT_TRUE(glf.execute());
-  UNITTEST_ASSERT_EQUAL(glf.steps(), 45);
-  UNITTEST_ASSERT_EQUAL(glf.number(), 1);
+  GreedyColoring gc(g);
+  UNITTEST_ASSERT_TRUE(gc.execute());
+  UNITTEST_ASSERT_EQUAL(gc.steps(), 45);
+  UNITTEST_ASSERT_EQUAL(gc.number(), 1);
   VertexNumbers expected;
   for (VertexNumber iv = 0; iv < ORDER; ++iv) expected.insert(iv);
-  UNITTEST_ASSERT_EQUAL(glf.coloring().size(), 1);
-  UNITTEST_ASSERT_EQUAL(glf.coloring()[0].size(), expected.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(glf.coloring()[0], expected);
+  UNITTEST_ASSERT_EQUAL(gc.coloring().size(), 1);
+  UNITTEST_ASSERT_EQUAL(gc.coloring()[0].size(), expected.size());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(gc.coloring()[0], expected);
 }
 
 TEST(complete_graph) {
   const VertexNumber ORDER = 10;
   SimpleGraph g(ORDER);
   g.make_complete();
-  GreedyColoringLF glf(g);
-  UNITTEST_ASSERT_TRUE(glf.execute());
-  UNITTEST_ASSERT_EQUAL(glf.steps(), 90);
-  UNITTEST_ASSERT_EQUAL(glf.number(), ORDER);
-  GreedyColoringLF::Coloring expected;
+  GreedyColoring gc(g);
+  UNITTEST_ASSERT_TRUE(gc.execute());
+  UNITTEST_ASSERT_EQUAL(gc.steps(), 90);
+  UNITTEST_ASSERT_EQUAL(gc.number(), ORDER);
+  GreedyColoring::Coloring expected;
   for (VertexNumber iv = 0; iv < ORDER; ++iv) {
     VertexNumbers part = {iv};
     expected.push_back(part);
   }
-  UNITTEST_ASSERT_EQUAL(glf.coloring().size(), expected.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(glf.coloring(), expected);
+  UNITTEST_ASSERT_EQUAL(gc.coloring().size(), expected.size());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(gc.coloring(), expected);
 }
 
 static const VertexValuesList VERTICES = {{"a", NOCOLOR, 2, 6},
@@ -75,16 +75,16 @@ static const EdgeValuesList EDGES = {{0, 1}, {0, 2}, {0, 5},
                                      {4, 5},
                                      {5, 6}, {5, 7}};
 
-static const GreedyColoringLF::Coloring COLORING = {{1, 5}, {0, 3, 7}, {2, 6}, {4}};
+static const GreedyColoring::Coloring COLORING = {{1, 5}, {0, 3, 7}, {2, 6}, {4}};
 
 TEST(sample_graph) {
   SimpleGraph g(VERTICES, EDGES);
-  GreedyColoringLF glf(g);
-  UNITTEST_ASSERT_TRUE(glf.execute());
-  UNITTEST_ASSERT_EQUAL(glf.steps(), 38);
-  UNITTEST_ASSERT_EQUAL(glf.number(), COLORING.size());
-  UNITTEST_ASSERT_EQUAL(glf.coloring().size(), COLORING.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(glf.coloring(), COLORING);
+  GreedyColoring gc(g);
+  UNITTEST_ASSERT_TRUE(gc.execute());
+  UNITTEST_ASSERT_EQUAL(gc.steps(), 38);
+  UNITTEST_ASSERT_EQUAL(gc.number(), COLORING.size());
+  UNITTEST_ASSERT_EQUAL(gc.coloring().size(), COLORING.size());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(gc.coloring(), COLORING);
 }
 
 static const VertexValuesList VERTICES2 = {{"a", NOCOLOR, 0, 2},
@@ -106,26 +106,26 @@ static const EdgeValuesList EDGES2 = {{0, 1}, {0, 2}, {0, 3}, {0, 4},
                                       {6, 7},
                                       {7, 8}};
 
-static const GreedyColoringLF::Coloring COLORING2 = {{0, 6, 8}, {1, 7}, {2, 4}, {3, 5}};
+static const GreedyColoring::Coloring COLORING2 = {{0, 6, 8}, {1, 7}, {2, 4}, {3, 5}};
 
 TEST(sample_graph_2) {
   SimpleGraph g(VERTICES2, EDGES2);
-  GreedyColoringLF glf(g);
-  UNITTEST_ASSERT_TRUE(glf.execute());
-  UNITTEST_ASSERT_EQUAL(glf.steps(), 48);
-  UNITTEST_ASSERT_EQUAL(glf.number(), COLORING2.size());
-  UNITTEST_ASSERT_EQUAL(glf.coloring().size(), COLORING2.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(glf.coloring(), COLORING2);
+  GreedyColoring gc(g);
+  UNITTEST_ASSERT_TRUE(gc.execute());
+  UNITTEST_ASSERT_EQUAL(gc.steps(), 48);
+  UNITTEST_ASSERT_EQUAL(gc.number(), COLORING2.size());
+  UNITTEST_ASSERT_EQUAL(gc.coloring().size(), COLORING2.size());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(gc.coloring(), COLORING2);
 }
 
 TEST(random_graphs) {
   const VertexNumber ORDER = 10;
   for (uint ip = 10; ip <= 90; ip += 10) {
     RandomGraph g(ORDER, ip/100.0);
-    GreedyColoringLF glf(g);
-    UNITTEST_ASSERT_TRUE(glf.execute());
+    GreedyColoring gc(g);
+    UNITTEST_ASSERT_TRUE(gc.execute());
     UNITTEST_ASSERT_FALSE(g.proper());
-    glf.apply(&g);
+    gc.apply(&g);
     UNITTEST_ASSERT_TRUE(g.proper());
   }
 }
