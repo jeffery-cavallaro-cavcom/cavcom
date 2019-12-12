@@ -12,7 +12,7 @@ namespace cavcom {
     class GreedyColoring : public VertexColoringAlgorithm {
      public:
       // Create a new greedy coloring algorithm instance for the specified graph.
-      GreedyColoring(const SimpleGraph &graph, bool interchange = false);
+      GreedyColoring(const SimpleGraph &graph, bool interchange = true);
 
       // Returns true if color interchange is enabled.
       bool interchange(void) const { return interchange_; }
@@ -35,6 +35,9 @@ namespace cavcom {
 
       // Calls the base class method and then runs the algorithm.
       virtual bool run();
+
+      // Attempts to perform a color interchange.
+      Color attempt_interchange(VertexNumber iv);
     };
 
   }  // namespace graph
