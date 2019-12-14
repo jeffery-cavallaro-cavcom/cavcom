@@ -238,18 +238,20 @@ TEST(sample_interchange_3) {
 }
 
 TEST(random_graphs) {
-  const VertexNumber ORDER = 10;
+  const VertexNumber ORDER = 50;
+  const uint TRIALS = 100;
   for (uint ip = 10; ip <= 90; ip += 10) {
-    RandomGraph g(ORDER, ip/100.0);
-    GreedyColoring gc(g, false);
-    UNITTEST_ASSERT_TRUE(gc.execute());
-    GreedyColoring gci(g);
-    UNITTEST_ASSERT_TRUE(gci.execute());
-    UNITTEST_ASSERT_LESSER_EQUAL(gci.number(), gc.number());
-    UNITTEST_ASSERT_FALSE(g.proper());
-    gc.apply(&g);
-    UNITTEST_ASSERT_TRUE(g.proper());
-    gci.apply(&g);
-    UNITTEST_ASSERT_TRUE(g.proper());
+    for (uint it = 0; it < TRIALS; ++it) {
+      RandomGraph g(ORDER, ip/100.0);
+      GreedyColoring gc(g, false);
+      UNITTEST_ASSERT_TRUE(gc.execute());
+      GreedyColoring gci(g);
+      UNITTEST_ASSERT_TRUE(gci.execute());
+      UNITTEST_ASSERT_FALSE(g.proper());
+      gc.apply(&g);
+      UNITTEST_ASSERT_TRUE(g.proper());
+      gci.apply(&g);
+      UNITTEST_ASSERT_TRUE(g.proper());
+    }
   }
 }
