@@ -1,48 +1,37 @@
-// Executes the Greedy Last First vertex coloring algorithm on a sequence of random graphs for a given order and
-// edge probability.
+// Executes the Zykov algorithm with no bounding on a sequence of random graphs for a given order and edge
+// probability.
 
 #include <sstream>
 
 #include "csv_sample_fields.h"
 #include "csv_file.h"
 #include "random_graph.h"
-#include "greedy_coloring.h"
-#include "quick_zykov.h"
+#include "zykov.h"
 
 using namespace cavcom::utility;
 using namespace cavcom::graph;
 
 class Statistics {
  public:
-  Statistics(void) : order("n"), eprob("p"), time("time"), steps("steps"),
-                     found("found"), actual("actual"), differ("differ") {}
+  Statistics(void) : order("n"), eprob("p"), time("time"), calls("calls") {}
   CSVDatumField<VertexNumber> order;
   CSVDatumField<uint> eprob;
   CSVSampleFields<double> time;
-  CSVSampleFields<ullong> steps;
-  CSVSampleFields<Degree> found;
-  CSVSampleFields<Degree> actual;
-  CSVSampleFields<Degree> differ;
+  CSVSampleFields<ullong> calls;
 
   void add_fields(CSVFile *csv) {
     csv->add_field(&order);
     csv->add_field(&eprob);
     time.add_fields(csv);
-    steps.add_fields(csv);
-    found.add_fields(csv);
-    actual.add_fields(csv);
-    differ.add_fields(csv);
+    calls.add_fields(csv);
   }
 
-  void gather_stats(VertexNumber n, uint p, Color cn, const GreedyColoring &gc) {
+  void gather_stats(VertexNumber n, uint p, const Zykov &z) {
     order.datum().value(n);
     eprob.datum().value(p);
-    std::chrono::duration<double> dt = gc.duration();
+    std::chrono::duration<double> dt = z.duration();
     time.add_data(dt.count());
-    steps.add_data(gc.steps());
-    found.add_data(gc.number());
-    actual.add_data(cn);
-    differ.add_data(gc.number() - cn);
+    calls.add_data(z.calls());
   }
 };
 
@@ -58,11 +47,11 @@ static std::string make_raw_filename(VertexNumber n, uint ipct) {
   return name.str();
 }
 
-static constexpr uint TRIALS = 1000;
+static constexpr uint TRIALS = 100;
 
 static constexpr VertexNumber N_START = 5;
-static constexpr VertexNumber N_END = 50;
-static constexpr VertexNumber N_INCR = 5;
+static constexpr VertexNumber N_END = 20;
+static constexpr VertexNumber N_INCR = 1;
 
 static constexpr uint P_START = 10;
 static constexpr uint P_END = 90;
@@ -87,16 +76,13 @@ int main(int argc, char *argv[]) {
       raw_file.write_header();
       raw_file.close();
 
-      uint ntrials = (n < 20) ? TRIALS : TRIALS/10;
-      for (uint itrial = 0; itrial < ntrials; ++itrial) {
+      for (uint itrial = 0; itrial < TRIALS; ++itrial) {
         raw_file.reset_data();
         RandomGraph rg(n, ipct/100.0);
-        GreedyColoring gc(rg);
-        gc.execute();
-        QuickZykov qz(rg);
-        qz.execute();
-        raw_data.gather_stats(n, ipct, qz.number(), gc);
-        summary_data.gather_stats(n, ipct, qz.number(), gc);
+        Zykov z(rg);
+        z.execute();
+        raw_data.gather_stats(n, ipct, z);
+        summary_data.gather_stats(n, ipct, z);
         raw_file.write_data();
         raw_file.close();
       }

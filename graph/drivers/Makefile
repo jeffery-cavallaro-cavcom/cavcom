@@ -5,6 +5,8 @@ bron_sources := bron.cc
 greedylf_sources := greedylf.cc
 greedylfint_sources := greedylfint.cc
 cf_source := cf.cc
+wang_source := wang.cc
+znone_source := znone.cc
 qz_sources := qz.cc
 
 test_sources := \
@@ -13,13 +15,15 @@ test_sources := \
 	$(greedylf_sources) \
 	$(greedylfint_sources) \
 	$(cf_sources) \
+	$(wang_sources) \
+	$(znone_sources) \
 	$(qz_sources)
 
 sources := $(test_sources)
 
 libraries :=
 
-programs := edwards bron greedylf greedylfint cf qz
+programs := edwards bron greedylf greedylfint cf wang znone qz
 
 tests := 
 
@@ -46,6 +50,8 @@ bron:	bron.o $(LIBS)
 greedylf:	greedylf.o $(LIBS)
 greedylfint:	greedylfint.o $(LIBS)
 cf:	cf.o $(LIBS)
+wang:	wang.o $(LIBS)
+znone:	znone.o $(LIBS)
 qz:	qz.o $(LIBS)
 
 -include $(subst .cc,.d,$(sources))

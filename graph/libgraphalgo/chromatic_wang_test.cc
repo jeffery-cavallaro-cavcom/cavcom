@@ -1,10 +1,10 @@
-// Runs the Christofides chromatic number algorithm.
+// Runs the Wang chromatic number algorithm.
 
 #include <algorithm>
 
 #include <libunittest/all.hpp>
 
-#include "christofides.h"
+#include "chromatic_wang.h"
 
 #include "random_graph.h"
 
@@ -12,52 +12,52 @@ using namespace cavcom::graph;
 
 TEST(null_graph) {
   SimpleGraph g(0);
-  Christofides c(g);
-  UNITTEST_ASSERT_TRUE(c.execute());
-  UNITTEST_ASSERT_EQUAL(c.calls(), 0);
-  UNITTEST_ASSERT_EQUAL(c.number(), 0);
-  UNITTEST_ASSERT_EQUAL(c.coloring().size(), 0);
+  ChromaticWang cw(g);
+  UNITTEST_ASSERT_TRUE(cw.execute());
+  UNITTEST_ASSERT_EQUAL(cw.calls(), 0);
+  UNITTEST_ASSERT_EQUAL(cw.number(), 0);
+  UNITTEST_ASSERT_EQUAL(cw.coloring().size(), 0);
 }
 
 TEST(trivial_graph) {
   SimpleGraph g(1);
-  Christofides c(g);
-  UNITTEST_ASSERT_TRUE(c.execute());
-  UNITTEST_ASSERT_EQUAL(c.calls(), 1);
-  UNITTEST_ASSERT_EQUAL(c.number(), 1);
-  Christofides::Coloring expected = {{0}};
-  UNITTEST_ASSERT_EQUAL(c.coloring().size(), expected.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(c.coloring(), expected);
+  ChromaticWang cw(g);
+  UNITTEST_ASSERT_TRUE(cw.execute());
+  UNITTEST_ASSERT_EQUAL(cw.calls(), 1);
+  UNITTEST_ASSERT_EQUAL(cw.number(), 1);
+  ChromaticWang::Coloring expected = {{0}};
+  UNITTEST_ASSERT_EQUAL(cw.coloring().size(), expected.size());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(cw.coloring(), expected);
 }
 
 TEST(empty_graph) {
   const VertexNumber ORDER = 10;
   SimpleGraph g(ORDER);
-  Christofides c(g);
-  UNITTEST_ASSERT_TRUE(c.execute());
-  UNITTEST_ASSERT_EQUAL(c.calls(), 1);
-  UNITTEST_ASSERT_EQUAL(c.number(), 1);
+  ChromaticWang cw(g);
+  UNITTEST_ASSERT_TRUE(cw.execute());
+  UNITTEST_ASSERT_EQUAL(cw.calls(), 1);
+  UNITTEST_ASSERT_EQUAL(cw.number(), 1);
   VertexNumbers expected;
   for (VertexNumber iv = 0; iv < ORDER; ++iv) expected.insert(iv);
-  UNITTEST_ASSERT_EQUAL(c.coloring().size(), 1);
-  UNITTEST_ASSERT_EQUAL(c.coloring()[0].size(), expected.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(c.coloring()[0], expected);
+  UNITTEST_ASSERT_EQUAL(cw.coloring().size(), 1);
+  UNITTEST_ASSERT_EQUAL(cw.coloring()[0].size(), expected.size());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(cw.coloring()[0], expected);
 }
 
 TEST(complete_graph) {
   const VertexNumber ORDER = 10;
   SimpleGraph g(ORDER);
   g.make_complete();
-  Christofides c(g);
-  UNITTEST_ASSERT_TRUE(c.execute());
-  UNITTEST_ASSERT_EQUAL(c.calls(), 5111);
-  UNITTEST_ASSERT_EQUAL(c.number(), ORDER);
-  Christofides::Coloring expected;
+  ChromaticWang cw(g);
+  UNITTEST_ASSERT_TRUE(cw.execute());
+  UNITTEST_ASSERT_EQUAL(cw.calls(), 10);
+  UNITTEST_ASSERT_EQUAL(cw.number(), ORDER);
+  ChromaticWang::Coloring expected;
   for (VertexNumber iv = 0; iv < ORDER; ++iv) {
     VertexNumbers part = {iv};
     expected.push_back(part);
   }
-  Christofides::Coloring found = c.coloring();
+  ChromaticWang::Coloring found = cw.coloring();
   std::sort(found.begin(), found.end());
   UNITTEST_ASSERT_EQUAL(found.size(), expected.size());
   UNITTEST_ASSERT_EQUAL_CONTAINERS(found, expected);
@@ -79,15 +79,15 @@ static const EdgeValuesList EDGES = {{0, 1}, {0, 2}, {0, 5},
                                      {4, 5},
                                      {5, 6}, {5, 7}};
 
-static const Christofides::Coloring COLORING = {{0, 4, 6, 7}, {1, 5}, {2, 3}};
+static const ChromaticWang::Coloring COLORING = {{0, 4, 6, 7}, {1, 5}, {2, 3}};
 
 TEST(sample_graph) {
   SimpleGraph g(VERTICES, EDGES);
-  Christofides c(g);
-  UNITTEST_ASSERT_TRUE(c.execute());
-  UNITTEST_ASSERT_EQUAL(c.calls(), 32);
-  UNITTEST_ASSERT_EQUAL(c.number(), COLORING.size());
-  Christofides::Coloring found = c.coloring();
+  ChromaticWang cw(g);
+  UNITTEST_ASSERT_TRUE(cw.execute());
+  UNITTEST_ASSERT_EQUAL(cw.calls(), 6);
+  UNITTEST_ASSERT_EQUAL(cw.number(), COLORING.size());
+  ChromaticWang::Coloring found = cw.coloring();
   std::sort(found.begin(), found.end());
   UNITTEST_ASSERT_EQUAL(found.size(), COLORING.size());
   UNITTEST_ASSERT_EQUAL_CONTAINERS(found, COLORING);
@@ -112,15 +112,15 @@ static const EdgeValuesList EDGES2 = {{0, 1}, {0, 2}, {0, 3}, {0, 4},
                                       {6, 7},
                                       {7, 8}};
 
-static const Christofides::Coloring COLORING2 = {{0, 6}, {1, 7}, {2, 5, 8}, {3, 4}};
+static const ChromaticWang::Coloring COLORING2 = {{0, 6, 8}, {1, 7}, {2, 5}, {3, 4}};
 
 TEST(sample_graph_2) {
   SimpleGraph g(VERTICES2, EDGES2);
-  Christofides c(g);
-  UNITTEST_ASSERT_TRUE(c.execute());
-  UNITTEST_ASSERT_EQUAL(c.calls(), 158);
-  UNITTEST_ASSERT_EQUAL(c.number(), COLORING2.size());
-  Christofides::Coloring found = c.coloring();
+  ChromaticWang cw(g);
+  UNITTEST_ASSERT_TRUE(cw.execute());
+  UNITTEST_ASSERT_EQUAL(cw.calls(), 15);
+  UNITTEST_ASSERT_EQUAL(cw.number(), COLORING2.size());
+  ChromaticWang::Coloring found = cw.coloring();
   std::sort(found.begin(), found.end());
   UNITTEST_ASSERT_EQUAL(found.size(), COLORING2.size());
   UNITTEST_ASSERT_EQUAL_CONTAINERS(found, COLORING2);
@@ -132,10 +132,10 @@ TEST(random_graphs) {
   for (uint ip = 10; ip <= 90; ip += 10) {
     for (uint it = 0; it < TRIALS; ++it) {
       RandomGraph g(ORDER, ip/100.0);
-      Christofides c(g);
-      UNITTEST_ASSERT_TRUE(c.execute());
+      ChromaticWang cw(g);
+      UNITTEST_ASSERT_TRUE(cw.execute());
       UNITTEST_ASSERT_FALSE(g.proper());
-      c.apply(&g);
+      cw.apply(&g);
       UNITTEST_ASSERT_TRUE(g.proper());
     }
   }

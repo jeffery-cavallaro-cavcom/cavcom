@@ -12,17 +12,15 @@ using namespace cavcom::graph;
 
 class Statistics {
  public:
-  Statistics(void) : order("n"), eprob("p"), edges("m"), time("time"), calls("calls") {}
+  Statistics(void) : order("n"), eprob("p"), time("time"), calls("calls") {}
   CSVDatumField<VertexNumber> order;
   CSVDatumField<uint> eprob;
-  CSVSampleFields<uint> edges;
   CSVSampleFields<double> time;
   CSVSampleFields<ullong> calls;
 
   void add_fields(CSVFile *csv) {
     csv->add_field(&order);
     csv->add_field(&eprob);
-    edges.add_fields(csv);
     time.add_fields(csv);
     calls.add_fields(csv);
   }
@@ -30,7 +28,6 @@ class Statistics {
   void gather_stats(VertexNumber n, uint p, const Christofides &cf) {
     order.datum().value(n);
     eprob.datum().value(p);
-    edges.add_data(cf.graph().size());
     std::chrono::duration<double> dt = cf.duration();
     time.add_data(dt.count());
     calls.add_data(cf.calls());
@@ -51,9 +48,9 @@ static std::string make_raw_filename(VertexNumber n, uint ipct) {
 
 static constexpr uint TRIALS = 1000;
 
-static constexpr VertexNumber N_START = 17;
+static constexpr VertexNumber N_START = 5;
 static constexpr VertexNumber N_END = 50;
-static constexpr VertexNumber N_INCR = 1;
+static constexpr VertexNumber N_INCR = 5;
 
 static constexpr uint P_START = 10;
 static constexpr uint P_END = 90;
