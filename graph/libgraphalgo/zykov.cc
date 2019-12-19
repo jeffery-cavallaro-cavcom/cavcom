@@ -1,30 +1,60 @@
 #include "zykov.h"
 
+#include "clique_edwards.h"
+#include "greedy_coloring.h"
+
 namespace cavcom {
   namespace graph {
 
     Zykov::Zykov(const SimpleGraph &graph) : VertexColoringAlgorithm(graph) {}
 
     bool Zykov::run() {
+      // Initialize the base and derived contexts.
       VertexColoringAlgorithm::run();
       current_.reset(new SimpleGraph(graph()));
+
+      // Establish the initial upper bound.
+      set_upper_bound();
+
+      // Branch and bound.
       branch(graph());
+
+      // If something other than the default was found then return it.
       set_chromatic();
+
       return true;
+    }
+
+    void Zykov::set_upper_bound() {
+      GreedyColoring greedy(graph());
+      greedy.execute();
+      current_.reset(new SimpleGraph(graph(), greedy.coloring()));
+      number_ = greedy.number();
+    }
+
+    bool Zykov::bound(const SimpleGraph &state) {
+      // The upper bound is no worse than this state.
+      if (state.order() < number_) number_ = state.order();
+
+      // Check this state's lower bound.
+      CliqueEdwards ce(state);
+      ce.execute();
+
+      return ce.number() >= number_;
     }
 
     void Zykov::branch(const SimpleGraph &state) {
       add_call();
 
-      // Check for bounding.
-      if (bound(state)) {
+      // Check for a complete graph (leaf state).
+      if (state.complete()) {
+        if (state.order() < current_->order()) current_.reset(new SimpleGraph(state));
         done_call();
         return;
       }
 
-      // Check for a complete graph (leaf state).
-      if (state.complete()) {
-        if (state.order() < current_->order()) current_.reset(new SimpleGraph(state));
+      // Check for bounding.
+      if (bound(state)) {
         done_call();
         return;
       }

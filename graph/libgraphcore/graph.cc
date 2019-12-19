@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <map>
 
 #include "errors.h"
 #include "graph.h"
@@ -18,7 +19,8 @@ namespace cavcom {
           bool directed, bool multiple, bool loops)
       : connections_(vertices.size(), directed, multiple, loops) {
       vertices_.reserve(vertices.size());
-      for_each(vertices.cbegin(), vertices.cend(), [this](const VertexValues &vertex){ vertices_.add(vertex); });
+      std::for_each(vertices.cbegin(), vertices.cend(),
+                    [this](const VertexValues &vertex){ vertices_.add(vertex); });
       join(edges);
     }
 
@@ -65,50 +67,95 @@ namespace cavcom {
     }
 
     Graph::Graph(const Graph &source, VertexNumber from, VertexNumber to)
-      : vertices_(source.vertices_, false, {from, to}),
-        connections_(source.order() - 1, source.directed(), source.multiple(), source.loops()) {
-      // The vertices must be distinct.
-      if (from == to) throw SameVertexContractError(from);
+      : Graph(source, VertexNumbersList({VertexNumbers({from, to})})) {
+      if (from == to) throw SameVertexContractError(to);
+    }
 
-      // Add the contracted vertex.
-      const Vertex &vfrom = source.vertex(from);
-      const Vertex &vto = source.vertex(to);
-      vertices_.add(vto.label(), vto.color(), vto.xpos(), vto.ypos());
+    Graph::Graph(const Graph &source, const VertexNumbersList &contract)
+      : vertices_(source.vertices_, false, contract),
+        connections_(after_contraction(vertices_.size(), contract),
+                     source.directed(), source.multiple(), source.loops()) {
+      // Construct a map that indicates where each vertex is going.  A vertex can only appear once.
+      using VertexLookup = std::map<VertexNumber, VertexNumbersList::size_type>;
+      VertexLookup where;
+      VertexNumbersList::size_type ns = contract.size();
+      for (VertexNumbersList::size_type is = 0, ic = 0; is < ns; ++is) {
+        const VertexNumbers &s = contract[is];
+        if (s.size() <= 1) continue;
+        std::for_each(s.cbegin(), s.cend(),
+                      [&](VertexNumber iv){
+                        if (!where.insert({iv, ic}).second) throw SameVertexContractError(iv);
+                      });
+        ++ic;
+      }
 
-      // Mark the contracted vertex.
-      VertexNumber cnum = vertices_.size() - 1;
-      Vertex &cv = vertices_[cnum];
+      // Contract each subset.
+      std::vector<VertexNumbersList::size_type> vwhere;
+      for (VertexNumbersList::size_type is = 0; is < ns; ++is) {
+        const VertexNumbers &s = contract[is];
 
-      // The contracted list for the new vertex is composed of the lists from the contracted vertices, and then
-      // the contracted vertices themselves.
-      contract(vfrom, vto, &cv.contracted_);
+        // Ignore empty and singleton sets.
+        if (s.size() <= 1) continue;
+
+        // Add the contracted vertex based on the first vertex in the set.
+        VertexNumber to = *s.cbegin();
+        const Vertex &vto = source.vertex(to);
+        vertices_.add(vto.label(), vto.color(), vto.xpos(), vto.ypos());
+
+        // Mark the contracted vertex.
+        VertexNumber cnum = vertices_.size() - 1;
+        vwhere.push_back(cnum);
+        Vertex &cv = vertices_[cnum];
+
+        // Construct the new contracted list.
+        Contracted &all = cv.contracted_;
+        std::for_each(s.cbegin(), s.cend(),
+                      [&](VertexNumber iv){
+                        const Vertex &v = source.vertex(iv);
+                        const Contracted &c = v.contracted();
+                        if (c.empty()) {
+                          all.insert(v.id());
+                        } else {
+                          all.insert(c.cbegin(), c.cend());
+                        }
+                      });
+      }
 
       // Merge edges.
       EdgeNumber m = source.size();
       for (EdgeNumber ie = 0; ie < m; ++ie) {
         const Edge &e = source.edge(ie);
+
+        // Determine where the edge was in the source graph.
         VertexNumber efrom = 0, eto = 0;
         source.find_vertex(e.from(), &efrom);
         source.find_vertex(e.to(), &eto);
 
-        // Discard edges between the contracted vertices.
-        if (((efrom == from) && (eto == to)) || ((efrom == to) && (eto == from))) continue;
-
-        // Move edges incident to the contracted from vertex to the contracted to vertex.
-        VertexNumber newfrom, newto;
-        if ((efrom == from) || (efrom == to)) {
-          newfrom = cnum;
-          find_vertex(e.to(), &newto);
-        } else if ((eto == from) || (eto == to)) {
-          find_vertex(e.from(), &newfrom);
-          newto = cnum;
+        // Determine where the edge is in the new graph.
+        VertexNumber newfrom = 0;
+        VertexNumber newto = 0;
+        VertexLookup::const_iterator found = where.find(efrom);
+        if (found == where.cend()) {
+          find_vertex(source.vertex(efrom).id(), &newfrom);
         } else {
-          find_vertex(e.from(), &newfrom);
-          find_vertex(e.to(), &newto);
+          newfrom = vwhere[found->second];
         }
 
-        // Suppress multiple edges if disabled.
-        if ((!adjacent(newfrom, newto)) || multiple()) join(newfrom, newto, e.label(), e.color(), e.weight());
+        found = where.find(eto);
+        if (found == where.cend()) {
+          find_vertex(source.vertex(eto).id(), &newto);
+        } else {
+          newto = vwhere[found->second];
+        }
+
+        // Discard edges between contracted vertices.
+        if (newfrom == newto) continue;
+
+        // Discard multiple edges if not allowed.
+        if (adjacent(newfrom, newto) && (!multiple())) continue;
+
+        // Join the new endpoints.
+        join(newfrom, newto, e.label(), e.color(), e.weight());
       }
     }
 
@@ -128,23 +175,15 @@ namespace cavcom {
     }
 
     void Graph::join(const EdgeValuesList &values) {
-      for_each(values.cbegin(), values.cend(), [this](const EdgeValues &edge){ join(edge); });
+      std::for_each(values.cbegin(), values.cend(), [this](const EdgeValues &edge){ join(edge); });
     }
 
-    void Graph::contract(const Vertex &from, const Vertex &to, Contracted *contracted) {
-      const Contracted &fc = from.contracted();
-      if (fc.empty()) {
-        contracted->push_back(from.id());
-      } else {
-        contracted->insert(contracted->end(), fc.cbegin(), fc.cend());
-      }
-
-      const Contracted &tc = to.contracted();
-      if (tc.empty()) {
-        contracted->push_back(to.id());
-      } else {
-        contracted->insert(contracted->end(), tc.cbegin(), tc.cend());
-      }
+    VertexNumber Graph::after_contraction(VertexNumber start, const VertexNumbersList &contract) {
+      std::for_each(contract.cbegin(), contract.cend(),
+                    [&](const VertexNumbers &s){
+                      if (s.size() > 1) ++start;
+                    });
+      return start;
     }
 
   }  // namespace graph

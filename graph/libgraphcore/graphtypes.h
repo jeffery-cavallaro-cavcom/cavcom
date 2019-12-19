@@ -3,7 +3,6 @@
 
 #include <set>
 #include <string>
-#include <vector>
 
 #include "types.h"
 
@@ -33,7 +32,7 @@ namespace cavcom {
 
     // Each vertex maintains a list of vertex IDs that track vertex contractions.  An empty contracted list
     // indicates that the vertex is not the result of any contractions.
-    using Contracted = std::vector<VertexID>;
+    using Contracted = std::set<VertexID>;
 
     // Vertices can be assigned and X and Y position to aid drawing software.
     using Dimension = double;

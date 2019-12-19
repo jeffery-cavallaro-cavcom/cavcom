@@ -33,7 +33,7 @@ TEST(empty_graph) {
   SimpleGraph g(ORDER);
   Zykov z(g);
   UNITTEST_ASSERT_TRUE(z.execute());
-  UNITTEST_ASSERT_EQUAL(z.calls(), 231949);
+  UNITTEST_ASSERT_EQUAL(z.calls(), 1);
   UNITTEST_ASSERT_EQUAL(z.number(), 1);
   VertexNumbers expected;
   for (VertexNumber iv = 0; iv < ORDER; ++iv) expected.insert(iv);
@@ -81,7 +81,7 @@ TEST(sample_graph) {
   SimpleGraph g(VERTICES, EDGES);
   Zykov z(g);
   UNITTEST_ASSERT_TRUE(z.execute());
-  UNITTEST_ASSERT_EQUAL(z.calls(), 575);
+  UNITTEST_ASSERT_EQUAL(z.calls(), 31);
   UNITTEST_ASSERT_EQUAL(z.number(), COLORING.size());
   UNITTEST_ASSERT_EQUAL(z.coloring().size(), COLORING.size());
   UNITTEST_ASSERT_EQUAL_CONTAINERS(z.coloring(), COLORING);
@@ -106,13 +106,13 @@ static const EdgeValuesList EDGES2 = {{0, 1}, {0, 2}, {0, 3}, {0, 4},
                                       {6, 7},
                                       {7, 8}};
 
-static const Zykov::Coloring COLORING2 = {{1, 5}, {2, 4}, {3, 7}, {0, 6, 8}};
+static const Zykov::Coloring COLORING2 = {{0, 6, 8}, {1, 7}, {2, 4}, {3, 5}};
 
 TEST(sample_graph_2) {
   SimpleGraph g(VERTICES2, EDGES2);
   Zykov z(g);
   UNITTEST_ASSERT_TRUE(z.execute());
-  UNITTEST_ASSERT_EQUAL(z.calls(), 845);
+  UNITTEST_ASSERT_EQUAL(z.calls(), 7);
   UNITTEST_ASSERT_EQUAL(z.number(), COLORING2.size());
   UNITTEST_ASSERT_EQUAL(z.coloring().size(), COLORING2.size());
   UNITTEST_ASSERT_EQUAL_CONTAINERS(z.coloring(), COLORING2);
@@ -120,7 +120,7 @@ TEST(sample_graph_2) {
 
 TEST(random_graphs) {
   const VertexNumber ORDER = 10;
-  const uint TRIALS = 5;
+  const uint TRIALS = 100;
   for (uint ip = 10; ip <= 90; ip += 10) {
     for (uint it = 0; it < TRIALS; ++it) {
       RandomGraph g(ORDER, ip/100.0);

@@ -1,5 +1,6 @@
 // Creates and exercises simple graphs.
 
+#include <algorithm>
 #include <vector>
 
 #include <libunittest/all.hpp>
@@ -462,7 +463,7 @@ TEST(contract_vertices) {
   UNITTEST_ASSERT_EQUAL(cg2.mindeg(), d);
   UNITTEST_ASSERT_EQUAL(cg2.maxdeg(), d);
 
-  c1.push_back(3);
+  c1.insert(3);
   UNITTEST_ASSERT_EQUAL_CONTAINERS(cg2.vertex(d).contracted(), c1);
 
   // And once more.
@@ -499,11 +500,44 @@ TEST(contract_vertices) {
   UNITTEST_ASSERT_EQUAL(cg4.mindeg(), 0);
   UNITTEST_ASSERT_EQUAL(cg4.maxdeg(), 0);
 
-  c1.insert(c1.end(), c2.cbegin(), c2.cend());
+  c1.insert(c2.cbegin(), c2.cend());
   UNITTEST_ASSERT_EQUAL_CONTAINERS(cg4.vertex(0).contracted(), c1);
 
   // Trying to contract a single vertex throws an exception.
   UNITTEST_ASSERT_THROW(SameVertexContractError, [&](){ SimpleGraph cg5(cg4, 0, 0); });
+}
+
+TEST(contract_many) {
+  SimpleGraph g(KV, KE);
+  SimpleGraph cg(g, { {}, {2}, {}, {3, 0}, {1, 4}, {} });
+  UNITTEST_ASSERT_EQUAL(cg.order(), 3);
+  UNITTEST_ASSERT_EQUAL(cg.size(), 3);
+
+  UNITTEST_ASSERT_EQUAL(cg.vertex(0).id(), 2);
+  UNITTEST_ASSERT_EQUAL(cg.vertex(1).id(), 5);
+  UNITTEST_ASSERT_EQUAL(cg.vertex(2).id(), 6);
+
+  UNITTEST_ASSERT_FALSE(cg.adjacent(0, 0));
+  UNITTEST_ASSERT_TRUE(cg.adjacent(0, 1));
+  UNITTEST_ASSERT_TRUE(cg.adjacent(0, 2));
+
+  UNITTEST_ASSERT_TRUE(cg.adjacent(1, 0));
+  UNITTEST_ASSERT_FALSE(cg.adjacent(1, 1));
+  UNITTEST_ASSERT_TRUE(cg.adjacent(1, 2));
+
+  UNITTEST_ASSERT_TRUE(cg.adjacent(2, 0));
+  UNITTEST_ASSERT_TRUE(cg.adjacent(2, 1));
+  UNITTEST_ASSERT_FALSE(cg.adjacent(2, 2));
+
+  UNITTEST_ASSERT_TRUE(cg.vertex(0).contracted().empty());
+
+  UNITTEST_ASSERT_EQUAL(cg.vertex(1).contracted().size(), 2);
+  VertexNumbers expected = {0, 3};
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(cg.vertex(1).contracted(), expected);
+
+  UNITTEST_ASSERT_EQUAL(cg.vertex(2).contracted().size(), 2);
+  expected = {1, 4};
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(cg.vertex(2).contracted(), expected);
 }
 
 TEST(complement_null) {

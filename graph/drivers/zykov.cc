@@ -1,5 +1,4 @@
-// Executes the Zykov algorithm with no bounding on a sequence of random graphs for a given order and edge
-// probability.
+// Executes the Zykov algorithm on a sequence of random graphs for a given order and edge probability.
 
 #include <sstream>
 
@@ -50,8 +49,8 @@ static std::string make_raw_filename(VertexNumber n, uint ipct) {
 static constexpr uint TRIALS = 100;
 
 static constexpr VertexNumber N_START = 5;
-static constexpr VertexNumber N_END = 20;
-static constexpr VertexNumber N_INCR = 1;
+static constexpr VertexNumber N_END = 50;
+static constexpr VertexNumber N_INCR = 5;
 
 static constexpr uint P_START = 10;
 static constexpr uint P_END = 90;
@@ -76,7 +75,8 @@ int main(int argc, char *argv[]) {
       raw_file.write_header();
       raw_file.close();
 
-      for (uint itrial = 0; itrial < TRIALS; ++itrial) {
+      uint ntrials = (n < 20) ? TRIALS : TRIALS/10;
+      for (uint itrial = 0; itrial < ntrials; ++itrial) {
         raw_file.reset_data();
         RandomGraph rg(n, ipct/100.0);
         Zykov z(rg);

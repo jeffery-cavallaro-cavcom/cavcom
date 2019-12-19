@@ -27,6 +27,9 @@ namespace cavcom {
     SimpleGraph::SimpleGraph(const SimpleGraph &source, VertexNumber from, VertexNumber to)
       : Graph(source, from, to) {}
 
+    SimpleGraph::SimpleGraph(const SimpleGraph &source, const VertexNumbersList &contract)
+      : Graph(source, contract) {}
+
     bool SimpleGraph::complete(void) const {
       VertexNumber n = order();
       if (n < 2) return true;

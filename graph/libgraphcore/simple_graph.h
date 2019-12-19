@@ -29,6 +29,9 @@ namespace cavcom {
       // Creates a copy of the specified simple graph, but with the two specified vertices contracted.
       SimpleGraph(const SimpleGraph &source, VertexNumber from, VertexNumber to);
 
+      // Creates a copy of the specified simple graph, but with the edge subsets contracted.
+      SimpleGraph(const SimpleGraph &source, const VertexNumbersList &contract);
+
       // Returns true if the graph is a complete graph.  This value is not cached so it should be considered
       // expensive to calculate.
       bool complete(void) const;

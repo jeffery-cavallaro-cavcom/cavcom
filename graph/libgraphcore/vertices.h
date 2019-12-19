@@ -16,6 +16,9 @@ namespace cavcom {
     // A set of vertices by vertex number.  Used during subgraph operations.
     using VertexNumbers = std::set<VertexNumber>;
 
+    // A list of vertex subsets, used by various partitioning algorithms.
+    using VertexNumbersList = std::vector<VertexNumbers>;
+
     // The vertices in a graph.
     class Vertices {
      public:
@@ -26,8 +29,12 @@ namespace cavcom {
       // Creates a new, empty vertex table.
       Vertices(void);
 
-      // Copies a vertex table, either keeping or removing the vertices in the specified list.
+      // Copies a vertex table, either keeping or removing the vertices in the specified set.
       Vertices(const Vertices &source, bool keep, const VertexNumbers &vertices);
+
+      // Copies a vertex table, either keeping or removing the vertices in the specified list.  Empty and singleton
+      // subsets are ignored.
+      Vertices(const Vertices &source, bool keep, const VertexNumbersList &vertices);
 
       // Returns the number of vertices in the table.
       VertexNumber size(void) const { return vertices_.size(); }

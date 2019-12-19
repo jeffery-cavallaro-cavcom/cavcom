@@ -9,9 +9,31 @@ namespace cavcom {
     Vertices::Vertices(void) : next_(0), id_to_number_("vertex id"), label_to_number_("vertex label") {}
 
     Vertices::Vertices(const Vertices &source, bool keep, const VertexNumbers &vertices) : Vertices() {
+      // Construct the new set of vertices.
       VertexNumber n = source.size();
       for (VertexNumber iv = 0, ov = 0; iv < n; ++iv) {
         bool found = (vertices.find(iv) != vertices.cend());
+        if ((keep && !found) || (!keep && found)) continue;
+        const Vertex &v = source[iv];
+        next_ = v.id();
+        add(v.label(), v.color(), v.xpos(), v.ypos());
+        vertices_[ov++].contracted_ = v.contracted_;
+      }
+      next_ = source.next_;
+    }
+
+    Vertices::Vertices(const Vertices &source, bool keep, const VertexNumbersList &vertices) : Vertices() {
+      // Flatten out the list.
+      VertexNumbers targets;
+      std::for_each(vertices.cbegin(), vertices.cend(),
+                    [&](VertexNumbers subset) {
+                      if (subset.size() > 1) targets.insert(subset.cbegin(), subset.cend());
+                    });
+
+      // Construct the new set of vertices.
+      VertexNumber n = source.size();
+      for (VertexNumber iv = 0, ov = 0; iv < n; ++iv) {
+        bool found = (targets.find(iv) != targets.cend());
         if ((keep && !found) || (!keep && found)) continue;
         const Vertex &v = source[iv];
         next_ = v.id();

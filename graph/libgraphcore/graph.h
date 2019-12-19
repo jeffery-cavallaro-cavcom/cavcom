@@ -54,6 +54,10 @@ namespace cavcom {
       // error if the from and to vertices are equal.
       Graph(const Graph &source, VertexNumber from, VertexNumber to);
 
+      // Creates a copy of the specified graph, but with all of the vertices in each subset contracted.  Empty and
+      // singleton subsets are ignored.
+      Graph(const Graph &source, const VertexNumbersList &contract);
+
       // Returns true for digraph edge semantics (otherwise undirected).
       bool directed(void) const { return connections_.directed(); }
 
@@ -143,8 +147,8 @@ namespace cavcom {
       // The connection matrix.  Indexed by from vertex and to vertex, in that order.
       Connections connections_;
 
-      // Constructs a contracted list from two vertices.
-      void contract(const Vertex &from, const Vertex &to, Contracted *contracted);
+      // Calculates the new number of nodes in a graph assuming contraction.
+      static VertexNumber after_contraction(VertexNumber start, const VertexNumbersList &contract);
     };
 
   }  // namespace graph
