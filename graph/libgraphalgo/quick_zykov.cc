@@ -1,14 +1,17 @@
 #include <utility>
 
-#include "bron2.h"
-#include "greedy_coloring.h"
-
 #include "quick_zykov.h"
+
+#include "bron2.h"
+#include "clique_edwards.h"
+#include "greedy_coloring.h"
 
 namespace cavcom {
   namespace graph {
 
     void QuickZykov::reset_counters() {
+      bounding_tries_ = 0;
+      bounding_hits_ = 0;
       edge_threshold_tries_ = 0;
       edge_threshold_hits_ = 0;
       small_degree_tries_ = 0;
@@ -20,15 +23,16 @@ namespace cavcom {
     }
 
     QuickZykov::QuickZykov(const SimpleGraph &graph)
-      : ChromaticNumberAlgorithm(graph), lower_bound_(0), upper_bound_(0), formatter_(nullptr) {
+      : VertexColoringAlgorithm(graph), lower_bound_(0), upper_bound_(0), formatter_(nullptr) {
       reset_counters();
     }
 
     bool QuickZykov::run() {
       // Reset the base and all derived context.
-      ChromaticNumberAlgorithm::run();
+      VertexColoringAlgorithm::run();
       lower_bound_ = 0;
       upper_bound_ = 0;
+      adjusted_upper_bound_ = 0;
       reset_counters();
 
       // Make a dynamic copy of the graph so that the algorithm can replace it with subgraphs.
@@ -63,6 +67,7 @@ namespace cavcom {
       GreedyColoring greedy(graph());
       greedy.execute();
       upper_bound_ = greedy.number();
+      adjusted_upper_bound_ = upper_bound_;
     }
 
     void QuickZykov::outer_loop(GraphPtr *ppg) {
@@ -92,7 +97,7 @@ namespace cavcom {
       // Determine if the graph in the current state is k-colorable.  This can be because either the upper bound
       // has be reached of the called subroutine indicates k-colorability.  If so, then done - the current value of
       // k is the chromatic number.  Otherwise, try the next value of k.  Note that a subgraph may be returned.
-      while (number_ < upper_bound_) {
+      while (number_ < adjusted_upper_bound_) {
         // Check for k-colorability.
         add_call();
         bool success = is_k_colorable(ppg);
@@ -148,6 +153,17 @@ namespace cavcom {
           continue;
         }
 
+        // Check for bounding.
+        add_step();
+        if (pg->order() < adjusted_upper_bound_) adjusted_upper_bound_ = pg->order();
+
+        add_step();
+        ++bounding_tries_;
+        if (check_bounding(&pg)) {
+          ++bounding_hits_;
+          return false;
+        }
+
         // Find the smallest number of common neighbors.
         b = 0;
         v1 = 0, v2 = 0;
@@ -156,7 +172,7 @@ namespace cavcom {
         add_step();
         bool subset = find_common_neighbors(&pg, &b, &v1, &v2, &b_nonadj, &v1_nonadj, &v2_nonadj);
 
-        // If the preceding call returns true then N(v1) is a subset of N(v2), so v1 can be removed.
+        // If the preceding call returns true then N(v1) is a subset of N(v2), so contract the two vertices.
         add_step();
         ++neighborhood_subset_tries_;
         if (subset) {
@@ -292,6 +308,19 @@ namespace cavcom {
       return true;
     }
 
+    bool QuickZykov::check_bounding(GraphPtr *ppg) {
+      GraphPtr &pg = *ppg;
+      CliqueEdwards ce(*pg);
+      ce.execute();
+      Color lb = ce.number();
+      bool bound = (lb > number_);
+      if (tracing() && bound) {
+        sub_prefix();
+        *formatter_->out() << "Bounding: lb=" << lb << ">" << number_ << "=k" << std::endl;
+      }
+      return bound;
+    }
+
     bool QuickZykov::find_common_neighbors(GraphPtr *ppg,
                                            Degree *smallest,
                                            VertexNumber *v1, VertexNumber *v2,
@@ -364,13 +393,9 @@ namespace cavcom {
         identify_vertex(pg, v1);
         *formatter_->out() << ") in N(";
         identify_vertex(pg, v2);
-        *formatter_->out() << "): Removing ";
-        identify_vertex(pg, v1);
-        *formatter_->out() << std::endl;
+        *formatter_->out() << "): Contracting" << std::endl;
       }
-      VertexNumbers x;
-      x.insert(v1);
-      pg.reset(new SimpleGraph(*pg, x, EdgeNumbers()));
+      pg.reset(new SimpleGraph(*pg, v1, v2));
       if (tracing()) formatter_->format(*pg);
     }
 

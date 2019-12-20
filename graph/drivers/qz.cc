@@ -16,6 +16,7 @@ class Statistics {
   Statistics(void) : order("n"), eprob("p"), edges("m"),
                      time("time"), steps("steps"), calls("calls"), depth("depth"),
                      lower_bound("lower_bound"), upper_bound("upper_bound"), number("number"), match("match"),
+                     bounding("bounding"),
                      edge_threshold("edge_threshold"),
                      small_degree("small_degree"),
                      neighborhood_subset("neighborhood_subset"),
@@ -31,6 +32,7 @@ class Statistics {
   CSVSampleFields<ullong> upper_bound;
   CSVSampleFields<ullong> number;
   CSVHitCounterFields match;
+  CSVHitCounterFields bounding;
   CSVHitCounterFields edge_threshold;
   CSVHitCounterFields small_degree;
   CSVHitCounterFields neighborhood_subset;
@@ -48,6 +50,7 @@ class Statistics {
     upper_bound.add_fields(csv);
     number.add_fields(csv);
     match.add_fields(csv);
+    bounding.add_fields(csv);
     edge_threshold.add_fields(csv);
     small_degree.add_fields(csv);
     neighborhood_subset.add_fields(csv);
@@ -67,6 +70,7 @@ class Statistics {
     upper_bound.add_data(qz.upper_bound());
     number.add_data(qz.number());
     match.add_data(1, (qz.lower_bound() == qz.upper_bound()) ? 1 : 0);
+    bounding.add_data(qz.bounding_tries(), qz.bounding_hits());
     edge_threshold.add_data(qz.edge_threshold_tries(), qz.edge_threshold_hits());
     small_degree.add_data(qz.small_degree_tries(), qz.small_degree_hits());
     neighborhood_subset.add_data(qz.neighborhood_subset_tries(), qz.neighborhood_subset_hits());
@@ -86,7 +90,7 @@ static std::string make_raw_filename(VertexNumber n, uint ipct) {
   return name.str();
 }
 
-static constexpr uint TRIALS = 100;
+static constexpr uint TRIALS = 1000;
 
 static constexpr VertexNumber N_START = 5;
 static constexpr VertexNumber N_END = 50;
@@ -115,7 +119,8 @@ int main(int argc, char *argv[]) {
       raw_file.write_header();
       raw_file.close();
 
-      for (uint itrial = 0; itrial < TRIALS; ++itrial) {
+      uint ntrials = (n < 20) ? TRIALS : TRIALS/10;
+      for (uint itrial = 0; itrial < ntrials; ++itrial) {
         raw_file.reset_data();
         RandomGraph rg(n, ipct/100.0);
         QuickZykov qz(rg);

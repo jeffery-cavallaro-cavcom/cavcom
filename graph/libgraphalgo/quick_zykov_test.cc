@@ -4,6 +4,9 @@
 
 #include "quick_zykov.h"
 
+#include "chromatic_wang.h"
+#include "random_graph.h"
+
 using namespace cavcom::graph;
 
 TEST(null_graph) {
@@ -115,7 +118,7 @@ TEST(sample_graph) {
   UNITTEST_ASSERT_TRUE(qz.execute());
   UNITTEST_ASSERT_EQUAL(qz.lower_bound(), 3);
   UNITTEST_ASSERT_EQUAL(qz.upper_bound(), 4);
-  UNITTEST_ASSERT_EQUAL(qz.steps(), 25);
+  UNITTEST_ASSERT_EQUAL(qz.steps(), 27);
   UNITTEST_ASSERT_EQUAL(qz.calls(), 2);
   UNITTEST_ASSERT_EQUAL(qz.number(), 3);
   UNITTEST_ASSERT_EQUAL(qz.maxdepth(), 2);
@@ -168,4 +171,19 @@ TEST(sample_graph_2) {
   UNITTEST_ASSERT_EQUAL(qz.neighborhood_subset_hits(), 0);
   UNITTEST_ASSERT_EQUAL(qz.common_neighbors_tries(), 0);
   UNITTEST_ASSERT_EQUAL(qz.common_neighbors_hits(), 0);
+}
+
+TEST(random_graphs) {
+  const VertexNumber ORDER = 10;
+  const uint TRIALS = 100;
+  for (uint ip = 10; ip <= 90; ip += 10) {
+    for (uint it = 0; it < TRIALS; ++it) {
+      RandomGraph g(ORDER, ip/100.0);
+      QuickZykov qz(g);
+      qz.execute();
+      ChromaticWang cw(g);
+      cw.execute();
+      UNITTEST_ASSERT_EQUAL(qz.number(), cw.number());
+    }
+  }
 }
