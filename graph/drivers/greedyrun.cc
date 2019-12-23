@@ -24,6 +24,7 @@ class Statistics {
     csv->add_field(&order);
     csv->add_field(&eprob);
     time.add_fields(csv);
+    steps.add_fields(csv);
     number.add_fields(csv);
   }
 
