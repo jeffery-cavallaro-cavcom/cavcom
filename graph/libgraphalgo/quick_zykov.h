@@ -104,7 +104,7 @@ namespace cavcom {
       //
       //  4.  Construct a list of all vertices with degree < k.
       //
-      //  5.  If such vertices exist, then remove then an go to step 1.
+      //  5.  If such vertices exist, then remove them an go to step 1.
       //
       //  6.  If n < kmax then kmax = n.
       //
