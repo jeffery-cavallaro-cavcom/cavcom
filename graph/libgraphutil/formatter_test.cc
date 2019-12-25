@@ -191,7 +191,7 @@ TEST(add_and_check_colors) {
   UNITTEST_ASSERT_TRUE(formatter.get_color(NOCOLOR).empty());
 
   // Check the explicit colors.
-  for_each(COLORS.cbegin(), COLORS.cend(), [&](const DummyFormatter::ColorValues &values){
+  for_each(COLORS.cbegin(), COLORS.cend(), [&formatter](const DummyFormatter::ColorValues &values){
                                              UNITTEST_ASSERT_EQUAL(formatter.get_color(values.id), values.color);
                                            });
 

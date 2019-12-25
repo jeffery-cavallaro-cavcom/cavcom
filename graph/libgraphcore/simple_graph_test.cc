@@ -84,8 +84,8 @@ TEST(make_empty) {
   UNITTEST_ASSERT_EQUAL(g.mindeg(), 0);
   UNITTEST_ASSERT_EQUAL(g.maxdeg(), 0);
 
-  UNITTEST_ASSERT_THROW(std::out_of_range, [&](){ g.vertex(ORDER); });
-  UNITTEST_ASSERT_THROW(std::out_of_range, [&](){ g.edge(0); });
+  UNITTEST_ASSERT_THROW(std::out_of_range, [&g](){ g.vertex(ORDER); });
+  UNITTEST_ASSERT_THROW(std::out_of_range, [&g](){ g.edge(0); });
 }
 
 TEST(make_graph) {
@@ -436,7 +436,7 @@ TEST(contract_vertices) {
   UNITTEST_ASSERT_EQUAL(cg1.mindeg(), d);
   UNITTEST_ASSERT_EQUAL(cg1.maxdeg(), d);
 
-  Contracted c1 = {0, 1};
+  VertexIDs c1 = {0, 1};
   UNITTEST_ASSERT_EQUAL_CONTAINERS(cg1.vertex(d).contracted(), c1);
 
   // Contract two more.
@@ -486,7 +486,7 @@ TEST(contract_vertices) {
   UNITTEST_ASSERT_EQUAL(cg3.maxdeg(), d);
 
   UNITTEST_ASSERT_EQUAL_CONTAINERS(cg3.vertex(0).contracted(), c1);
-  Contracted c2 = {4, 2};
+  VertexIDs c2 = {4, 2};
   UNITTEST_ASSERT_EQUAL_CONTAINERS(cg3.vertex(1).contracted(), c2);
 
   // And finally down to one vertex.
@@ -504,7 +504,7 @@ TEST(contract_vertices) {
   UNITTEST_ASSERT_EQUAL_CONTAINERS(cg4.vertex(0).contracted(), c1);
 
   // Trying to contract a single vertex throws an exception.
-  UNITTEST_ASSERT_THROW(SameVertexContractError, [&](){ SimpleGraph cg5(cg4, 0, 0); });
+  UNITTEST_ASSERT_THROW(SameVertexContractError, [&cg4](){ SimpleGraph cg5(cg4, 0, 0); });
 }
 
 TEST(contract_many) {
@@ -589,8 +589,10 @@ TEST(id_label_not_found) {
 TEST(id_label_not_found_errors) {
   SimpleGraph g(VERTICES, EDGES);
   VertexNumber found;
-  UNITTEST_ASSERT_THROW(Vertices::IDs::NotFoundLookupError, [&](){ g.find_vertex(5, &found, true); });
-  UNITTEST_ASSERT_THROW(Vertices::Labels::NotFoundLookupError, [&](){ g.find_vertex("v5", &found, true); });
+  UNITTEST_ASSERT_THROW(Vertices::IDs::NotFoundLookupError,
+                        ([&g, &found](){ g.find_vertex(5, &found, true); }));
+  UNITTEST_ASSERT_THROW(Vertices::Labels::NotFoundLookupError,
+                        ([&g, &found](){ g.find_vertex("v5", &found, true); }));
 }
 
 TEST(convert_ids_to_numbers) {
@@ -618,7 +620,8 @@ TEST(convert_ids_to_numbers_error) {
   std::vector<VertexID> ids = {1, 5};
 
   VertexNumbers numbers;
-  UNITTEST_ASSERT_THROW(Vertices::IDs::NotFoundLookupError, [&](){ sg.ids_to_numbers(ids, &numbers); });
+  UNITTEST_ASSERT_THROW(Vertices::IDs::NotFoundLookupError,
+                        ([&sg, &ids, &numbers](){ sg.ids_to_numbers(ids, &numbers); }));
 }
 
 TEST(coloring_nocolor) {

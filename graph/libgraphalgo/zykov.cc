@@ -94,7 +94,7 @@ namespace cavcom {
       coloring_.resize(n);
       for (VertexNumber iv = 0; iv < n; ++iv) {
         const Vertex &v = result.vertex(iv);
-        const Contracted &c = v.contracted();
+        const VertexIDs &c = v.contracted();
         VertexNumber nc = c.size();
         VertexNumbers &color = coloring_[iv];
         if (nc > 0) {

@@ -17,11 +17,11 @@ namespace cavcom {
       VertexNumber n = graph->order();
       for (VertexNumber iv = 0; iv < n; ++iv) graph->vertex(iv).color(NOCOLOR);
 
-      Coloring::size_type nc = coloring_.size();
-      for (Coloring::size_type ic = 0; ic < nc; ++ic) {
+      VertexNumbersList::size_type nc = coloring_.size();
+      for (VertexNumbersList::size_type ic = 0; ic < nc; ++ic) {
         Color color = ic + 1;
         const VertexNumbers &c = coloring_[ic];
-        for_each(c.cbegin(), c.cend(), [&](VertexNumber iv){ graph->vertex(iv).color(color); });
+        for_each(c.cbegin(), c.cend(), [graph, color](VertexNumber iv){ graph->vertex(iv).color(color); });
       }
     }
 

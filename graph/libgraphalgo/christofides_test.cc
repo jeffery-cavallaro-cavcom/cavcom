@@ -25,7 +25,7 @@ TEST(trivial_graph) {
   UNITTEST_ASSERT_TRUE(c.execute());
   UNITTEST_ASSERT_EQUAL(c.calls(), 1);
   UNITTEST_ASSERT_EQUAL(c.number(), 1);
-  Christofides::Coloring expected = {{0}};
+  VertexNumbersList expected = {{0}};
   UNITTEST_ASSERT_EQUAL(c.coloring().size(), expected.size());
   UNITTEST_ASSERT_EQUAL_CONTAINERS(c.coloring(), expected);
 }
@@ -52,12 +52,12 @@ TEST(complete_graph) {
   UNITTEST_ASSERT_TRUE(c.execute());
   UNITTEST_ASSERT_EQUAL(c.calls(), 5111);
   UNITTEST_ASSERT_EQUAL(c.number(), ORDER);
-  Christofides::Coloring expected;
+  VertexNumbersList expected;
   for (VertexNumber iv = 0; iv < ORDER; ++iv) {
     VertexNumbers part = {iv};
     expected.push_back(part);
   }
-  Christofides::Coloring found = c.coloring();
+  VertexNumbersList found = c.coloring();
   std::sort(found.begin(), found.end());
   UNITTEST_ASSERT_EQUAL(found.size(), expected.size());
   UNITTEST_ASSERT_EQUAL_CONTAINERS(found, expected);
@@ -79,7 +79,7 @@ static const EdgeValuesList EDGES = {{0, 1}, {0, 2}, {0, 5},
                                      {4, 5},
                                      {5, 6}, {5, 7}};
 
-static const Christofides::Coloring COLORING = {{0, 4, 6, 7}, {1, 5}, {2, 3}};
+static const VertexNumbersList COLORING = {{0, 4, 6, 7}, {1, 5}, {2, 3}};
 
 TEST(sample_graph) {
   SimpleGraph g(VERTICES, EDGES);
@@ -87,7 +87,7 @@ TEST(sample_graph) {
   UNITTEST_ASSERT_TRUE(c.execute());
   UNITTEST_ASSERT_EQUAL(c.calls(), 32);
   UNITTEST_ASSERT_EQUAL(c.number(), COLORING.size());
-  Christofides::Coloring found = c.coloring();
+  VertexNumbersList found = c.coloring();
   std::sort(found.begin(), found.end());
   UNITTEST_ASSERT_EQUAL(found.size(), COLORING.size());
   UNITTEST_ASSERT_EQUAL_CONTAINERS(found, COLORING);
@@ -112,7 +112,7 @@ static const EdgeValuesList EDGES2 = {{0, 1}, {0, 2}, {0, 3}, {0, 4},
                                       {6, 7},
                                       {7, 8}};
 
-static const Christofides::Coloring COLORING2 = {{0, 6}, {1, 7}, {2, 5, 8}, {3, 4}};
+static const VertexNumbersList COLORING2 = {{0, 6}, {1, 7}, {2, 5, 8}, {3, 4}};
 
 TEST(sample_graph_2) {
   SimpleGraph g(VERTICES2, EDGES2);
@@ -120,7 +120,7 @@ TEST(sample_graph_2) {
   UNITTEST_ASSERT_TRUE(c.execute());
   UNITTEST_ASSERT_EQUAL(c.calls(), 158);
   UNITTEST_ASSERT_EQUAL(c.number(), COLORING2.size());
-  Christofides::Coloring found = c.coloring();
+  VertexNumbersList found = c.coloring();
   std::sort(found.begin(), found.end());
   UNITTEST_ASSERT_EQUAL(found.size(), COLORING2.size());
   UNITTEST_ASSERT_EQUAL_CONTAINERS(found, COLORING2);

@@ -26,7 +26,7 @@ namespace cavcom {
       // Flatten out the list.
       VertexNumbers targets;
       std::for_each(vertices.cbegin(), vertices.cend(),
-                    [&](VertexNumbers subset) {
+                    [&targets](VertexNumbers subset) {
                       if (subset.size() > 1) targets.insert(subset.cbegin(), subset.cend());
                     });
 

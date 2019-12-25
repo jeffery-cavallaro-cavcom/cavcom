@@ -97,7 +97,7 @@ namespace cavcom {
       // Converts a container of vertex IDs to vertex numbers and adds the vertex numbers to the specified vertex
       // number set.  Throws a lookup error for any unknown vertex error.
       template <typename T> void ids_to_numbers(const T &ids, VertexNumbers *numbers) const {
-        for_each(ids.cbegin(), ids.cend(), [&](VertexID id){
+        for_each(ids.cbegin(), ids.cend(), [this, numbers](VertexID id){
                                              VertexNumber number;
                                              find_vertex(id, &number, true);
                                              numbers->insert(number);

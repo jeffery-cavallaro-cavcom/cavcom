@@ -27,7 +27,6 @@ namespace cavcom {
       virtual bool bound(const SimpleGraph &state);
 
      private:
-      using ColoringByIDs = std::vector<VertexIDs>;
       using GraphPtr = std::unique_ptr<SimpleGraph>;
 
       // The current smallest coloring.

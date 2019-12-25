@@ -24,7 +24,7 @@ TEST(trivial_graph) {
   UNITTEST_ASSERT_EQUAL(hop.maxdepth(), 1);
   UNITTEST_ASSERT_EQUAL(hop.components().size(), 1);
   UNITTEST_ASSERT_EQUAL(hop.number(), 1);
-  Hopcroft::Components expected = {{0}};
+  VertexNumbersList expected = {{0}};
   UNITTEST_ASSERT_EQUAL_CONTAINERS(hop.components(), expected);
 }
 
@@ -37,7 +37,7 @@ TEST(empty_graph) {
   UNITTEST_ASSERT_EQUAL(hop.maxdepth(), 1);
   UNITTEST_ASSERT_EQUAL(hop.components().size(), ORDER);
   UNITTEST_ASSERT_EQUAL(hop.number(), ORDER);
-  Hopcroft::Components expected;
+  VertexNumbersList expected;
   for (VertexNumber iv = 0; iv < ORDER; ++iv) expected.push_back({iv});
   UNITTEST_ASSERT_EQUAL_CONTAINERS(hop.components(), expected);
 }
@@ -52,7 +52,7 @@ TEST(complete_graph) {
   UNITTEST_ASSERT_EQUAL(hop.maxdepth(), ORDER);
   UNITTEST_ASSERT_EQUAL(hop.components().size(), 1);
   UNITTEST_ASSERT_EQUAL(hop.number(), 1);
-  Hopcroft::Components expected;
+  VertexNumbersList expected;
   expected.push_back(VertexNumbers());
   for (VertexNumber iv = 0; iv < ORDER; ++iv) expected.back().insert(iv);
   UNITTEST_ASSERT_EQUAL_CONTAINERS(hop.components(), expected);
@@ -85,7 +85,7 @@ TEST(connected_graph) {
   UNITTEST_ASSERT_EQUAL(hop.maxdepth(), g.order());
   UNITTEST_ASSERT_EQUAL(hop.components().size(), 1);
   UNITTEST_ASSERT_EQUAL(hop.number(), 1);
-  Hopcroft::Components expected;
+  VertexNumbersList expected;
   expected.push_back(VertexNumbers());
   for (VertexNumber iv = 0; iv < g.order(); ++iv) expected.back().insert(iv);
   UNITTEST_ASSERT_EQUAL_CONTAINERS(hop.components(), expected);
@@ -94,7 +94,7 @@ TEST(connected_graph) {
 static const EdgeValuesList EDGES2 = {{0, 3}, {0, 8}, {3, 8}, {8, 6},
                                       {1, 2}, {2, 7}, {7, 5}, {5, 1}};
 
-static const Hopcroft::Components COMPONENTS = {{0, 3, 6, 8}, {1, 2, 5, 7}, {4}};
+static const VertexNumbersList COMPONENTS = {{0, 3, 6, 8}, {1, 2, 5, 7}, {4}};
 
 TEST(disconnected_graph) {
   SimpleGraph g(VERTICES, EDGES2);

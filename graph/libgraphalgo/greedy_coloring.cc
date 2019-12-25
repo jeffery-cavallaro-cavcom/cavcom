@@ -56,7 +56,7 @@ namespace cavcom {
 
     void GreedyColoring::sort(void) {
       std::sort(sorted_.begin(), sorted_.end(),
-                [&](VertexNumber iv, VertexNumber jv){ return graph().degree(iv) > graph().degree(jv); });
+                [this](VertexNumber iv, VertexNumber jv){ return graph().degree(iv) > graph().degree(jv); });
     }
 
     Color GreedyColoring::attempt_interchange(VertexNumber iv) {
@@ -98,12 +98,12 @@ namespace cavcom {
       SimpleGraph subgraph(graph(), keep);
       Hopcroft hop(subgraph);
       hop.execute();
-      const Hopcroft::Components &components = hop.components();
+      const VertexNumbersList &components = hop.components();
 
       // Convert the kept adjacent vertex numbers to be relative to the subgraph.
       VertexNumbers sub_keep_adj;
       std::for_each(keep_adj.cbegin(), keep_adj.cend(),
-                    [&](VertexNumber ig){
+                    [this, &subgraph, &sub_keep_adj](VertexNumber ig){
                       VertexNumber is = 0;
                       subgraph.find_vertex(graph().vertex(ig).id(), &is);
                       sub_keep_adj.insert(is);
@@ -123,7 +123,7 @@ namespace cavcom {
 
         const VertexNumbers &sub_comp = components[ic];
         std::for_each(sub_keep_adj.cbegin(), sub_keep_adj.cend(),
-                      [&](VertexNumber is){
+                      [this, &sub_comp, &in_comp, &not_in_comp, &present, &not_present](VertexNumber is){
                         add_step();
                         if (sub_comp.find(is) == sub_comp.cend()) {
                           if (not_in_comp <= 0) not_present = is;
@@ -151,7 +151,7 @@ namespace cavcom {
       // Swap the two colors in the target component.
       const VertexNumbers &sub_comp = components[ic];
       std::for_each(sub_comp.cbegin(), sub_comp.cend(),
-                    [&](VertexNumber is){
+                    [this, &subgraph, c1, c2](VertexNumber is){
                       add_step();
                       VertexNumber ig = 0;
                       graph().find_vertex(subgraph.vertex(is).id(), &ig);

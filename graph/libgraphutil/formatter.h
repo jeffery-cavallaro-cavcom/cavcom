@@ -106,7 +106,7 @@ namespace cavcom {
       // Adds all of the specified colors.  Duplicate colors will replace earlier matching colors.  An ID of NOCOLOR
       // will replace the default color.
       void add_colors(const ColorValuesList &colors) {
-        for_each(colors.cbegin(), colors.cend(), [&](const ColorValues &color)
+        for_each(colors.cbegin(), colors.cend(), [this](const ColorValues &color)
                                                  { add_color(color.id, color.color); });
       }
 

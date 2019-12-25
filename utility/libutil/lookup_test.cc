@@ -44,7 +44,7 @@ TEST(create_empty_table) {
 
   UNITTEST_ASSERT_EQUAL(lookup.size(), 0);
   UNITTEST_ASSERT_FALSE(lookup.find("hello"));
-  UNITTEST_ASSERT_THROW(StringToInt::NotFoundLookupError, [&](){ lookup.find("world", true); });
+  UNITTEST_ASSERT_THROW(StringToInt::NotFoundLookupError, [&lookup](){ lookup.find("world", true); });
 }
 
 using TestValues = struct { std::string svalue; int ivalue; };
@@ -88,7 +88,8 @@ TEST(key_not_found) {
   StringToInt lookup;
   add_values(&lookup, 0, TESTDATA.size());
   UNITTEST_ASSERT_FALSE(lookup.find(BAD));
-  UNITTEST_ASSERT_THROW(StringToInt::NotFoundLookupError, [&](){ lookup.find(BAD, true); });
+  UNITTEST_ASSERT_THROW(StringToInt::NotFoundLookupError,
+                        ([&lookup, &BAD](){ lookup.find(BAD, true); }));
 }
 
 TEST(duplicate_key) {
@@ -97,7 +98,8 @@ TEST(duplicate_key) {
   StringToInt lookup;
   add_values(&lookup, 0, n);
   UNITTEST_ASSERT_FALSE(lookup.add(v.svalue, v.ivalue));
-  UNITTEST_ASSERT_THROW(StringToInt::DuplicateLookupError, [&](){ lookup.add(v.svalue, v.ivalue, true); });
+  UNITTEST_ASSERT_THROW(StringToInt::DuplicateLookupError,
+                        ([&lookup, &v](){ lookup.add(v.svalue, v.ivalue, true); }));
 }
 
 TEST(remove_key) {

@@ -83,7 +83,7 @@ namespace cavcom {
         const VertexNumbers &s = contract[is];
         if (s.size() <= 1) continue;
         std::for_each(s.cbegin(), s.cend(),
-                      [&](VertexNumber iv){
+                      [&where, ic](VertexNumber iv){
                         if (!where.insert({iv, ic}).second) throw SameVertexContractError(iv);
                       });
         ++ic;
@@ -108,11 +108,11 @@ namespace cavcom {
         Vertex &cv = vertices_[cnum];
 
         // Construct the new contracted list.
-        Contracted &all = cv.contracted_;
+        VertexIDs &all = cv.contracted_;
         std::for_each(s.cbegin(), s.cend(),
-                      [&](VertexNumber iv){
+                      [&source, &all](VertexNumber iv){
                         const Vertex &v = source.vertex(iv);
-                        const Contracted &c = v.contracted();
+                        const VertexIDs &c = v.contracted();
                         if (c.empty()) {
                           all.insert(v.id());
                         } else {
@@ -180,7 +180,7 @@ namespace cavcom {
 
     VertexNumber Graph::after_contraction(VertexNumber start, const VertexNumbersList &contract) {
       std::for_each(contract.cbegin(), contract.cend(),
-                    [&](const VertexNumbers &s){
+                    [&start](const VertexNumbers &s){
                       if (s.size() > 1) ++start;
                     });
       return start;

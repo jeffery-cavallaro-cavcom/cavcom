@@ -16,8 +16,6 @@ namespace cavcom {
     // maximal independent set of vertices from G-V(S).
     class Christofides : public VertexColoringAlgorithm {
      public:
-      using ColoringByIDs = std::vector<VertexIDs>;
-
       // Create a new Christofides algorithm instance for the specified graph.
       Christofides(const SimpleGraph &graph);
 
@@ -26,10 +24,10 @@ namespace cavcom {
       // identified by vertex ID, since vertex position will change as subgraphs are constructed.  A flat copy of
       // the vertices in the coloring is maintained for easier subset determination.
       struct Chromatic {
-        Chromatic(const ColoringByIDs &coloring, const VertexIDs &vertices)
+        Chromatic(const VertexIDsList &coloring, const VertexIDs &vertices)
           : coloring_(coloring), vertices_(vertices) {}
 
-        ColoringByIDs coloring_;
+        VertexIDsList coloring_;
         VertexIDs vertices_;
       };
       using Colorings = std::list<Chromatic>;
@@ -42,7 +40,7 @@ namespace cavcom {
       virtual bool run();
 
       // Converts the found coloring from IDs to numbers for return.
-      void ids_to_numbers(const ColoringByIDs &coloring);
+      void ids_to_numbers(const VertexIDsList &coloring);
 
       friend class ChristofidesNode;
     };

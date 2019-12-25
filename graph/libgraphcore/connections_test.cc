@@ -32,9 +32,9 @@ TEST(create_empty_matrix) {
     UNITTEST_ASSERT_EQUAL(cm.outdeg(iv), 0);
     UNITTEST_ASSERT_EQUAL(cm.degree(iv), 0);
   }
-  UNITTEST_ASSERT_THROW(std::out_of_range, [&](){ cm.indeg(ORDER); });
-  UNITTEST_ASSERT_THROW(std::out_of_range, [&](){ cm.outdeg(ORDER); });
-  UNITTEST_ASSERT_THROW(std::out_of_range, [&](){ cm.degree(ORDER); });
+  UNITTEST_ASSERT_THROW(std::out_of_range, [&cm](){ cm.indeg(ORDER); });
+  UNITTEST_ASSERT_THROW(std::out_of_range, [&cm](){ cm.outdeg(ORDER); });
+  UNITTEST_ASSERT_THROW(std::out_of_range, [&cm](){ cm.degree(ORDER); });
 }
 
 TEST(add_one_simple_edge) {
@@ -228,12 +228,12 @@ TEST(add_multiple_directed_loop_edges) {
 TEST(prevent_multiple_edges) {
   Connections cm(ORDER);
   UNITTEST_ASSERT_EQUAL(cm.join(FROM, TO, EDGE1), 1);
-  UNITTEST_ASSERT_THROW(MultipleEdgeError, [&](){ cm.join(FROM, TO, EDGE2); });
+  UNITTEST_ASSERT_THROW(MultipleEdgeError, [&cm](){ cm.join(FROM, TO, EDGE2); });
 }
 
 TEST(prevent_loop_edges) {
   Connections cm(ORDER);
-  UNITTEST_ASSERT_THROW(LoopEdgeError, [&](){ cm.join(FROM, FROM, EDGE1); });
+  UNITTEST_ASSERT_THROW(LoopEdgeError, [&cm](){ cm.join(FROM, FROM, EDGE1); });
 }
 
 TEST(make_a_path) {

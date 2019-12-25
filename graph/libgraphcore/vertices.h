@@ -13,12 +13,6 @@ namespace cavcom {
     // A list of vertex attributes for defining vertices.
     using VertexValuesList = std::vector<VertexValues>;
 
-    // A set of vertices by vertex number.  Used during subgraph operations.
-    using VertexNumbers = std::set<VertexNumber>;
-
-    // A list of vertex subsets, used by various partitioning algorithms.
-    using VertexNumbersList = std::vector<VertexNumbers>;
-
     // The vertices in a graph.
     class Vertices {
      public:

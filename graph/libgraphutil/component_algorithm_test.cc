@@ -7,11 +7,11 @@
 using namespace cavcom::graph;
 
 // A dummy component algorithm.
-static const ComponentAlgorithm::Components COMPONENTS = {{0},
-                                                          {1, 2},
-                                                          {4, 8},
-                                                          {3, 6, 7, 9},
-                                                          {5}};
+static const VertexNumbersList COMPONENTS = {{0},
+                                             {1, 2},
+                                             {4, 8},
+                                             {3, 6, 7, 9},
+                                             {5}};
 
 class DummyAlgorithm : public ComponentAlgorithm {
  public:
@@ -25,7 +25,7 @@ class DummyAlgorithm : public ComponentAlgorithm {
   virtual bool run() {
     ComponentAlgorithm::run();
     status_ = true;
-    for (ComponentAlgorithm::Components::size_type ic = 0; ic < COMPONENTS.size(); ++ic) {
+    for (VertexNumbersList::size_type ic = 0; ic < COMPONENTS.size(); ++ic) {
       if (fail_ && (ic >= 2)) status_ = false;
       add_component(COMPONENTS[ic]);
     }

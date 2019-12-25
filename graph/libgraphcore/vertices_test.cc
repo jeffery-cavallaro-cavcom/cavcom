@@ -20,7 +20,7 @@ static void check_vertex(const Vertex &vertex, VertexID id, const VertexValues &
 TEST(create_empty_table) {
   Vertices vertices;
   UNITTEST_ASSERT_EQUAL(vertices.size(), 0);
-  UNITTEST_ASSERT_THROW(std::out_of_range, [&](){ vertices[0]; });
+  UNITTEST_ASSERT_THROW(std::out_of_range, [&vertices](){ vertices[0]; });
   VertexNumber found;
   UNITTEST_ASSERT_FALSE(vertices.find(0, &found));
   UNITTEST_ASSERT_FALSE(vertices.find("xxx", &found));
@@ -76,8 +76,10 @@ TEST(id_label_not_found_errors) {
   Vertices vertices;
   add_vertices(&vertices);
   VertexNumber found;
-  UNITTEST_ASSERT_THROW(Vertices::IDs::NotFoundLookupError, [&](){ vertices.find(10, &found, true); });
-  UNITTEST_ASSERT_THROW(Vertices::Labels::NotFoundLookupError, [&](){ vertices.find("vertex-X", &found, true); });
+  UNITTEST_ASSERT_THROW(Vertices::IDs::NotFoundLookupError,
+                        ([&vertices, &found](){ vertices.find(10, &found, true); }));
+  UNITTEST_ASSERT_THROW(Vertices::Labels::NotFoundLookupError,
+                        ([&vertices, &found](){ vertices.find("vertex-X", &found, true); }));
 }
 
 TEST(unlabeled_to_unlabeled) {
@@ -173,7 +175,8 @@ TEST(set_duplicate_label) {
   Vertices vertices;
   add_vertices(&vertices);
   Label label = vertices[LABELED].label();
-  UNITTEST_ASSERT_THROW(Vertices::Labels::DuplicateLookupError, [&](){ vertices.label(UNLABELED, label); });
+  UNITTEST_ASSERT_THROW(Vertices::Labels::DuplicateLookupError,
+                        ([&vertices, &label](){ vertices.label(UNLABELED, label); }));
 }
 
 TEST(reuse_duplicate_label) {
@@ -181,7 +184,8 @@ TEST(reuse_duplicate_label) {
   add_vertices(&vertices);
   VertexNumber n = vertices.size();
   Label label = vertices[LABELED].label();
-  UNITTEST_ASSERT_THROW(Vertices::Labels::DuplicateLookupError, [&](){ vertices.add(label, 1); });
+  UNITTEST_ASSERT_THROW(Vertices::Labels::DuplicateLookupError,
+                        ([&vertices, &label](){ vertices.add(label, 1); }));
   UNITTEST_ASSERT_EQUAL(vertices.size(), n);
 
   UNITTEST_ASSERT_EQUAL(vertices.size(), VALUES.size());

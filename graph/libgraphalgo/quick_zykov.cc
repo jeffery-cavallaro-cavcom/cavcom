@@ -70,7 +70,7 @@ namespace cavcom {
 
       add_step();
       if (formatter_) outer_prefix();
-      if (kmin_ == kmax_) {
+      if (kmin_ >= kmax_) {
         *formatter_->out() << "xlb=" << kmin_ << "=" << kmax_ << "=xub, done" << std::endl;
         return;
       }
@@ -81,6 +81,47 @@ namespace cavcom {
       // Target a vertex that occurs in the least number of MISs.  Each MIS that contains the target vertex results
       // in a tree that will need to be walked.
       establish_trees();
+
+      // Start with the lower bound.
+      add_step();
+      number_ = kmin_;
+      if (tracing()) {
+        outer_prefix();
+        *formatter_->out() << "Initialize: k=" << number_ << std::endl;
+      }
+
+      // Loop on increased values of k until either kmax is achieved or until the recursive subroutine returns
+      // true.  The former case accepts the initial greedy coloring as chromatic.  The latter occurs when the
+      // current state of one of the Zykov trees has been found to be k-colorable.
+      while (number_ < kmax_) {
+        add_step();
+        if (formatter_) {
+          outer_prefix();
+          *formatter_->out() << "k=" << number_ << "<" << kmax_ << "=kmax, continuing" << std::endl;
+        }
+
+        // Try each tree.  Stop on the first success.
+        ZykovTreeList::size_type ntrees = trees_.size();
+        for (ZykovTreeList::size_type itree = 0; itree < ntrees; ++itree) {
+          ZykovTree &tree = trees_[itree];
+          if (tree.is_k_colorable(number_)) {
+          }
+        }
+
+        // None of the graphs was k-colorable.  Try the next value of k.
+        add_step();
+        ++number_;
+        if (formatter_) {
+          outer_prefix();
+          *formatter_->out() << "Incrementing: k=" << number_ << std::endl;
+        }
+      }
+
+      add_step();
+      if (formatter_) {
+        outer_prefix();
+        *formatter_->out() << "k=" << number_ << "=" << kmax_ << "=kmax, accepting greedy coloring" << std::endl;
+      }
     }
 
     void QuickZykov::set_lower_bound(void) {
@@ -180,6 +221,10 @@ namespace cavcom {
       }
     }
 
+    bool QuickZykov::ZykovTree::is_k_colorable(Color k) {
+      return false;
+    }
+
 #if 0
     bool QuickZykov::run() {
       // If tracing then output the final state of the graph.
@@ -193,29 +238,6 @@ namespace cavcom {
     }
 
     void QuickZykov::outer_loop(GraphPtr *ppg) {
-      // Determine the lower and upper bounds.
-      add_step();
-      calculate_lower();
-      if (tracing()) {
-        outer_prefix();
-        *formatter_->out() << "Lower bound: kmin=" << lower_bound_ << std::endl;
-      }
-
-      add_step();
-      calculate_upper();
-      if (tracing()) {
-        outer_prefix();
-        *formatter_->out() << "Upper bound: kmax=" << upper_bound_ << std::endl;
-      }
-
-      // Start with the lower bound.
-      add_step();
-      number_ = lower_bound_;
-      if (tracing()) {
-        outer_prefix();
-        *formatter_->out() << "Initialized: k=" << number_ << std::endl;
-      }
-
       // Determine if the graph in the current state is k-colorable.  This can be because either the upper bound
       // has be reached of the called subroutine indicates k-colorability.  If so, then done - the current value of
       // k is the chromatic number.  Otherwise, try the next value of k.  Note that a subgraph may be returned.
@@ -225,14 +247,6 @@ namespace cavcom {
         bool success = is_k_colorable(ppg);
         done_call();
         if (success) break;
-
-        // No, so try the next value of k.
-        add_step();
-        ++number_;
-        if (tracing()) {
-          outer_prefix();
-          *formatter_->out() << steps() << "Incrementing: k=" << number_ << std::endl;
-        }
       }
     }
 
@@ -418,7 +432,7 @@ namespace cavcom {
         if (x.empty()) {
           *formatter_->out() << " none" << std::endl;
         } else {
-          for_each(x.begin(), x.end(), [&](VertexNumber iv)
+          for_each(x.begin(), x.end(), [this, &pg](VertexNumber iv)
                                        { *formatter_->out() << " ";
                                          identify_vertex(pg, iv); });
           *formatter_->out() << std::endl;

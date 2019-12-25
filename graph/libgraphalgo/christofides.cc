@@ -21,7 +21,8 @@ namespace cavcom {
 
         // The current MIS is in terms of vertex numbers relative to the current subgraph.  Convert it to vertex IDs.
         VertexIDs mis_ids;
-        for_each(mis.cbegin(), mis.cend(), [&](VertexNumber iv){ mis_ids.insert(graph().vertex(iv).id()); });
+        for_each(mis.cbegin(), mis.cend(),
+                 [this, &mis_ids](VertexNumber iv){ mis_ids.insert(graph().vertex(iv).id()); });
 
         // Use a new color for the current MIS.
         parent_->next_->push_back(chromatic_);
@@ -33,9 +34,10 @@ namespace cavcom {
         Christofides::Colorings::iterator ic = parent_->next_->begin();
         while (ic != next_chromatic) {
           VertexIDs::size_type shared = 0;
-          for_each(next_chromatic->vertices_.cbegin(), next_chromatic->vertices_.cend(), [&](VertexID id){
-              if (ic->vertices_.find(id) != ic->vertices_.cend()) ++shared;
-            });
+          for_each(next_chromatic->vertices_.cbegin(), next_chromatic->vertices_.cend(),
+                   [&ic, &shared](VertexID id){
+                     if (ic->vertices_.find(id) != ic->vertices_.cend()) ++shared;
+                   });
           if (shared == next_chromatic->vertices_.size()) {
             parent_->next_->erase(next_chromatic);
             parent_->done_call();
@@ -75,7 +77,7 @@ namespace cavcom {
 
       // Seed the algorithm with an empty coloring.
       current_.reset(new Colorings);
-      current_->emplace_back(ColoringByIDs(), VertexIDs());
+      current_->emplace_back(VertexIDsList(), VertexIDs());
 
       // Continue extending each current chromatic coloring until the first occasion when all vertices are used.
       bool more = true;
@@ -104,10 +106,10 @@ namespace cavcom {
       return true;
     }
 
-    void Christofides::ids_to_numbers(const ColoringByIDs &coloring) {
+    void Christofides::ids_to_numbers(const VertexIDsList &coloring) {
       coloring_.clear();
       for_each(coloring.cbegin(), coloring.cend(),
-               [&](const VertexIDs &ids){
+               [this](const VertexIDs &ids){
                  coloring_.resize(coloring_.size() + 1);
                  graph().ids_to_numbers(ids, &coloring_.back());
                });

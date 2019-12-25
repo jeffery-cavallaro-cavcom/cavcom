@@ -32,7 +32,7 @@ TEST(trivial_graph) {
   UNITTEST_ASSERT_TRUE(gc.execute());
   UNITTEST_ASSERT_EQUAL(gc.steps(), 0);
   UNITTEST_ASSERT_EQUAL(gc.number(), 1);
-  GreedyColoring::Coloring expected = {{0}};
+  VertexNumbersList expected = {{0}};
   UNITTEST_ASSERT_EQUAL(gc.coloring().size(), expected.size());
   UNITTEST_ASSERT_EQUAL_CONTAINERS(gc.coloring(), expected);
 }
@@ -43,7 +43,7 @@ TEST(trivial_interchange) {
   UNITTEST_ASSERT_TRUE(gc.execute());
   UNITTEST_ASSERT_EQUAL(gc.steps(), 0);
   UNITTEST_ASSERT_EQUAL(gc.number(), 1);
-  GreedyColoring::Coloring expected = {{0}};
+  VertexNumbersList expected = {{0}};
   UNITTEST_ASSERT_EQUAL(gc.coloring().size(), expected.size());
   UNITTEST_ASSERT_EQUAL_CONTAINERS(gc.coloring(), expected);
 }
@@ -84,7 +84,7 @@ TEST(complete_graph) {
   UNITTEST_ASSERT_TRUE(gc.execute());
   UNITTEST_ASSERT_EQUAL(gc.steps(), 90);
   UNITTEST_ASSERT_EQUAL(gc.number(), ORDER);
-  GreedyColoring::Coloring expected;
+  VertexNumbersList expected;
   for (VertexNumber iv = 0; iv < ORDER; ++iv) {
     VertexNumbers part = {iv};
     expected.push_back(part);
@@ -101,7 +101,7 @@ TEST(complete_interchange) {
   UNITTEST_ASSERT_TRUE(gc.execute());
   UNITTEST_ASSERT_EQUAL(gc.steps(), 252);
   UNITTEST_ASSERT_EQUAL(gc.number(), ORDER);
-  GreedyColoring::Coloring expected;
+  VertexNumbersList expected;
   for (VertexNumber iv = 0; iv < ORDER; ++iv) {
     VertexNumbers part = {iv};
     expected.push_back(part);
@@ -126,7 +126,7 @@ static const EdgeValuesList EDGES = {{0, 1}, {0, 2}, {0, 5},
                                      {4, 5},
                                      {5, 6}, {5, 7}};
 
-static const GreedyColoring::Coloring COLORING = {{1, 5}, {0, 3, 7}, {2, 6}, {4}};
+static const VertexNumbersList COLORING = {{1, 5}, {0, 3, 7}, {2, 6}, {4}};
 
 TEST(sample_graph) {
   SimpleGraph g(VERTICES, EDGES);
@@ -171,7 +171,7 @@ static const EdgeValuesList EDGES2 = {{0, 1}, {0, 2}, {0, 3}, {0, 4},
                                       {6, 7},
                                       {7, 8}};
 
-static const GreedyColoring::Coloring COLORING2 = {{0, 6, 8}, {1, 7}, {2, 4}, {3, 5}};
+static const VertexNumbersList COLORING2 = {{0, 6, 8}, {1, 7}, {2, 4}, {3, 5}};
 
 TEST(sample_graph_2) {
   SimpleGraph g(VERTICES2, EDGES2);
@@ -210,8 +210,8 @@ static const EdgeValuesList EDGES3 = {{0, 5}, {0, 6}, {0, 7}, {0, 8}, {0, 9},
                                       {7, 9},
                                       {8, 9}};
 
-static const GreedyColoring::Coloring COLORING3 = {{6, 8}, {4, 7}, {3, 5, 9}, {0, 1, 2}};
-static const GreedyColoring::Coloring ICOLORING3 = {{6, 8}, {5, 7}, {0, 4}, {1, 2, 3, 9}};
+static const VertexNumbersList COLORING3 = {{6, 8}, {4, 7}, {3, 5, 9}, {0, 1, 2}};
+static const VertexNumbersList ICOLORING3 = {{6, 8}, {5, 7}, {0, 4}, {1, 2, 3, 9}};
 
 TEST(sample_graph_3) {
   SimpleGraph g(VERTICES3, EDGES3);

@@ -11,20 +11,18 @@ namespace cavcom {
     // Any algorithm that constructs a proper or chromatic coloring for a graph.
     class VertexColoringAlgorithm : public ChromaticNumberAlgorithm {
      public:
-      using Coloring = std::vector<VertexNumbers>;
-
       // Creates a new instance of a vertex coloring algorithm for the specified graph.
       explicit VertexColoringAlgorithm(const SimpleGraph &graph);
 
       // Returns the constructed proper or chromatic coloring.
-      const Coloring &coloring(void) const { return coloring_; }
+      const VertexNumbersList &coloring(void) const { return coloring_; }
 
       // Applies the found coloring to the specified graph.
       void apply(Graph *graph);
 
      protected:
       // The constructed proper or chromatic coloring.
-      Coloring coloring_;
+      VertexNumbersList coloring_;
 
       // Calls the base class method and resets the derived state.
       virtual bool run();

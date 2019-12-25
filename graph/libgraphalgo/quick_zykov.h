@@ -94,7 +94,7 @@ namespace cavcom {
       class ZykovTree : public VertexColoringAlgorithm {
        public:
         using GraphPtr = std::unique_ptr<SimpleGraph>;
-        using VertexNumbersListPtr = std::vector<VertexNumbersList>;
+        using VertexNumbersListPtr = std::unique_ptr<VertexNumbersList>;
 
         // Creates a new Zykov tree for the input graph using the specified MIS.  The initial chromatic number
         // upper bound for the graph is specified.  Note that this upper bound may be reduced during branching,
@@ -108,6 +108,13 @@ namespace cavcom {
 
         // Returns the current chromatic number upper bound for graphs in this tree.
         Color kmax(void) const { return kmax_; }
+
+        // Returns the removed vertex list.
+        const VertexNumbersList &removed(void) { return *removed_; }
+
+        // Executes the modified Zykov algorithm to determine if the graph associated with this tree is
+        // k-colorable.  Note that the graph, removed vertex list, and effective kmax may be altered.
+        bool is_k_colorable(Color k);
 
        private:
         // Parent algorithm context.  Use for step, call, and peg counter access.
@@ -144,7 +151,7 @@ namespace cavcom {
       //
       //  2. Use the sequential last-first algorithm to calculate an upper bound for the chromatic number: kmax.
       //
-      //  3. If the lower bound equals the upper bound then go to step N.
+      //  3. If kmin = kmax then accept the initial greedy coloring and return kmin.
       //
       //  4. Use the Bron Kerbosch algorithm on the complement of the input graph to find all MISs.
       //
@@ -156,6 +163,17 @@ namespace cavcom {
       //     graph for the state is the input graph with all of the vertices in the corresponding MIS contracted
       //     and edges added between all vertices in the MIS and all vertices not in the MIS.  The initial
       //     chromatic number upper bound for each graph is set to the upper bound for the input graph.
+      //
+      //  8. Initialize k to kmin.
+      //
+      //  9. If k = kmax then accept the initial greedy coloring and return k.
+      //
+      //  10. For each Zykov tree, determine if the graph is k-colorable.
+      //
+      //  11. If one of the graphs is k-colorable then construct and accept a coloring from the resulting
+      //      complete graph and the removed vertex list and return k.
+      //
+      //  12. Increment k and go to step 9.
       //
       void outer_loop(void);
 
@@ -174,11 +192,6 @@ namespace cavcom {
       void outer_prefix(void);
 
 #if 0
-      //
-      //  3. Initialize k to kmin.
-      //
-      //  4. If k = kmax then return this value.
-      //
       //  5. Call the subroutine to determine if the current state of G is k-colorable for the current value of k.
       //     If so, then return with the current value of k.  If not, then the method will return a subgraph
       //     replacement for G to be used for the remainder of the algorithm.
@@ -226,7 +239,6 @@ namespace cavcom {
       //  17.  Return false.
       //
       // Each of these steps is counted, as well as a count for the current call and each recursive call.
-      bool is_k_colorable(GraphPtr *ppg);
 
       // Resets all the derived-class counters.
       void reset_counters();

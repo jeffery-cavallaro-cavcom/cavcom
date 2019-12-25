@@ -17,8 +17,6 @@ namespace cavcom {
       ChromaticWang(const SimpleGraph &graph);
 
      private:
-      using ColoringByIDs = std::vector<VertexIDs>;
-
       // A MIS is a graph is a clique in its complement.
       SimpleGraph complement_;
 
@@ -27,10 +25,10 @@ namespace cavcom {
 
       // Generates the MISs for the next state, prunes them, and recursively calls itself to look for the
       // smallest path to completion.
-      void next_states(const ColoringByIDs &coloring, VertexIDs vertices);
+      void next_states(const VertexIDsList &coloring, VertexIDs vertices);
 
       // Registers the specified coloring (by vertex ID) as the current chromatic coloring.
-      void chromatic(const ColoringByIDs &coloring);
+      void chromatic(const VertexIDsList &coloring);
     };
 
   }  // namespace graph

@@ -28,14 +28,14 @@ static const EdgeValuesList EDGES = {{0, 1}, {0, 2}, {0, 3}, {0, 4},
                                      {6, 7},
                                      {7, 8}};
 
-static const Bron::Cliques CLIQUES = {{0, 1, 2, 3},
-                                      {0, 1, 4},
-                                      {1, 2, 3, 6},
-                                      {1, 4, 6},
-                                      {4, 5, 6, 7},
-                                      {7, 8}};
+static const VertexNumbersList CLIQUES = {{0, 1, 2, 3},
+                                          {0, 1, 4},
+                                          {1, 2, 3, 6},
+                                          {1, 4, 6},
+                                          {4, 5, 6, 7},
+                                          {7, 8}};
 
-static const Bron::Cliques MAX_CLIQUES = {CLIQUES[0], CLIQUES[2], CLIQUES[4]};
+static const VertexNumbersList MAX_CLIQUES = {CLIQUES[0], CLIQUES[2], CLIQUES[4]};
 
 TEST(bron1_null) {
   SimpleGraph g;
@@ -97,7 +97,7 @@ TEST(bron1_empty) {
   UNITTEST_ASSERT_EQUAL(b.total(), 10);
   UNITTEST_ASSERT_EQUAL(b.number(), 1);
   UNITTEST_ASSERT_EQUAL(b.cliques().size(), ORDER);
-  for (Bron1::Cliques::size_type ic = 0; ic < ORDER; ++ic) {
+  for (VertexNumbersList::size_type ic = 0; ic < ORDER; ++ic) {
     const VertexNumbers &c = b.cliques()[ic];
     VertexNumbers expected = {ic};
     UNITTEST_ASSERT_EQUAL(c.size(), expected.size());
@@ -115,9 +115,9 @@ TEST(bron2_empty) {
   UNITTEST_ASSERT_EQUAL(b.total(), 10);
   UNITTEST_ASSERT_EQUAL(b.number(), 1);
   UNITTEST_ASSERT_EQUAL(b.cliques().size(), ORDER);
-  Bron::Cliques cliques = b.cliques();
+  VertexNumbersList cliques = b.cliques();
   std::sort(cliques.begin(), cliques.end());
-  for (Bron1::Cliques::size_type ic = 0; ic < ORDER; ++ic) {
+  for (VertexNumbersList::size_type ic = 0; ic < ORDER; ++ic) {
     const VertexNumbers &c = cliques[ic];
     VertexNumbers expected = {ic};
     UNITTEST_ASSERT_EQUAL(c.size(), expected.size());
@@ -168,7 +168,7 @@ TEST(bron1_sample) {
   UNITTEST_ASSERT_EQUAL(b.total(), CLIQUES.size());
   UNITTEST_ASSERT_EQUAL(b.number(), MAX_CLIQUES[0].size());
   UNITTEST_ASSERT_EQUAL(b.cliques().size(), CLIQUES.size());
-  for (Bron::Cliques::size_type ic = 0; ic < CLIQUES.size(); ++ic) {
+  for (VertexNumbersList::size_type ic = 0; ic < CLIQUES.size(); ++ic) {
     UNITTEST_ASSERT_EQUAL_CONTAINERS(b.cliques()[ic], CLIQUES[ic]);
   }
 }
@@ -182,9 +182,9 @@ TEST(bron2_sample) {
   UNITTEST_ASSERT_EQUAL(b.total(), CLIQUES.size());
   UNITTEST_ASSERT_EQUAL(b.number(), MAX_CLIQUES[0].size());
   UNITTEST_ASSERT_EQUAL(b.cliques().size(), CLIQUES.size());
-  Bron::Cliques cliques = b.cliques();
+  VertexNumbersList cliques = b.cliques();
   std::sort(cliques.begin(), cliques.end());
-  for (Bron::Cliques::size_type ic = 0; ic < CLIQUES.size(); ++ic) {
+  for (VertexNumbersList::size_type ic = 0; ic < CLIQUES.size(); ++ic) {
     UNITTEST_ASSERT_EQUAL_CONTAINERS(cliques[ic], CLIQUES[ic]);
   }
 }
@@ -198,7 +198,7 @@ TEST(bron1_max_only) {
   UNITTEST_ASSERT_EQUAL(b.total(), CLIQUES.size());
   UNITTEST_ASSERT_EQUAL(b.number(), MAX_CLIQUES[0].size());
   UNITTEST_ASSERT_EQUAL(b.cliques().size(), MAX_CLIQUES.size());
-  for (Bron::Cliques::size_type ic = 0; ic < MAX_CLIQUES.size(); ++ic) {
+  for (VertexNumbersList::size_type ic = 0; ic < MAX_CLIQUES.size(); ++ic) {
     UNITTEST_ASSERT_EQUAL_CONTAINERS(b.cliques()[ic], MAX_CLIQUES[ic]);
   }
 }
@@ -212,9 +212,9 @@ TEST(bron2_max_only) {
   UNITTEST_ASSERT_EQUAL(b.total(), CLIQUES.size());
   UNITTEST_ASSERT_EQUAL(b.number(), MAX_CLIQUES[0].size());
   UNITTEST_ASSERT_EQUAL(b.cliques().size(), MAX_CLIQUES.size());
-  Bron::Cliques cliques = b.cliques();
+  VertexNumbersList cliques = b.cliques();
   std::sort(cliques.begin(), cliques.end());
-  for (Bron::Cliques::size_type ic = 0; ic < MAX_CLIQUES.size(); ++ic) {
+  for (VertexNumbersList::size_type ic = 0; ic < MAX_CLIQUES.size(); ++ic) {
     UNITTEST_ASSERT_EQUAL_CONTAINERS(cliques[ic], MAX_CLIQUES[ic]);
   }
 }

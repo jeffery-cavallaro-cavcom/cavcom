@@ -7,17 +7,17 @@
 using namespace cavcom::graph;
 
 // A dummy clique algorithm.
-static const CliqueAlgorithm::Cliques CLIQUES = {{0},
-                                                 {0, 1},
-                                                 {1, 3, 4, 5, 9},
-                                                 {2, 5, 6},
-                                                 {1, 2, 3, 4, 5},
-                                                 {4, 5, 8, 9},
-                                                 {5}};
+static const VertexNumbersList CLIQUES = {{0},
+                                          {0, 1},
+                                          {1, 3, 4, 5, 9},
+                                          {2, 5, 6},
+                                          {1, 2, 3, 4, 5},
+                                          {4, 5, 8, 9},
+                                          {5}};
 
-static const CliqueAlgorithm::Cliques MAX_CLIQUES{CLIQUES[2], CLIQUES[4]};
+static const VertexNumbersList MAX_CLIQUES{CLIQUES[2], CLIQUES[4]};
 
-static const CliqueAlgorithm::Cliques PARTIAL_CLIQUES{CLIQUES[0], CLIQUES[1]};
+static const VertexNumbersList PARTIAL_CLIQUES{CLIQUES[0], CLIQUES[1]};
 
 class DummyAlgorithm : public CliqueAlgorithm {
  public:
@@ -31,7 +31,7 @@ class DummyAlgorithm : public CliqueAlgorithm {
   virtual bool run() {
     CliqueAlgorithm::run();
     status_ = true;
-    for (CliqueAlgorithm::Cliques::size_type ic = 0; ic < CLIQUES.size(); ++ic) {
+    for (VertexNumbersList::size_type ic = 0; ic < CLIQUES.size(); ++ic) {
       if (fail_ && (ic >= 2)) status_ = false;
       add_clique(CLIQUES[ic]);
     }

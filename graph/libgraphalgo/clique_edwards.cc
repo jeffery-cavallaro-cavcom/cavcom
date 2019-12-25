@@ -40,7 +40,7 @@ namespace cavcom {
           // Skip vertices that are not adjacant to everything in the current clique.  Note that this will skip
           // already selected vertices.
           if (std::any_of(clique_.cbegin(), clique_.cend(),
-                          [&](VertexNumber jv){
+                          [this, iv](VertexNumber jv){
                             add_step();
                             return !graph().adjacent(iv, jv);
                           })) {

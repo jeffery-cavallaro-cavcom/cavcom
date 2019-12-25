@@ -9,7 +9,7 @@ using namespace cavcom::graph;
 // A dummy coloring algorithm that just sets the coloring.
 class DummyAlgorithm : public VertexColoringAlgorithm {
  public:
-  DummyAlgorithm(const SimpleGraph &graph, const Coloring &coloring) : VertexColoringAlgorithm(graph) {
+  DummyAlgorithm(const SimpleGraph &graph, const VertexNumbersList &coloring) : VertexColoringAlgorithm(graph) {
     coloring_ = coloring;
   }
 
@@ -22,7 +22,7 @@ static const VertexValuesList VERTICES = {{"a", NOCOLOR, 0, 0},
                                           {"c", 1, 0, 0},
                                           {"d", 1, 0, 0}};
 
-static const DummyAlgorithm::Coloring COLORING = {{0}, {1, 3}, {2}};
+static const VertexNumbersList COLORING = {{0}, {1, 3}, {2}};
 
 TEST(color_graph) {
   SimpleGraph g(VERTICES, EdgeValuesList());

@@ -1,6 +1,7 @@
 #ifndef CAVCOM_GRAPH_LIBGRAPHCORE_VERTEX_H_
 #define CAVCOM_GRAPH_LIBGRAPHCORE_VERTEX_H_
 
+#include <set>
 #include <vector>
 
 #include "edge.h"
@@ -40,7 +41,7 @@ namespace cavcom {
       Color color(void) const { return color_; }
       void color(Color color) { color_ = color; }
 
-      const Contracted &contracted(void) const { return contracted_; }
+      const VertexIDs &contracted(void) const { return contracted_; }
 
       // Vertex location, for drawing add-ons.
       Dimension xpos(void) const { return xpos_; }
@@ -53,7 +54,7 @@ namespace cavcom {
       VertexID id_;
       Label label_;
       Color color_;
-      Contracted contracted_;
+      VertexIDs contracted_;
       Dimension xpos_;
       Dimension ypos_;
 
@@ -68,6 +69,8 @@ namespace cavcom {
     // their position in the vertex table, which corresponds to their position in the connection matrix.
     using VertexTable = std::vector<Vertex>;
     using VertexNumber = VertexTable::size_type;
+    using VertexNumbers = std::set<VertexNumber>;
+    using VertexNumbersList = std::vector<VertexNumbers>;
 
   }  // namespace graph
 }  // namespace cavcom

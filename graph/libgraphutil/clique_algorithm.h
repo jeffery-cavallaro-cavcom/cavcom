@@ -11,8 +11,6 @@ namespace cavcom {
     // Any algorithm that finds all of the maximal cliques in a graph.
     class CliqueAlgorithm : public CliqueNumberAlgorithm {
      public:
-      using Cliques = std::vector<VertexNumbers>;
-
       // The following mode flags control what is saved.  ALL means that all found maximal cliques are counted and
       // saved.  MAX_ONLY means that all found maximal cliques are counted; however, only maximum cliques are
       // saved.  FIRST_MAX means that only the first found maximum clique is saved.  Derived algorithms should use
@@ -28,7 +26,7 @@ namespace cavcom {
 
       // Returns all found cliques, if cliques are being saved.  Otherwise, the list will contain a single entry
       // that is the first found maximum clique.
-      const Cliques &cliques(void) const { return cliques_; }
+      const VertexNumbersList &cliques(void) const { return cliques_; }
 
       // Returns the set operating mode.
       int mode(void) const { return mode_; }
@@ -57,7 +55,7 @@ namespace cavcom {
 
      private:
       // All found cliques, if being saved.  Otherwise, the first maximum clique found.
-      Cliques cliques_;
+      VertexNumbersList cliques_;
 
       // Operating mode.
       int mode_;

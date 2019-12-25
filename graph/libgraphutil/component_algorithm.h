@@ -11,13 +11,11 @@ namespace cavcom {
     // Any algorithm that finds all of the components in a graph.
     class ComponentAlgorithm : public ComponentNumberAlgorithm {
      public:
-      using Components = std::vector<VertexNumbers>;
-
       // Creates a new instance of a component algorithm for the specified graph.
       explicit ComponentAlgorithm(const SimpleGraph &graph, bool save = true);
 
       // Returns all found components, if components are being saved.
-      const Components &components(void) const { return components_; }
+      const VertexNumbersList &components(void) const { return components_; }
 
       // If true then components are being saved when found.
       bool save(void) const { return save_; }
@@ -35,7 +33,7 @@ namespace cavcom {
 
      private:
       // All found components, if being saved.  Otherwise, the first maximum component found.
-      Components components_;
+      VertexNumbersList components_;
 
       // Save found components flag.
       bool save_;
