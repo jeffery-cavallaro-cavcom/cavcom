@@ -1,7 +1,9 @@
+#include <algorithm>
 #include <utility>
 
 #include "quick_zykov.h"
 
+#include "container_formatter.h"
 #include "bron2.h"
 #include "clique_edwards.h"
 #include "greedy_coloring.h"
@@ -9,7 +11,35 @@
 namespace cavcom {
   namespace graph {
 
-    void QuickZykov::reset_counters() {
+    QuickZykov::QuickZykov(const SimpleGraph &graph, TikzFormatter *formatter)
+      : VertexColoringAlgorithm(graph), kmin_(0), kmax_(0), kemax_(0), formatter_(formatter) {
+      reset_counters();
+    }
+
+    bool QuickZykov::run() {
+      // Initialize the base and derived context.
+      VertexColoringAlgorithm::run();
+      kmin_ = 0;
+      kmax_ = 0;
+      kemax_ = 0;
+      reset_counters();
+      trees_.clear();
+
+      if (tracing()) {
+        *formatter_->out() << "Initial graph:" << std::endl;
+        formatter_->format(graph());
+      }
+
+      // Run the algorithm by calling the outer loop.
+      outer_loop();
+
+      // This algorithm always returns an answer.
+      return true;
+    }
+
+    void QuickZykov::reset_counters(void) {
+      ubadjust_tries_ = 0;
+      ubadjust_hits_ = 0;
       bounding_tries_ = 0;
       bounding_hits_ = 0;
       edge_threshold_tries_ = 0;
@@ -22,31 +52,136 @@ namespace cavcom {
       common_neighbors_hits_ = 0;
     }
 
-    QuickZykov::QuickZykov(const SimpleGraph &graph)
-      : VertexColoringAlgorithm(graph), lower_bound_(0), upper_bound_(0), formatter_(nullptr) {
-      reset_counters();
-    }
-
-    bool QuickZykov::run() {
-      // Reset the base and all derived context.
-      VertexColoringAlgorithm::run();
-      lower_bound_ = 0;
-      upper_bound_ = 0;
-      adjusted_upper_bound_ = 0;
-      reset_counters();
-
-      // Make a dynamic copy of the graph so that the algorithm can replace it with subgraphs.
-      GraphPtr pg(new SimpleGraph(graph()));
-
-      // If tracing then set up a formatter and output the initial graph.
-      if (tracing()) {
-        *formatter_->out() << "Initial graph" << std::endl;
-        formatter_->format(*pg);
+    void QuickZykov::outer_loop(void) {
+      // Set the upper and lower bounds.  If they match then accept the default greedy coloring.
+      add_step();
+      set_lower_bound();
+      if (formatter_) {
+        outer_prefix();
+        *formatter_->out() << "xlb=" << kmin_ << std::endl;
       }
 
-      // Call the outer loop, which is guaranteed to return with an answer.
-      outer_loop(&pg);
+      add_step();
+      set_upper_bound();
+      if (formatter_) {
+        outer_prefix();
+        *formatter_->out() << "xub=" << kmax_ << std::endl;
+      }
 
+      add_step();
+      if (formatter_) outer_prefix();
+      if (kmin_ == kmax_) {
+        *formatter_->out() << "xlb=" << kmin_ << "=" << kmax_ << "=xub, done" << std::endl;
+        return;
+      }
+      if (formatter_) {
+        *formatter_->out() << "xlb=" << kmin_ << "<" << kmax_ << "=xub, continuing" << std::endl;
+      }
+
+      // Target a vertex that occurs in the least number of MISs.  Each MIS that contains the target vertex results
+      // in a tree that will need to be walked.
+      establish_trees();
+    }
+
+    void QuickZykov::set_lower_bound(void) {
+      Bron2 bron(graph(), Bron::MODE_MAX_ONLY, false);
+      bron.execute();
+      kmin_ = bron.number();
+    }
+
+    void QuickZykov::set_upper_bound(void) {
+      GreedyColoring greedy(graph());
+      greedy.execute();
+      kmax_ = greedy.number();
+      coloring_ = greedy.coloring();
+      number_ = kmax_;
+    }
+
+    void QuickZykov::establish_trees(void) {
+      // Run the Bron Kerbosch algorithm to find all of the MISs for the input graph.
+      add_step();
+      SimpleGraph complement(graph(), true);
+      Bron2 bron(complement);
+      bron.execute();
+      const VertexNumbersList &miss = bron.cliques();
+      VertexNumbersList::size_type nmiss = miss.size();
+      if (formatter_) {
+        outer_prefix();
+        *formatter_->out() << "Total MISs=" << nmiss << std::endl;
+      }
+
+      // Count how many times each vertex occurs in a MIS.
+      add_step();
+      VertexNumber n = graph().order();
+      std::vector<VertexNumbersList::size_type> occurs(n);
+      std::for_each(bron.cliques().cbegin(), bron.cliques().cend(),
+                    [&occurs](const VertexNumbers &mis){
+                      for_each(mis.cbegin(), mis.cend(), [&occurs](VertexNumber iv){ ++occurs[iv]; });
+                    });
+      if (formatter_) {
+        outer_prefix();
+        *formatter_->out() << "Counting vertex occurrences in MISs" << std::endl;
+      }
+
+      // Target the vertex that occurs in the least number of MISs.
+      add_step();
+      VertexNumber target = 0;
+      VertexNumbersList::size_type occurrences = occurs[0];
+      for (VertexNumber iv = 1; iv < n; ++iv) {
+        VertexNumbersList::size_type next = occurs[iv];
+        if (next < occurrences) occurrences = next;
+      }
+      if (formatter_) {
+        outer_prefix();
+        *formatter_->out() << "Vertex " << target << " occurs in " << occurrences << " MISs" << std::endl;
+      }
+
+      // Create a tree for each MIS that contains the target vertex.
+      add_step();
+      for (VertexNumbersList::size_type imis = 0; imis < nmiss; ++imis) {
+        const VertexNumbers &mis = miss[imis];
+        if (mis.find(target) != mis.end()) trees_.emplace_back(this, mis, kmax_, formatter_, imis);
+      }
+      if (formatter_) {
+        cavcom::utility::ContainerFormatter cf(formatter_->out());
+        cf.start("  {");
+        outer_prefix();
+        *formatter_->out() << "Creating trees for MISs:" << std::endl;
+        std::for_each(miss.cbegin(), miss.cend(),
+                      [&cf](const VertexNumbers &mis){ cf(mis.cbegin(), mis.cend()) << std::endl; });
+      }
+    }
+
+    void QuickZykov::outer_prefix(void) {
+      *formatter_->out() << steps() << ". (outer) ";
+    }
+
+    QuickZykov::ZykovTree::ZykovTree(QuickZykov *parent,
+                                     const VertexNumbers &mis,
+                                     Color kmax,
+                                     TikzFormatter *formatter,
+                                     ullong itree)
+      : VertexColoringAlgorithm(parent->graph()), parent_(parent), kmax_(kmax),
+        formatter_(formatter), itree_(itree) {
+      // Vertices in the MIS have the same color, which is different from all the vertices not in the MIS.
+      VertexNumber contracted = 0;
+      if (mis.size() > 1) {
+        pgraph_.reset(new SimpleGraph(graph(), { mis }));
+        contracted = pgraph_->order() - 1;
+      } else {
+        pgraph_.reset(new SimpleGraph(graph(), { mis }));
+        contracted = *mis.cbegin();
+      }
+
+      // Vertices not in the MIS have a different color than vertices in the MIS.
+      VertexNumber n = pgraph_->order();
+      for (VertexNumber iv = 0; iv < n; ++iv) {
+        if ((iv != contracted) && (!pgraph_->adjacent(iv, contracted))) pgraph_->join(iv, contracted);
+      }
+    }
+
+#if 0
+    bool QuickZykov::run() {
       // If tracing then output the final state of the graph.
       if (tracing())  {
         *formatter_->out() << "Final graph" << std::endl;
@@ -55,19 +190,6 @@ namespace cavcom {
 
       // An answer is guaranteed.
       return true;
-    }
-
-    void QuickZykov::calculate_lower() {
-      Bron2 bron(graph(), Bron::MODE_FIRST_MAX, false);
-      bron.execute();
-      lower_bound_ = bron.number();
-    }
-
-    void QuickZykov::calculate_upper() {
-      GreedyColoring greedy(graph());
-      greedy.execute();
-      upper_bound_ = greedy.number();
-      adjusted_upper_bound_ = upper_bound_;
     }
 
     void QuickZykov::outer_loop(GraphPtr *ppg) {
@@ -463,10 +585,6 @@ namespace cavcom {
       return success;
     }
 
-    void QuickZykov::outer_prefix(void) {
-      *formatter_->out() << steps() << ". (outer) ";
-    }
-
     void QuickZykov::sub_prefix(void) {
       *formatter_->out() << steps() << ". (sub-" << depth() << ") ";
     }
@@ -480,6 +598,7 @@ namespace cavcom {
         *formatter_->out() << label;
       }
     }
+#endif
 
   }  // namespace graph
 }  // namespace cavcom

@@ -35,7 +35,9 @@ test_sources := \
 	zykov_test.cc \
 	quick_zykov_test.cc
 
-sources := $(libgraphalgo_sources) $(test_sources)
+sources := qz_example.cc $(libgraphalgo_sources) $(test_sources)
+
+programs := qz_example
 
 libraries := libgraphalgo.a
 
@@ -55,10 +57,12 @@ include ../../templates/Makefile.all.mk
 CPPFLAGS += -I../libgraphutil -I../libgraphcore -I../../utility/libutil
 CXXFLAGS += -I../libgraphutil -I../libgraphcore -I../../utility/libutil
 
-TESTLIBS += ../libgraphutil/libgraphutil.a ../libgraphcore/libgraphcore.a
+TESTLIBS += ../libgraphutil/libgraphutil.a ../libgraphcore/libgraphcore.a ../../utility/libutil/libutil.a
 
 libgraphalgo.a: $(subst .cc,.o,$(libgraphalgo_sources))
 	$(make-library)
+
+qz_example:	qz_example.o $(libraries) $(TESTLIBS)
 
 mycielski_test:	mycielski_test.o $(libraries) $(TESTLIBS)
 hopcroft_test:	hopcroft_test.o $(libraries) $(TESTLIBS)
