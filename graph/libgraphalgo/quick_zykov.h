@@ -2,6 +2,7 @@
 #define CAVCOM_GRAPH_LIBGRAPHALGO_QUICK_ZYKOV_H_
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "tikz_formatter.h"
@@ -43,9 +44,19 @@ namespace cavcom {
       ullong edge_threshold_tries() const { return edge_threshold_tries_; }
       ullong edge_threshold_hits() const { return edge_threshold_hits_; }
 
+      void edge_threshold_add(bool hit = false) {
+        ++edge_threshold_tries_;
+        if (hit) ++edge_threshold_hits_;
+      }
+
       // Peg counters that measure the effectiveness of the small degree vertex removal test.
       ullong small_degree_tries() const { return small_degree_tries_; }
       ullong small_degree_hits() const { return small_degree_hits_; }
+
+      void small_degree_add(bool hit = false) {
+        ++small_degree_tries_;
+        if (hit) ++small_degree_hits_;
+      }
 
       // Peg counters that measure the effectiveness of the neighborhood subset test.
       ullong neighborhood_subset_tries() { return neighborhood_subset_tries_; }
@@ -94,7 +105,7 @@ namespace cavcom {
       class ZykovTree : public VertexColoringAlgorithm {
        public:
         using GraphPtr = std::unique_ptr<SimpleGraph>;
-        using VertexNumbersListPtr = std::unique_ptr<VertexNumbersList>;
+        using VertexIDsListPtr = std::unique_ptr<VertexIDsList>;
 
         // Creates a new Zykov tree for the input graph using the specified MIS.  The initial chromatic number
         // upper bound for the graph is specified.  Note that this upper bound may be reduced during branching,
@@ -106,15 +117,23 @@ namespace cavcom {
                   TikzFormatter *formatter = nullptr,
                   ullong itree = 0);
 
+        // Returns the current state of the reduced graph.
+        const SimpleGraph &current(void) const { return *pgraph_; }
+
         // Returns the current chromatic number upper bound for graphs in this tree.
         Color kmax(void) const { return kmax_; }
 
         // Returns the removed vertex list.
-        const VertexNumbersList &removed(void) { return *removed_; }
+        const VertexIDsList &removed(void) { return *premoved_; }
 
-        // Executes the modified Zykov algorithm to determine if the graph associated with this tree is
-        // k-colorable.  Note that the graph, removed vertex list, and effective kmax may be altered.
-        bool is_k_colorable(Color k);
+        // Constructs the final chromatic coloring based on the specified complete graph and removed vertex list.
+        // Each vertex in the complete graph is assigned its own color, which is used for all of the contracted
+        // vertices.  The removed vertices are greedy colored (without color interchange) last removed first.
+        void construct_coloring();
+
+       protected:
+        // Executes the modified Zykov algorithm.  Returns true if a k-colorable solution is found in the tree.
+        virtual bool run();
 
        private:
         // Parent algorithm context.  Use for step, call, and peg counter access.
@@ -127,7 +146,7 @@ namespace cavcom {
 
         // The current list of removed vertices in the order removed.  Each entry corresponds to a single or
         // contracted vertex.
-        VertexNumbersListPtr removed_;
+        VertexIDsListPtr premoved_;
 
         // The current upper bound for the chromatic number bounding this tree.
         Color kmax_;
@@ -135,6 +154,38 @@ namespace cavcom {
         // Formatter and tree number to use when tracing.
         TikzFormatter *formatter_;
         ullong itree_;
+
+        // The steps of the recursive subroutine are as follows:
+        //
+        //  1.  If n <= k then return true.
+        //
+        //  2.  Calculate a maximum edge threshold: a = n^2(k-1)/2k.
+        //
+        //  3.  If m > a then return false.
+        //
+        //  4.  Construct a list of all vertices with degree < k.
+        //
+        //  5.  If such vertices exist, then remove them an go to step 1.
+        //
+        bool is_k_colorable(GraphPtr *ppgraph, VertexIDsListPtr *ppremoved);
+
+        // Returns true if n <= k.
+        bool check_for_success(const SimpleGraph &g);
+
+        // Calculates the maximum edge threshold for a graph assuming that it is k-colorable.
+        double max_edge_threshold(const SimpleGraph &g);
+
+        // Returns true if the number of edges does not exceed the maximum edge threshold.
+        bool check_max_edges(const SimpleGraph &g, double a);
+
+        // Finds vertices with degree < k.
+        void find_small_degree(const SimpleGraph &g, VertexNumbers *x);
+
+        // Removes the specified list of vertices.  Returns true if vertices were removed.
+        bool remove_small_vertices(GraphPtr *ppg, VertexIDsListPtr *ppremoved, const VertexNumbers &x);
+
+        // Constructs a prefix for recursive subroutine trace messages.
+        void sub_prefix(void);
       };
 
       // The list of MIS-related Zykov trees.
@@ -191,28 +242,13 @@ namespace cavcom {
       // Constructs a prefix for outer loop trace messages.
       void outer_prefix(void);
 
-#if 0
-      //  5. Call the subroutine to determine if the current state of G is k-colorable for the current value of k.
-      //     If so, then return with the current value of k.  If not, then the method will return a subgraph
-      //     replacement for G to be used for the remainder of the algorithm.
-      //
-      //  6. Increment k and go to step 4.
-      //
-      // Each of these steps is counted.
-      void outer_loop(GraphPtr *ppg);
+      // Formats a list of vertex numbers as IDs.
+      static std::ostream &numbers_to_ids(const SimpleGraph &g,
+                                          const VertexNumbers &numbers,
+                                          const std::string &prefix,
+                                          std::ostream *out);
 
-      // The steps of the inner loop are as follows:
-      //
-      //  1.  If n <= k then return true.
-      //
-      //  2.  Calculate a maximum edge threshold: a = n^2(k-1)/2k.
-      //
-      //  3.  If m > a then return false.
-      //
-      //  4.  Construct a list of all vertices with degree < k.
-      //
-      //  5.  If such vertices exist, then remove them an go to step 1.
-      //
+#if 0
       //  6.  If n < kmax then kmax = n.
       //
       //  7.  Calculate a lower bound for the current graph.
@@ -240,31 +276,6 @@ namespace cavcom {
       //
       // Each of these steps is counted, as well as a count for the current call and each recursive call.
 
-      // Resets all the derived-class counters.
-      void reset_counters();
-
-      // Calculates a lower bound for the chromatic number using the Bron Kerbosch algorithm to find the clique
-      // number of the graph.
-      void calculate_lower();
-
-      // Calculates an upper bound for the chromatic number using the sequential last-first algorithm.
-      void calculate_upper();
-
-      // Returns true if n <= k.
-      bool check_for_success(GraphPtr *ppg);
-
-      // Calculates the maximum edge threshold for a graph assuming that it is k-colorable.
-      double max_edge_threshold(GraphPtr *ppg);
-
-      // Returns true if the number of edges does not exceed the maximum edge threshold.
-      bool check_max_edges(GraphPtr *ppg, double a);
-
-      // Finds vertices with degree < k.
-      void find_small_degree(GraphPtr *ppg, VertexNumbers *x);
-
-      // Removes the specified list of vertices.  Returns true if vertices were removed.
-      bool remove_small_vertices(GraphPtr *ppg, const VertexNumbers &x);
-
       // Uses the Edwards Elphick algorithm to calculate a lower bound for the current graph and check it against
       // the current k value.  If the lower bound is greater then returns true to bound.
       bool check_bounding(GraphPtr *ppg);
@@ -291,9 +302,6 @@ namespace cavcom {
 
       // Adds an edge to the two specified vertices.  Returns true if the resulting graph is k-colorable.
       bool add_edge(GraphPtr *ppg, VertexNumber v1, VertexNumber v2);
-
-      // Constructs a prefix for called subroutine trace messages.
-      void sub_prefix(void);
 
       // Identifies a vertex by number.  Either the label or vertex ID will be used.
       void identify_vertex(const GraphPtr &pg, VertexNumber iv);

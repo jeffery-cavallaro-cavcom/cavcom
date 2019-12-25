@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <iostream>
 #include <utility>
 
 #include "quick_zykov.h"
@@ -32,6 +33,17 @@ namespace cavcom {
 
       // Run the algorithm by calling the outer loop.
       outer_loop();
+
+      if (tracing()) {
+        *formatter_->out() << "Final coloring:" << std::endl;
+        cavcom::utility::ContainerFormatter fc(formatter_->out());
+        fc.start("  {");
+        std::for_each(coloring_.cbegin(), coloring_.cend(),
+                      [this, &fc](const VertexNumbers &color){
+                        fc(color.cbegin(), color.cend());
+                        *formatter_->out() << std::endl;
+                      });
+      }
 
       // This algorithm always returns an answer.
       return true;
@@ -104,7 +116,20 @@ namespace cavcom {
         ZykovTreeList::size_type ntrees = trees_.size();
         for (ZykovTreeList::size_type itree = 0; itree < ntrees; ++itree) {
           ZykovTree &tree = trees_[itree];
-          if (tree.is_k_colorable(number_)) {
+
+          add_step();
+          if (tracing()) {
+            outer_prefix();
+            *formatter_->out() << "Starting tree " << itree << std::endl;
+            formatter_->format(tree.current());
+          }
+
+          if (tree.execute()) {
+            // A solution has been found.  Construct the final chromatic coloring.
+            add_step();
+            tree.construct_coloring();
+            coloring_ = tree.coloring();
+            return;
           }
         }
 
@@ -174,7 +199,8 @@ namespace cavcom {
       }
       if (formatter_) {
         outer_prefix();
-        *formatter_->out() << "Vertex " << target << " occurs in " << occurrences << " MISs" << std::endl;
+        *formatter_->out() << "Vertex " << graph().vertex(target).id() << " occurs in " << occurrences << " MISs"
+                           << std::endl;
       }
 
       // Create a tree for each MIS that contains the target vertex.
@@ -184,12 +210,14 @@ namespace cavcom {
         if (mis.find(target) != mis.end()) trees_.emplace_back(this, mis, kmax_, formatter_, imis);
       }
       if (formatter_) {
-        cavcom::utility::ContainerFormatter cf(formatter_->out());
-        cf.start("  {");
         outer_prefix();
         *formatter_->out() << "Creating trees for MISs:" << std::endl;
         std::for_each(miss.cbegin(), miss.cend(),
-                      [&cf](const VertexNumbers &mis){ cf(mis.cbegin(), mis.cend()) << std::endl; });
+                      [this, target](const VertexNumbers &mis){
+                        if (mis.find(target) != mis.cend()) {
+                          numbers_to_ids(graph(), mis, "  {", formatter_->out()) << std::endl;
+                        }
+                      });
       }
     }
 
@@ -197,17 +225,32 @@ namespace cavcom {
       *formatter_->out() << steps() << ". (outer) ";
     }
 
+    std::ostream &QuickZykov::numbers_to_ids(const SimpleGraph &g,
+                                             const VertexNumbers &numbers,
+                                             const std::string &prefix = std::string(),
+                                             std::ostream *out = &std::cout) {
+      VertexIDs ids;
+      std::for_each(numbers.cbegin(), numbers.cend(),
+                    [&g, &ids](VertexNumber iv){
+                      ids.insert(g.vertex(iv).id());
+                    });
+      cavcom::utility::ContainerFormatter cf(out);
+      if (!prefix.empty()) cf.start(prefix);
+      cf(ids.cbegin(), ids.cend());
+      return *out;
+    }
+
     QuickZykov::ZykovTree::ZykovTree(QuickZykov *parent,
                                      const VertexNumbers &mis,
                                      Color kmax,
                                      TikzFormatter *formatter,
                                      ullong itree)
-      : VertexColoringAlgorithm(parent->graph()), parent_(parent), kmax_(kmax),
+      : VertexColoringAlgorithm(parent->graph()), parent_(parent), premoved_(new VertexIDsList()), kmax_(kmax),
         formatter_(formatter), itree_(itree) {
       // Vertices in the MIS have the same color, which is different from all the vertices not in the MIS.
       VertexNumber contracted = 0;
       if (mis.size() > 1) {
-        pgraph_.reset(new SimpleGraph(graph(), { mis }));
+        pgraph_.reset(new SimpleGraph(graph(), VertexNumbersList({ mis })));
         contracted = pgraph_->order() - 1;
       } else {
         pgraph_.reset(new SimpleGraph(graph(), { mis }));
@@ -221,73 +264,143 @@ namespace cavcom {
       }
     }
 
-    bool QuickZykov::ZykovTree::is_k_colorable(Color k) {
+    bool QuickZykov::ZykovTree::run() {
+      number_ = parent_->number();
+      return is_k_colorable(&pgraph_, &premoved_);
+    }
+
+    bool QuickZykov::ZykovTree::is_k_colorable(GraphPtr *ppgraph, VertexIDsListPtr *ppremoved) {
+      // Attempt to bound before branching.
+      while (true) {
+        GraphPtr &pg = *ppgraph;
+
+        // Check for success (n <= k).
+        add_step();
+        if (check_for_success(*pg)) return true;
+
+        // Calculate a maximum edge threshold.  Fail if the graph size exceeds this threshold.  Note that complete
+        // graphs are always caught by this check.
+        add_step();
+        double a = max_edge_threshold(*pg);
+
+        // Make sure that the current number of edges doesn't exceed the threshold.
+        add_step();
+        bool more = check_max_edges(*pg, a);
+        parent_->edge_threshold_add(more);
+        if (!more) return false;
+
+        // Find all vertices with degree < k.
+        add_step();
+        VertexNumbers x;
+        find_small_degree(*pg, &x);
+
+        // Remove all such small degree vertices.
+        add_step();
+        more = remove_small_vertices(ppgraph, ppremoved, x);
+        parent_->small_degree_add(more);
+        if (more) continue;
+
+        // All of the bounding tests have failed.
+        break;
+      }
+
+      // This tree does not result in a k-colorable graph.
       return false;
     }
 
-#if 0
-    bool QuickZykov::run() {
-      // If tracing then output the final state of the graph.
-      if (tracing())  {
-        *formatter_->out() << "Final graph" << std::endl;
-        formatter_->format(*pg);
+    bool QuickZykov::ZykovTree::check_for_success(const SimpleGraph &g) {
+      VertexNumber n = g.order();
+      bool success = (n <= number_);
+      if (formatter_) {
+        sub_prefix();
+        *formatter_->out() << "Success check: n=" << n;
+        if (success) {
+          *formatter_->out() << "<=" << number_ << "=k, success" << std::endl;
+        } else {
+          *formatter_->out() << ">" << number_ << "=k, continuing" << std::endl;
+        }
       }
+      return success;
+    }
 
-      // An answer is guaranteed.
+    double QuickZykov::ZykovTree::max_edge_threshold(const SimpleGraph &g) {
+      double n = static_cast<double>(g.order());
+      double k = static_cast<double>(number_);
+      double a = n*n*(k - 1)/(2*k);
+      if (formatter_) {
+        sub_prefix();
+        *formatter_->out() << "Maximum edge threshold: a=" << a << std::endl;
+      }
+      return a;
+    }
+
+    bool QuickZykov::ZykovTree::check_max_edges(const SimpleGraph &g, double a) {
+      double m = static_cast<double>(g.size());
+      bool ok = (m <= a);
+      if (formatter_) {
+        sub_prefix();
+        *formatter_->out() << "Compare: m=" << m;
+        if (ok) {
+          *formatter_->out() << "<=" << a << "=a, continuing" << std::endl;
+        } else {
+          *formatter_->out() << ">" << a << "=a, failed" << std::endl;
+        }
+      }
+      return (ok);
+    }
+
+    void QuickZykov::ZykovTree::find_small_degree(const SimpleGraph &g,  VertexNumbers *x) {
+      VertexNumber n = g.order();
+      x->clear();
+      for (VertexNumber iv = 0; iv < n; ++iv) {
+        if (g.degree(iv) < number_) x->insert(iv);
+      }
+      if (formatter_) {
+        sub_prefix();
+        *formatter_->out() << "Small degree check: found " << x->size() << std::endl;
+      }
+    }
+
+    bool QuickZykov::ZykovTree::remove_small_vertices(GraphPtr *ppg,
+                                                      VertexIDsListPtr *ppremoved,
+                                                      const VertexNumbers &x) {
+      if (formatter_) {
+        sub_prefix();
+        *formatter_->out() << "Removing vertices: ";
+      }
+      if (x.empty()) {
+        if (formatter_) *formatter_->out() << "none" << std::endl;
+        return false;
+      }
+      GraphPtr &pg = *ppg;
+      VertexIDsListPtr &premoved = *ppremoved;
+      premoved->resize(premoved->size() + 1);
+      VertexIDs &ids = premoved->back();
+      std::for_each(x.cbegin(), x.cend(),
+                    [&pg, &ids](VertexNumber iv){ ids.insert(pg->vertex(iv).id()); });
+      if (formatter_) {
+        cavcom::utility::ContainerFormatter cf(formatter_->out());
+        cf(ids.cbegin(), ids.cend()) << std::endl;
+      }
+      ppg->reset(new SimpleGraph(*pg, x, EdgeNumbers()));
+      if (formatter_) formatter_->format(**ppg);
       return true;
     }
 
-    void QuickZykov::outer_loop(GraphPtr *ppg) {
-      // Determine if the graph in the current state is k-colorable.  This can be because either the upper bound
-      // has be reached of the called subroutine indicates k-colorability.  If so, then done - the current value of
-      // k is the chromatic number.  Otherwise, try the next value of k.  Note that a subgraph may be returned.
-      while (number_ < adjusted_upper_bound_) {
-        // Check for k-colorability.
-        add_call();
-        bool success = is_k_colorable(ppg);
-        done_call();
-        if (success) break;
-      }
+    void QuickZykov::ZykovTree::construct_coloring() {
     }
 
+    void QuickZykov::ZykovTree::sub_prefix() {
+      *formatter_->out() << parent_->steps() << ". (" << itree_ << "-" << depth() << ") ";
+    }
+
+#if 0
     bool QuickZykov::is_k_colorable(GraphPtr *ppg) {
       GraphPtr &pg = *ppg;
       Degree b = 0;
       VertexNumber v1 = 0, v2 = 0;
       Degree b_nonadj = 0;
       VertexNumber v1_nonadj = 0, v2_nonadj = 0;
-
-      // Attempt to bound before branching.
-      while (true) {
-        // Check for success (n <= k).
-        add_step();
-        if (check_for_success(ppg)) return true;
-
-        // Calculate a maximum edge threshold.  Fail if the graph size exceeds this threshold.  Note that complete
-        // graphs are always caught by this check.
-        add_step();
-        double a = max_edge_threshold(ppg);
-
-        // Make sure that the current number of edges doesn't exceed the threshold.
-        add_step();
-        ++edge_threshold_tries_;
-        if (!check_max_edges(ppg, a)) {
-          ++edge_threshold_hits_;
-          return false;
-        }
-
-        // Find all vertices with degree < k.
-        add_step();
-        VertexNumbers x;
-        find_small_degree(ppg, &x);
-
-        // Remove all such small degree vertices.
-        add_step();
-        ++small_degree_tries_;
-        if (remove_small_vertices(ppg, x)) {
-          ++small_degree_hits_;
-          continue;
-        }
 
         // Check for bounding.
         add_step();
@@ -346,11 +459,7 @@ namespace cavcom {
           return false;
         }
 
-        // All of the bounding tests have failed.
-        break;
-      }
-
-      // The preceding loop should terminate with v1_nonadj and v2_nonadj set to two non-adjacent vertices with the
+        // The preceding loop should terminate with v1_nonadj and v2_nonadj set to two non-adjacent vertices with the
       // smallest number of common neighbors.  Assume that they are the same color and contract them.
       add_step();
       if (contract_vertices(ppg, v1_nonadj, v2_nonadj)) return true;
@@ -366,82 +475,6 @@ namespace cavcom {
         *formatter_->out() << "Not " << number_ << "-colorable" << std::endl;
       }
       return false;
-    }
-
-    bool QuickZykov::check_for_success(GraphPtr *ppg) {
-      GraphPtr &pg = *ppg;
-      VertexNumber n = pg->order();
-      if (tracing()) {
-        sub_prefix();
-        *formatter_->out() << "Success check: n=" << n << ", k=" << number_ << ": ";
-      }
-      if (n <= number_) {
-        if (tracing()) *formatter_->out() << "graph is " << number_ << "-colorable" << std::endl;
-        return true;
-      }
-      if (tracing()) *formatter_->out() << "continue" << std::endl;
-      return false;
-    }
-
-    double QuickZykov::max_edge_threshold(GraphPtr *ppg) {
-      GraphPtr &pg = *ppg;
-      double n = static_cast<double>(pg->order());
-      double k = static_cast<double>(number_);
-      double a = n*n*(k - 1)/(2*k);
-      if (tracing()) {
-        sub_prefix();
-        *formatter_->out() << "Maximum edge threshold: a=" << a << std::endl;
-      }
-      return a;
-    }
-
-    bool QuickZykov::check_max_edges(GraphPtr *ppg, double a) {
-      GraphPtr &pg = *ppg;
-      double m = static_cast<double>(pg->size());
-      if (tracing()) {
-        sub_prefix();
-        *formatter_->out() << "Compare: m=" << m << ", a=" << a << ": ";
-      }
-      if (m > a) {
-        if (tracing()) *formatter_->out() << "not " << number_ << "-colorable" << std::endl;
-        return false;
-      }
-      if (tracing()) *formatter_->out() << "continue" << std::endl;
-      return true;
-    }
-
-    void QuickZykov::find_small_degree(GraphPtr *ppg, VertexNumbers *x) {
-      GraphPtr &pg = *ppg;
-      VertexNumber n = pg->order();
-      if (tracing()) {
-        sub_prefix();
-        *formatter_->out() << "Finding degree < " << number_ << ": found ";
-      }
-      x->clear();
-      for (VertexNumber i = 0; i < n; ++i) {
-        if (pg->degree(i) < number_) x->insert(i);
-      }
-      if (tracing()) *formatter_->out() << x->size() << std::endl;
-    }
-
-    bool QuickZykov::remove_small_vertices(GraphPtr *ppg, const VertexNumbers &x) {
-      GraphPtr &pg = *ppg;
-      if (tracing()) {
-        sub_prefix();
-        *formatter_->out() << "Removing vertices:";
-        if (x.empty()) {
-          *formatter_->out() << " none" << std::endl;
-        } else {
-          for_each(x.begin(), x.end(), [this, &pg](VertexNumber iv)
-                                       { *formatter_->out() << " ";
-                                         identify_vertex(pg, iv); });
-          *formatter_->out() << std::endl;
-        }
-      }
-      if (x.empty()) return false;
-      pg.reset(new SimpleGraph(*pg, x, EdgeNumbers()));
-      if (tracing()) formatter_->format(*pg);
-      return true;
     }
 
     bool QuickZykov::check_bounding(GraphPtr *ppg) {
@@ -597,10 +630,6 @@ namespace cavcom {
       done_call();
       if (success) pg = std::move(recursive);
       return success;
-    }
-
-    void QuickZykov::sub_prefix(void) {
-      *formatter_->out() << steps() << ". (sub-" << depth() << ") ";
     }
 
     void QuickZykov::identify_vertex(const GraphPtr &pg, VertexNumber iv) {
