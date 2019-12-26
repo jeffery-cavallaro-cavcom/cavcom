@@ -12,7 +12,7 @@ test_sources := \
 	matrix_test.cc \
 	types_test.cc
 
-source := $(libutil_source) $(test_sources)
+sources := $(libutil_sources) $(test_sources)
 
 libraries := libutil.a
 
