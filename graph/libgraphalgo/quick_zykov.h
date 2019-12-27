@@ -44,13 +44,13 @@ namespace cavcom {
       void small_degree_add(bool hit = false);
 
       // Peg counters that measure the effectiveness of the neighborhood subset test.
-      ullong neighborhood_subset_tries() { return neighborhood_subset_tries_; }
-      ullong neighborhood_subset_hits() { return neighborhood_subset_hits_; }
+      ullong neighborhood_subset_tries() const { return neighborhood_subset_tries_; }
+      ullong neighborhood_subset_hits() const { return neighborhood_subset_hits_; }
       void neighborhood_subset_add(bool hit = false);
 
       // Peg counters that measure the effectiveness of the minimum common neighbor upper bound test.
-      ullong common_neighbors_tries() { return common_neighbors_tries_; }
-      ullong common_neighbors_hits() { return common_neighbors_hits_; }
+      ullong common_neighbors_tries() const { return common_neighbors_tries_; }
+      ullong common_neighbors_hits() const { return common_neighbors_hits_; }
       void common_neighbors_add(bool hit = false);
 
       // Peg counters that measure the effectiveness of the lower bound exceeding the upper bound test.
@@ -190,7 +190,7 @@ namespace cavcom {
         // Calculates the maximum edge threshold for a graph assuming that it is k-colorable.
         double max_edge_threshold(const SimpleGraph &g);
 
-        // Returns true if the number of edges does not exceed the maximum edge threshold.
+        // Returns false if the number of edges exceeds the maximum edge threshold.
         bool check_max_edges(const SimpleGraph &g, double a);
 
         // Finds vertices with degree < k.
@@ -219,7 +219,7 @@ namespace cavcom {
         // Calculates a new lower bound for the specified graph.
         Color calc_lb(const SimpleGraph &g);
 
-        // Performs the normal Zykov bounding check.  Returns true if bounded.
+        // Returns true if bounding should occur.
         bool check_bounding(Color lb);
 
         // Contracts the two specified vertices.  Returns true if the resulting graph is k-colorable.

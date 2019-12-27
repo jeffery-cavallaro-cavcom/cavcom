@@ -45,7 +45,8 @@ CXXFLAGS = ${CPPFLAGS}
 LIBS +=	../libgraphalgo/libgraphalgo.a \
 	../libgraphutil/libgraphutil.a \
 	../libgraphcore/libgraphcore.a \
-	../../utility/liblog/liblog.a
+	../../utility/liblog/liblog.a \
+	../../utility/libutil/libutil.a
 
 LDLIBS += -lstdc++fs
 

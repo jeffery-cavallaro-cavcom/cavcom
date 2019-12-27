@@ -6,6 +6,7 @@
 
 #include "chromatic_wang.h"
 
+#include "mycielski.h"
 #include "random_graph.h"
 
 using namespace cavcom::graph;
@@ -37,11 +38,11 @@ TEST(empty_graph) {
   UNITTEST_ASSERT_TRUE(cw.execute());
   UNITTEST_ASSERT_EQUAL(cw.calls(), 1);
   UNITTEST_ASSERT_EQUAL(cw.number(), 1);
-  VertexNumbers expected;
-  for (VertexNumber iv = 0; iv < ORDER; ++iv) expected.insert(iv);
-  UNITTEST_ASSERT_EQUAL(cw.coloring().size(), 1);
-  UNITTEST_ASSERT_EQUAL(cw.coloring()[0].size(), expected.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(cw.coloring()[0], expected);
+  VertexNumbers numbers;
+  for (VertexNumber iv = 0; iv < ORDER; ++iv) numbers.insert(iv);
+  VertexNumbersList expected = { numbers };
+  UNITTEST_ASSERT_EQUAL(cw.coloring().size(), expected.size());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(cw.coloring(), expected);
 }
 
 TEST(complete_graph) {
@@ -53,14 +54,11 @@ TEST(complete_graph) {
   UNITTEST_ASSERT_EQUAL(cw.calls(), 10);
   UNITTEST_ASSERT_EQUAL(cw.number(), ORDER);
   VertexNumbersList expected;
-  for (VertexNumber iv = 0; iv < ORDER; ++iv) {
-    VertexNumbers part = {iv};
-    expected.push_back(part);
-  }
-  VertexNumbersList found = cw.coloring();
-  std::sort(found.begin(), found.end());
-  UNITTEST_ASSERT_EQUAL(found.size(), expected.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(found, expected);
+  for (VertexNumber iv = 0; iv < ORDER; ++iv) expected.push_back({ iv });
+  VertexNumbersList actual = cw.coloring();
+  std::sort(actual.begin(), actual.end());
+  UNITTEST_ASSERT_EQUAL(actual.size(), expected.size());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(actual, expected);
 }
 
 static const VertexValuesList VERTICES = {{"a", NOCOLOR, 2, 6},
@@ -87,10 +85,13 @@ TEST(sample_graph) {
   UNITTEST_ASSERT_TRUE(cw.execute());
   UNITTEST_ASSERT_EQUAL(cw.calls(), 6);
   UNITTEST_ASSERT_EQUAL(cw.number(), COLORING.size());
-  VertexNumbersList found = cw.coloring();
-  std::sort(found.begin(), found.end());
-  UNITTEST_ASSERT_EQUAL(found.size(), COLORING.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(found, COLORING);
+  VertexNumbersList actual = cw.coloring();
+  std::sort(actual.begin(), actual.end());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(actual, COLORING);
+
+  UNITTEST_ASSERT_FALSE(g.proper());
+  cw.apply(&g);
+  UNITTEST_ASSERT_TRUE(g.proper());
 }
 
 static const VertexValuesList VERTICES2 = {{"a", NOCOLOR, 0, 2},
@@ -120,10 +121,30 @@ TEST(sample_graph_2) {
   UNITTEST_ASSERT_TRUE(cw.execute());
   UNITTEST_ASSERT_EQUAL(cw.calls(), 15);
   UNITTEST_ASSERT_EQUAL(cw.number(), COLORING2.size());
-  VertexNumbersList found = cw.coloring();
-  std::sort(found.begin(), found.end());
-  UNITTEST_ASSERT_EQUAL(found.size(), COLORING2.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(found, COLORING2);
+  VertexNumbersList actual = cw.coloring();
+  std::sort(actual.begin(), actual.end());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(actual, COLORING2);
+
+  UNITTEST_ASSERT_FALSE(g.proper());
+  cw.apply(&g);
+  UNITTEST_ASSERT_TRUE(g.proper());
+}
+
+static const VertexNumbersList COLORINGM = {{0, 4, 5, 9}, {1, 3, 6, 8}, {2, 10}, {7}};
+
+TEST(myclieski_graph) {
+  Mycielski g(4);
+  ChromaticWang cw(g);
+  UNITTEST_ASSERT_TRUE(cw.execute());
+  UNITTEST_ASSERT_EQUAL(cw.calls(), 43);
+  UNITTEST_ASSERT_EQUAL(cw.number(), COLORINGM.size());
+  VertexNumbersList actual = cw.coloring();
+  std::sort(actual.begin(), actual.end());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(actual, COLORINGM);
+
+  UNITTEST_ASSERT_FALSE(g.proper());
+  cw.apply(&g);
+  UNITTEST_ASSERT_TRUE(g.proper());
 }
 
 TEST(random_graphs) {

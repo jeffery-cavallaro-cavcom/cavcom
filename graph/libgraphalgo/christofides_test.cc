@@ -6,6 +6,7 @@
 
 #include "christofides.h"
 
+#include "mycielski.h"
 #include "random_graph.h"
 
 using namespace cavcom::graph;
@@ -37,11 +38,11 @@ TEST(empty_graph) {
   UNITTEST_ASSERT_TRUE(c.execute());
   UNITTEST_ASSERT_EQUAL(c.calls(), 1);
   UNITTEST_ASSERT_EQUAL(c.number(), 1);
-  VertexNumbers expected;
-  for (VertexNumber iv = 0; iv < ORDER; ++iv) expected.insert(iv);
-  UNITTEST_ASSERT_EQUAL(c.coloring().size(), 1);
-  UNITTEST_ASSERT_EQUAL(c.coloring()[0].size(), expected.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(c.coloring()[0], expected);
+  VertexNumbers numbers;
+  for (VertexNumber iv = 0; iv < ORDER; ++iv) numbers.insert(iv);
+  VertexNumbersList expected = { numbers };
+  UNITTEST_ASSERT_EQUAL(c.coloring().size(), expected.size());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(c.coloring(), expected);
 }
 
 TEST(complete_graph) {
@@ -53,14 +54,11 @@ TEST(complete_graph) {
   UNITTEST_ASSERT_EQUAL(c.calls(), 5111);
   UNITTEST_ASSERT_EQUAL(c.number(), ORDER);
   VertexNumbersList expected;
-  for (VertexNumber iv = 0; iv < ORDER; ++iv) {
-    VertexNumbers part = {iv};
-    expected.push_back(part);
-  }
-  VertexNumbersList found = c.coloring();
-  std::sort(found.begin(), found.end());
-  UNITTEST_ASSERT_EQUAL(found.size(), expected.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(found, expected);
+  for (VertexNumber iv = 0; iv < ORDER; ++iv) expected.push_back({ iv });
+  VertexNumbersList actual = c.coloring();
+  std::sort(actual.begin(), actual.end());
+  UNITTEST_ASSERT_EQUAL(actual.size(), expected.size());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(actual, expected);
 }
 
 static const VertexValuesList VERTICES = {{"a", NOCOLOR, 2, 6},
@@ -91,6 +89,10 @@ TEST(sample_graph) {
   std::sort(found.begin(), found.end());
   UNITTEST_ASSERT_EQUAL(found.size(), COLORING.size());
   UNITTEST_ASSERT_EQUAL_CONTAINERS(found, COLORING);
+
+  UNITTEST_ASSERT_FALSE(g.proper());
+  c.apply(&g);
+  UNITTEST_ASSERT_TRUE(g.proper());
 }
 
 static const VertexValuesList VERTICES2 = {{"a", NOCOLOR, 0, 2},
@@ -124,6 +126,27 @@ TEST(sample_graph_2) {
   std::sort(found.begin(), found.end());
   UNITTEST_ASSERT_EQUAL(found.size(), COLORING2.size());
   UNITTEST_ASSERT_EQUAL_CONTAINERS(found, COLORING2);
+
+  UNITTEST_ASSERT_FALSE(g.proper());
+  c.apply(&g);
+  UNITTEST_ASSERT_TRUE(g.proper());
+}
+
+static const VertexNumbersList COLORINGM = {{0, 4, 10}, {1, 3}, {2}, {5, 6, 7, 8, 9}};
+
+TEST(myclieski_graph) {
+  Mycielski g(4);
+  Christofides c(g);
+  UNITTEST_ASSERT_TRUE(c.execute());
+  UNITTEST_ASSERT_EQUAL(c.calls(), 192);
+  UNITTEST_ASSERT_EQUAL(c.number(), COLORINGM.size());
+  VertexNumbersList actual = c.coloring();
+  std::sort(actual.begin(), actual.end());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(actual, COLORINGM);
+
+  UNITTEST_ASSERT_FALSE(g.proper());
+  c.apply(&g);
+  UNITTEST_ASSERT_TRUE(g.proper());
 }
 
 TEST(random_graphs) {

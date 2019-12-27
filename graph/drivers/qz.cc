@@ -16,11 +16,11 @@ class Statistics {
   Statistics(void) : order("n"), eprob("p"), edges("m"),
                      time("time"), steps("steps"), calls("calls"), depth("depth"),
                      lower_bound("lower_bound"), upper_bound("upper_bound"), number("number"), match("match"),
-                     bounding("bounding"),
                      edge_threshold("edge_threshold"),
                      small_degree("small_degree"),
                      neighborhood_subset("neighborhood_subset"),
-                     common_neighbors("common_neighbors") {}
+                     common_neighbors("common_neighbors"),
+                     bounding("bounding") {}
   CSVDatumField<VertexNumber> order;
   CSVDatumField<uint> eprob;
   CSVSampleFields<uint> edges;
@@ -32,11 +32,11 @@ class Statistics {
   CSVSampleFields<ullong> upper_bound;
   CSVSampleFields<ullong> number;
   CSVHitCounterFields match;
-  CSVHitCounterFields bounding;
   CSVHitCounterFields edge_threshold;
   CSVHitCounterFields small_degree;
   CSVHitCounterFields neighborhood_subset;
   CSVHitCounterFields common_neighbors;
+  CSVHitCounterFields bounding;
 
   void add_fields(CSVFile *csv) {
     csv->add_field(&order);
@@ -50,11 +50,11 @@ class Statistics {
     upper_bound.add_fields(csv);
     number.add_fields(csv);
     match.add_fields(csv);
-    bounding.add_fields(csv);
     edge_threshold.add_fields(csv);
     small_degree.add_fields(csv);
     neighborhood_subset.add_fields(csv);
     common_neighbors.add_fields(csv);
+    bounding.add_fields(csv);
   }
 
   void gather_stats(VertexNumber n, uint p, const QuickZykov &qz) {
@@ -66,15 +66,15 @@ class Statistics {
     steps.add_data(qz.steps());
     calls.add_data(qz.calls());
     depth.add_data(qz.maxdepth());
-    lower_bound.add_data(qz.lower_bound());
-    upper_bound.add_data(qz.upper_bound());
+    lower_bound.add_data(qz.kmin());
+    upper_bound.add_data(qz.kmax());
     number.add_data(qz.number());
-    match.add_data(1, (qz.lower_bound() == qz.upper_bound()) ? 1 : 0);
-    bounding.add_data(qz.bounding_tries(), qz.bounding_hits());
+    match.add_data(1, (qz.kmin() == qz.kmax()) ? 1 : 0);
     edge_threshold.add_data(qz.edge_threshold_tries(), qz.edge_threshold_hits());
     small_degree.add_data(qz.small_degree_tries(), qz.small_degree_hits());
     neighborhood_subset.add_data(qz.neighborhood_subset_tries(), qz.neighborhood_subset_hits());
     common_neighbors.add_data(qz.common_neighbors_tries(), qz.common_neighbors_hits());
+    bounding.add_data(qz.bounding_tries(), qz.bounding_hits());
   }
 };
 
@@ -92,7 +92,7 @@ static std::string make_raw_filename(VertexNumber n, uint ipct) {
 
 static constexpr uint TRIALS = 1000;
 
-static constexpr VertexNumber N_START = 26;
+static constexpr VertexNumber N_START = 5;
 static constexpr VertexNumber N_END = 30;
 static constexpr VertexNumber N_INCR = 1;
 

@@ -27,7 +27,7 @@ namespace cavcom {
       void separator(const std::string &separator) { separator_ = separator; }
 
       // Returns the target output stream.
-      std::ostream &out(void) { return *out_; };
+      std::ostream &out(void) { return *out_; }
 
       // Formats the specified range of a container.
       template <typename I> std::ostream &operator()(I begin, I end) {

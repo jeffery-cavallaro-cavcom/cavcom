@@ -4,6 +4,7 @@
 
 #include "zykov.h"
 
+#include "mycielski.h"
 #include "random_graph.h"
 
 using namespace cavcom::graph;
@@ -35,11 +36,11 @@ TEST(empty_graph) {
   UNITTEST_ASSERT_TRUE(z.execute());
   UNITTEST_ASSERT_EQUAL(z.calls(), 1);
   UNITTEST_ASSERT_EQUAL(z.number(), 1);
-  VertexNumbers expected;
-  for (VertexNumber iv = 0; iv < ORDER; ++iv) expected.insert(iv);
-  UNITTEST_ASSERT_EQUAL(z.coloring().size(), 1);
-  UNITTEST_ASSERT_EQUAL(z.coloring()[0].size(), expected.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(z.coloring()[0], expected);
+  VertexNumbers numbers;
+  for (VertexNumber iv = 0; iv < ORDER; ++iv) numbers.insert(iv);
+  VertexNumbersList expected = { numbers };
+  UNITTEST_ASSERT_EQUAL(z.coloring().size(), expected.size());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(z.coloring(), expected);
 }
 
 TEST(complete_graph) {
@@ -51,12 +52,11 @@ TEST(complete_graph) {
   UNITTEST_ASSERT_EQUAL(z.calls(), 1);
   UNITTEST_ASSERT_EQUAL(z.number(), ORDER);
   VertexNumbersList expected;
-  for (VertexNumber iv = 0; iv < ORDER; ++iv) {
-    VertexNumbers part = {iv};
-    expected.push_back(part);
-  }
-  UNITTEST_ASSERT_EQUAL(z.coloring().size(), expected.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(z.coloring(), expected);
+  for (VertexNumber iv = 0; iv < ORDER; ++iv) expected.push_back({ iv });
+  VertexNumbersList actual = z.coloring();
+  std::sort(actual.begin(), actual.end());
+  UNITTEST_ASSERT_EQUAL(actual.size(), expected.size());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(actual, expected);
 }
 
 static const VertexValuesList VERTICES = {{"a", NOCOLOR, 2, 6},
@@ -75,7 +75,7 @@ static const EdgeValuesList EDGES = {{0, 1}, {0, 2}, {0, 5},
                                      {4, 5},
                                      {5, 6}, {5, 7}};
 
-static const VertexNumbersList COLORING = {{0, 3}, {2, 5}, {1, 4, 6, 7}};
+static const VertexNumbersList COLORING = {{0, 3}, {1, 4, 6, 7}, {2, 5}};
 
 TEST(sample_graph) {
   SimpleGraph g(VERTICES, EDGES);
@@ -83,8 +83,13 @@ TEST(sample_graph) {
   UNITTEST_ASSERT_TRUE(z.execute());
   UNITTEST_ASSERT_EQUAL(z.calls(), 31);
   UNITTEST_ASSERT_EQUAL(z.number(), COLORING.size());
-  UNITTEST_ASSERT_EQUAL(z.coloring().size(), COLORING.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(z.coloring(), COLORING);
+  VertexNumbersList actual = z.coloring();
+  std::sort(actual.begin(), actual.end());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(actual, COLORING);
+
+  UNITTEST_ASSERT_FALSE(g.proper());
+  z.apply(&g);
+  UNITTEST_ASSERT_TRUE(g.proper());
 }
 
 static const VertexValuesList VERTICES2 = {{"a", NOCOLOR, 0, 2},
@@ -115,7 +120,30 @@ TEST(sample_graph_2) {
   UNITTEST_ASSERT_EQUAL(z.calls(), 7);
   UNITTEST_ASSERT_EQUAL(z.number(), COLORING2.size());
   UNITTEST_ASSERT_EQUAL(z.coloring().size(), COLORING2.size());
-  UNITTEST_ASSERT_EQUAL_CONTAINERS(z.coloring(), COLORING2);
+  VertexNumbersList actual = z.coloring();
+  std::sort(actual.begin(), actual.end());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(actual, COLORING2);
+
+  UNITTEST_ASSERT_FALSE(g.proper());
+  z.apply(&g);
+  UNITTEST_ASSERT_TRUE(g.proper());
+}
+
+static const VertexNumbersList COLORINGM = {{0, 2, 10}, {1, 3, 6, 8}, {4, 5, 9}, {7}};
+
+TEST(myclieski_graph) {
+  Mycielski g(4);
+  Zykov z(g);
+  UNITTEST_ASSERT_TRUE(z.execute());
+  UNITTEST_ASSERT_EQUAL(z.calls(), 175);
+  UNITTEST_ASSERT_EQUAL(z.number(), COLORINGM.size());
+  VertexNumbersList actual = z.coloring();
+  std::sort(actual.begin(), actual.end());
+  UNITTEST_ASSERT_EQUAL_CONTAINERS(actual, COLORINGM);
+
+  UNITTEST_ASSERT_FALSE(g.proper());
+  z.apply(&g);
+  UNITTEST_ASSERT_TRUE(g.proper());
 }
 
 TEST(random_graphs) {

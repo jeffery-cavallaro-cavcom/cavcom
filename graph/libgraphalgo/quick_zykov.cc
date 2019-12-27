@@ -338,18 +338,18 @@ namespace cavcom {
         double a = max_edge_threshold(*pg);
 
         // Make sure that the current number of edges doesn't exceed the threshold.
-        bool more = check_max_edges(*pg, a);
-        parent_->edge_threshold_add(more);
-        if (!more) return false;
+        bool failed = !check_max_edges(*pg, a);
+        parent_->edge_threshold_add(failed);
+        if (failed) return false;
 
         // Find all vertices with degree < k.
         VertexNumbers x;
         find_small_degree(*pg, &x);
 
         // Remove all such small degree vertices.
-        more = remove_small_vertices(ppgraph, ppremoved, x);
-        parent_->small_degree_add(more);
-        if (more) continue;
+        bool success = remove_small_vertices(ppgraph, ppremoved, x);
+        parent_->small_degree_add(success);
+        if (success) continue;
 
         // Find the smallest number of common neighbors.
         b = 0;
@@ -393,7 +393,7 @@ namespace cavcom {
       // Calculate a new lower bound for the chromatic number.
       Color lb = calc_lb(*pg);
 
-      // Bound if the lower bound exceeds the current k value.
+      // Bound if the current lower bound exceeds k.
       if (check_bounding(lb)) return false;
 
       // Assume that the two nonadjacent vertices with the smallest number of common neighbors
@@ -564,7 +564,7 @@ namespace cavcom {
     bool QuickZykov::ZykovTree::check_common_ub(double b, double c) {
       add_step();
       bool ok = (b < c);
-      parent_->common_neighbors_add(ok);
+      parent_->common_neighbors_add(!ok);
       if (formatter()) {
         sub_prefix() << "Compare: b=" << b;
         if (ok) {
