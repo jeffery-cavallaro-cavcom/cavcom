@@ -112,12 +112,19 @@ namespace cavcom {
 
         // Constructs the final chromatic coloring based on the specified complete graph and removed vertex list.
         // Each vertex in the complete graph is assigned its own color, which is used for all of the contracted
-        // vertices.  The removed vertices are greedy colored (without color interchange) last removed first.
+        // vertices.  The removed vertices are then greedy colored (without color interchange) in the order
+        // removed.
         void construct_coloring();
 
         // Count steps and calls in the parent.
         void add_step() { parent_->add_step(); }
+        ullong steps() { return parent_->steps(); }
+
         void add_call() { parent_->add_call(); }
+        void done_call() { parent_->done_call(); }
+        ullong calls() { return parent_->calls(); }
+
+        ullong depth() { return parent_->depth(); }
 
        protected:
         // Executes the modified Zykov algorithm.  Returns true if a k-colorable solution is found in the tree.
@@ -166,6 +173,15 @@ namespace cavcom {
         //
         //  13. If w > k return false.
         //
+        //  14.  Determine two non-adjacent vertices with the smallest number of common neighbors: u, v.
+        //
+        //  15.  If is_k_colorable(G.uv) then return true.
+        //
+        //  16.  If is_k_colorable(G+u) then return true.
+        //
+        //  17.  Return false.
+        //
+        // Each of these steps is counted, as well as a count for the current call and each recursive call.
         bool is_k_colorable(GraphPtr *ppgraph, VertexIDsListPtr *ppremoved);
 
         // Returns true if n <= k.
@@ -181,7 +197,7 @@ namespace cavcom {
         void find_small_degree(const SimpleGraph &g, VertexNumbers *x);
 
         // Removes the specified list of vertices.  Returns true if vertices were removed.
-        bool remove_small_vertices(GraphPtr *ppg, VertexIDsListPtr *ppremoved, const VertexNumbers &x);
+        bool remove_small_vertices(GraphPtr *ppgraph, VertexIDsListPtr *ppremoved, const VertexNumbers &x);
 
         // Determines the number of common neighbors for each pair of vertices in the specified graph.  If the
         // neighborhood of one vertex is found to be a subset of another then the method returns true with the
@@ -192,10 +208,25 @@ namespace cavcom {
                                    Degree *smallest_nonadj, VertexNumber *v1_nonadj, VertexNumber *v2_nonadj);
 
         // Removes vertex v1, which was found to have a neighborhood that is a subset of v2.
-        void remove_subset(GraphPtr *ppg, VertexNumber v1, VertexNumber v2);
+        void remove_subset(GraphPtr *ppgraph, VertexNumber v1, VertexNumber v2);
+
+        // Calculates the minimum common neighbors upper bound for a graph assuming that it is k-colorable.
+        double min_common_ub(const SimpleGraph &g);
+
+        // Returns true if the specified minimum common neighbors count does not exceed the specified upper bound.
+        bool check_common_ub(double b, double c);
+
+        // Calculates a new lower bound for the specified graph.
+        Color calc_lb(const SimpleGraph &g);
 
         // Performs the normal Zykov bounding check.  Returns true if bounded.
-        bool check_bounding(const SimpleGraph &g);
+        bool check_bounding(Color lb);
+
+        // Contracts the two specified vertices.  Returns true if the resulting graph is k-colorable.
+        bool contract_vertices(GraphPtr *ppgraph, VertexIDsListPtr *ppremoved, VertexNumber v1, VertexNumber v2);
+
+        // Adds an edge to the two specified vertices.  Returns true if the resulting graph is k-colorable.
+        bool add_edge(GraphPtr *ppgraph, VertexIDsListPtr *ppremoved, VertexNumber v1, VertexNumber v2);
 
         // Returns the parent formatter.
         TikzFormatter *formatter(void) { return parent_->formatter(); }
@@ -241,7 +272,7 @@ namespace cavcom {
       //  12. For each Zykov tree, determine if the graph is k-colorable.
       //
       //  13. If one of the graphs is k-colorable then construct and accept a coloring from the resulting complete
-      //      graph and emoved vertex list and return k.
+      //      graph and removed vertex list and return k.
       //
       //  14. Increment k and go to step 9.
       //
@@ -282,30 +313,6 @@ namespace cavcom {
         containers_(data.cbegin(), data.cend()) << std::endl;
         return containers_.out();
       }
-
-#if 0
-      //  14.  Determine two non-adjacent vertices with the smallest number of common neighbors: u, v.
-      //
-      //  15.  If is_k_colorable(G.uv) then return true.
-      //
-      //  16.  If is_k_colorable(G+u) then return true.
-      //
-      //  17.  Return false.
-      //
-      // Each of these steps is counted, as well as a count for the current call and each recursive call.
-
-      // Calculates the minimum common neighbors upper bound for a graph assuming that it is k-colorable.
-      double min_common_ub(GraphPtr *ppg);
-
-      // Returns true if the specified minimum common neighbors count does not exceed the specified upper bound.
-      bool check_common_ub(double b, double c);
-
-      // Contracts the two specified vertices.  Returns true if the resulting graph is k-colorable.
-      bool contract_vertices(GraphPtr *ppg, VertexNumber v1, VertexNumber v2);
-
-      // Adds an edge to the two specified vertices.  Returns true if the resulting graph is k-colorable.
-      bool add_edge(GraphPtr *ppg, VertexNumber v1, VertexNumber v2);
-#endif
     };
 
   }  // namespace graph

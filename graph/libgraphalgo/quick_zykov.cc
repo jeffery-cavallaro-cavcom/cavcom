@@ -33,11 +33,6 @@ namespace cavcom {
       // Run the algorithm by calling the outer loop.
       outer_loop();
 
-      if (formatter_) {
-        *formatter_->out() << "Final coloring:" << std::endl;
-        format_numbers_list_as_ids(graph(), coloring_, true);
-      }
-
       // This algorithm always returns an answer.
       return true;
     }
@@ -96,6 +91,10 @@ namespace cavcom {
             add_step();
             tree.construct_coloring();
             coloring_ = tree.coloring();
+            if (formatter_) {
+              outer_prefix() << "Final coloring:" << std::endl;
+              format_numbers_list_as_ids(graph(), coloring_, true);
+            }
             return;
           }
         }
@@ -316,11 +315,18 @@ namespace cavcom {
 
     bool QuickZykov::ZykovTree::run() {
       number_ = parent_->number();
-      return is_k_colorable(&pgraph_, &premoved_);
+      add_call();
+      bool success = is_k_colorable(&pgraph_, &premoved_);
+      done_call();
+      return success;
     }
 
     bool QuickZykov::ZykovTree::is_k_colorable(GraphPtr *ppgraph, VertexIDsListPtr *ppremoved) {
       GraphPtr &pg = *ppgraph;
+      Degree b = 0;
+      VertexNumber v1 = 0, v2 = 0;
+      Degree b_nonadj = 0;
+      VertexNumber v1_nonadj = 0, v2_nonadj = 0;
 
       // Attempt to bound before branching.
       while (true) {
@@ -346,30 +352,60 @@ namespace cavcom {
         if (more) continue;
 
         // Find the smallest number of common neighbors.
-        Degree b = 0;
-        VertexNumber v1 = 0, v2 = 0;
-        Degree b_nonadj = 0;
-        VertexNumber v1_nonadj = 0, v2_nonadj = 0;
+        b = 0;
+        v1 = 0;
+        v2 = 0;
+        b_nonadj = 0;
+        v1_nonadj = 0;
+        v2_nonadj = 0;
         bool subset = find_common_neighbors(*pg, &b, &v1, &v2, &b_nonadj, &v1_nonadj, &v2_nonadj);
 
         // If the preceding call returns true then N(v1) is a subset of N(v2), so contract the two vertices.
         add_step();
         parent_->neighborhood_subset_add(subset);
         if (subset) {
-          if (formatter()) sub_prefix() << "N(" << pg->vertex(v1).id() << ") in N("
+          if (formatter()) sub_prefix() << "Neighborhood subset check: N(" << pg->vertex(v1).id() << ") in N("
                                         << pg->vertex(v2).id() << "), contracting"
                                         << std::endl;
           pg.reset(new SimpleGraph(*pg, v1, v2));
           if (formatter()) formatter()->format(*pg);
           continue;
         }
-        if (formatter()) sub_prefix() << "No neighborhood subsets found" << std::endl;
+        if (formatter()) sub_prefix() << "Neighborhood subset check: none" << std::endl;
 
-        // All of the bounding tests have failed.
+        // All of the reduction tasks have failed.
         break;
       }
 
-      // This tree does not result in a k-colorable graph.
+      // Mark the two vertices with the smallest number of common neighbors.
+      add_step();
+      if (formatter()) sub_prefix() << "Smallest common neighbors: "
+                                    << pg->vertex(v1).id() << " and " << pg->vertex(v2).id()
+                                    << " have " << b << std::endl;
+
+      // Calculate an upper bound for the minimum number of common neighbors.  If the minimum found exceeds this
+      // then the graph is not k-colorable.
+      double c = min_common_ub(*pg);
+
+      // Check that the previously found minimum number of common neighbors does not exceed the upper bound.
+      if (!check_common_ub(b, c)) return false;
+
+      // Calculate a new lower bound for the chromatic number.
+      Color lb = calc_lb(*pg);
+
+      // Bound if the lower bound exceeds the current k value.
+      if (check_bounding(lb)) return false;
+
+      // Assume that the two nonadjacent vertices with the smallest number of common neighbors
+      // smallest number of common neighbors.  Assume that they are the same color and contract them.
+      if (contract_vertices(ppgraph, ppremoved, v1_nonadj, v2_nonadj)) return true;
+
+      // Using the same color doesn't work, so try different colors.
+      if (add_edge(ppgraph, ppremoved, v1_nonadj, v2_nonadj)) return true;
+
+      // The graph is not k-colorable.
+      add_step();
+      if (formatter()) sub_prefix() << "Not " << number_ << "-colorable" << std::endl;
       return false;
     }
 
@@ -422,7 +458,7 @@ namespace cavcom {
       if (formatter()) sub_prefix() << "Small degree check: found " << x->size() << std::endl;
     }
 
-    bool QuickZykov::ZykovTree::remove_small_vertices(GraphPtr *ppg,
+    bool QuickZykov::ZykovTree::remove_small_vertices(GraphPtr *ppgraph,
                                                       VertexIDsListPtr *ppremoved,
                                                       const VertexNumbers &x) {
       add_step();
@@ -430,17 +466,25 @@ namespace cavcom {
         if (formatter()) sub_prefix() << "Removing vertices: none" << std::endl;
         return false;
       }
-      GraphPtr &pg = *ppg;
+      GraphPtr &pg = *ppgraph;
       VertexIDsListPtr &premoved = *ppremoved;
-      premoved->resize(premoved->size() + 1);
-      VertexIDs &ids = premoved->back();
+      VertexIDs ids;
       std::for_each(x.cbegin(), x.cend(),
-                    [&pg, &ids](VertexNumber iv){ ids.insert(pg->vertex(iv).id()); });
-      ppg->reset(new SimpleGraph(*pg, x, EdgeNumbers()));
+                    [&pg, &premoved, &ids](VertexNumber iv){
+                      const Vertex &v = pg->vertex(iv);
+                      const VertexIDs &c = v.contracted();
+                      ids.insert(v.id());
+                      if (c.empty()) {
+                        premoved->push_back(VertexIDs({v.id()}));
+                      } else {
+                        premoved->push_back(c);
+                      }
+                    });
+      ppgraph->reset(new SimpleGraph(*pg, x, EdgeNumbers()));
       if (formatter()) {
         if (formatter()) sub_prefix() << "Removing vertices: ";
         parent_->format_ids(ids, false);
-        formatter()->format(**ppg);
+        formatter()->format(**ppgraph);
       }
       return true;
     }
@@ -508,11 +552,41 @@ namespace cavcom {
       return false;
     }
 
-    bool QuickZykov::ZykovTree::check_bounding(const SimpleGraph &g) {
+    double QuickZykov::ZykovTree::min_common_ub(const SimpleGraph &g) {
+      add_step();
+      double n = static_cast<double>(g.order());
+      double k = static_cast<double>(number_);
+      double c = n - 2 - (n - 2)/(k - 1);
+      if (formatter()) sub_prefix() << "Minimum common neighbors upper bound: c = " << c << std::endl;
+      return c;
+    }
+
+    bool QuickZykov::ZykovTree::check_common_ub(double b, double c) {
+      add_step();
+      bool ok = (b < c);
+      parent_->common_neighbors_add(ok);
+      if (formatter()) {
+        sub_prefix() << "Compare: b=" << b;
+        if (ok) {
+          *formatter()->out() << "<=" << c << "=c, continuing" << std::endl;
+        } else {
+          *formatter()->out() << ">" << c << "=c, failed" << std::endl;
+        }
+      }
+      return ok;
+    }
+
+    Color QuickZykov::ZykovTree::calc_lb(const SimpleGraph &g) {
       add_step();
       CliqueEdwards ce(g);
       ce.execute();
       Color lb = ce.number();
+      if (formatter()) sub_prefix() << "xlb=" << lb << std::endl;
+      return lb;
+    }
+
+    bool QuickZykov::ZykovTree::check_bounding(Color lb) {
+      add_step();
       bool bound = (lb > number_);
       parent_->bounding_add(bound);
       if (formatter()) {
@@ -526,124 +600,106 @@ namespace cavcom {
       return bound;
     }
 
+    bool QuickZykov::ZykovTree::contract_vertices(GraphPtr *ppgraph, VertexIDsListPtr *ppremoved,
+                                                  VertexNumber v1, VertexNumber v2) {
+      add_step();
+      GraphPtr &pg = *ppgraph;
+      VertexIDsListPtr &premoved = *ppremoved;
+      if (formatter()) sub_prefix() << "Contracting: " << pg->vertex(v1).id() << " and "
+                                    << pg->vertex(v2).id() << std::endl;
+      GraphPtr next_graph(new SimpleGraph(*pg, v1, v2));
+      VertexIDsListPtr next_removed(new VertexIDsList(*premoved));
+      if (formatter()) formatter()->format(*next_graph);
+      add_call();
+      bool success = is_k_colorable(&next_graph, &next_removed);
+      done_call();
+      if (success) {
+        pg = std::move(next_graph);
+        premoved = std::move(next_removed);
+      }
+      return success;
+    }
+
+    bool QuickZykov::ZykovTree::add_edge(GraphPtr *ppgraph, VertexIDsListPtr *ppremoved,
+                                         VertexNumber v1, VertexNumber v2) {
+      add_step();
+      GraphPtr &pg = *ppgraph;
+      VertexIDsListPtr &premoved = *ppremoved;
+      if (formatter()) sub_prefix() << "Joining: " << pg->vertex(v1).id() << " and "
+                                    << pg->vertex(v2).id() << std::endl;
+      GraphPtr next_graph(new SimpleGraph(*pg));
+      next_graph->join(v1, v2);
+      VertexIDsListPtr next_removed(new VertexIDsList(*premoved));
+      if (formatter()) formatter()->format(*next_graph);
+      add_call();
+      bool success = is_k_colorable(&next_graph, &next_removed);
+      done_call();
+      if (success) {
+        pg = std::move(next_graph);
+        premoved = std::move(next_removed);
+      }
+      return success;
+    }
+
     void QuickZykov::ZykovTree::construct_coloring() {
+      const SimpleGraph &gi = graph();
+      const SimpleGraph &gf = *pgraph_;
+      const VertexIDsList &r = *premoved_;
+
+      // Start a new coloring.
+      coloring_.clear();
+      coloring_.resize(number_);
+
+      // Start with the vertices in the final graph.
+      VertexNumber nf = gf.order();
+      for (VertexNumber iv = 0; iv < nf; ++iv) {
+        const Vertex &v = gf.vertex(iv);
+        const VertexIDs &c = v.contracted();
+        VertexNumbers color;
+        if (c.empty()) {
+          VertexNumber iv = 0;
+          gi.find_vertex(v.id(), &iv);
+          color.insert(iv);
+        } else {
+          gi.ids_to_numbers(c, &color);
+        }
+        coloring_[iv].insert(color.cbegin(), color.cend());
+      }
+
+      // Color the removed vertices in the order removed using a greedy coloring.  No new colors should be used.
+      std::for_each(r.cbegin(), r.cend(),
+                    [this, &gi](const VertexIDs &ids){
+                      // Convert the IDs to numbers.
+                      VertexNumbers numbers;
+                      gi.ids_to_numbers(ids, &numbers);
+
+                      // Determine how the colors are used by already colored vertices that are adjacent.
+                      std::vector<bool> used(number_);
+                      std::for_each(numbers.cbegin(), numbers.cend(),
+                                    [this, &gi, &used](VertexNumber iv){
+                                      for (Color ic = 0; ic < number_; ++ic) {
+                                        const VertexNumbers &color = coloring_[ic];
+                                        if (std::any_of(color.cbegin(), color.cend(),
+                                                         [&gi, iv](VertexNumber jv){ return gi.adjacent(iv, jv); })) {
+                                          used[ic] = true;
+                                        }
+                                      }
+                                    });
+
+                      // Select the first unused color.
+                      Color ic = 0;
+                      for (ic = 0; used[ic]; ++ic) {}
+
+                      // Use the selected color.
+                      coloring_.at(ic).insert(numbers.cbegin(), numbers.cend());
+                    });
     }
 
     std::ostream &QuickZykov::ZykovTree::sub_prefix() {
       std::ostream &out = *formatter()->out();
-      out << parent_->steps() << ". (" << itree_ << "-" << depth() << ") ";
+      out << steps() << ". (" << itree_ << "-" << depth() << ") ";
       return out;
     }
-
-#if 0
-    bool QuickZykov::is_k_colorable(GraphPtr *ppg) {
-      GraphPtr &pg = *ppg;
-        // Mark the two vertices with the smallest number of common neighbors.
-        add_step();
-        if (tracing()) {
-          sub_prefix();
-          *formatter_->out() << "Smallest common neighbors: ";
-          identify_vertex(pg, v1);
-          *formatter_->out() << " and ";
-          identify_vertex(pg, v2);
-          *formatter_->out() << " have " << b << std::endl;
-        }
-
-        // Calculate an upper bound for the minimum number of common neighbors.  If the minimum found exceeds this
-        // then the graph is not k-colorable.
-        add_step();
-        double c = min_common_ub(ppg);
-
-        // Check that the previously found minimum number of common neighbors does not exceed the upper bound.
-        add_step();
-        ++common_neighbors_tries_;
-        if (!check_common_ub(b, c)) {
-          ++common_neighbors_hits_;
-          return false;
-        }
-
-        // The preceding loop should terminate with v1_nonadj and v2_nonadj set to two non-adjacent vertices with the
-      // smallest number of common neighbors.  Assume that they are the same color and contract them.
-      add_step();
-      if (contract_vertices(ppg, v1_nonadj, v2_nonadj)) return true;
-
-      // Using the same color doesn't work, so try different colors.
-      add_step();
-      if (add_edge(ppg, v1_nonadj, v2_nonadj)) return true;
-
-      // The graph is not k-colorable.
-      add_step();
-      if (tracing()) {
-        sub_prefix();
-        *formatter_->out() << "Not " << number_ << "-colorable" << std::endl;
-      }
-      return false;
-    }
-
-    double QuickZykov::min_common_ub(GraphPtr *ppg) {
-      GraphPtr &pg = *ppg;
-      double n = static_cast<double>(pg->order());
-      double k = static_cast<double>(number_);
-      double c = n - 2 - (n - 2)/(k - 1);
-      if (tracing()) {
-        sub_prefix();
-        *formatter_->out() << "Minimum common neighbors upper bound: c = " << c << std::endl;
-      }
-      return c;
-    }
-
-    bool QuickZykov::check_common_ub(double b, double c) {
-      if (tracing()) {
-        sub_prefix();
-        *formatter_->out() << "Compare: b=" << b << ", c=" << c << ": ";
-      }
-      if (b > c) {
-        if (tracing()) *formatter_->out() << "not " << number_ << "-colorable" << std::endl;
-        return false;
-      }
-      if (tracing()) *formatter_->out() << "continue" << std::endl;
-      return true;
-    }
-
-    bool QuickZykov::contract_vertices(GraphPtr *ppg, VertexNumber v1, VertexNumber v2) {
-      GraphPtr &pg = *ppg;
-      if (tracing()) {
-        sub_prefix();
-        *formatter_->out() << "Contracting: ";
-        identify_vertex(pg, v1);
-        *formatter_->out() << " and ";
-        identify_vertex(pg, v2);
-        *formatter_->out() << std::endl;
-      }
-      GraphPtr recursive(new SimpleGraph(*pg, v1, v2));
-      if (tracing()) formatter_->format(*recursive);
-      add_call();
-      bool success = is_k_colorable(&recursive);
-      done_call();
-      if (success) pg = std::move(recursive);
-      return success;
-    }
-
-    bool QuickZykov::add_edge(GraphPtr *ppg, VertexNumber v1, VertexNumber v2) {
-      GraphPtr &pg = *ppg;
-      if (tracing()) {
-        sub_prefix();
-        *formatter_->out() << "Adding edge: ";
-        identify_vertex(pg, v1);
-        *formatter_->out() << " and ";
-        identify_vertex(pg, v2);
-        *formatter_->out() << std::endl;
-      }
-      GraphPtr recursive(new SimpleGraph(*pg));
-      recursive->join(v1, v2);
-      if (tracing()) formatter_->format(*recursive);
-      add_call();
-      bool success = is_k_colorable(&recursive);
-      done_call();
-      if (success) pg = std::move(recursive);
-      return success;
-    }
-#endif
 
   }  // namespace graph
 }  // namespace cavcom
