@@ -33,6 +33,11 @@ namespace cavcom {
       // Run the algorithm by calling the outer loop.
       outer_loop();
 
+      if (formatter_) {
+        *formatter_->out() << "Final coloring:" << std::endl;
+        format_numbers_list_as_ids(graph(), coloring_, true);
+      }
+
       // This algorithm always returns an answer.
       return true;
     }
@@ -89,12 +94,9 @@ namespace cavcom {
           if (tree.execute()) {
             // A solution has been found.  Construct the final chromatic coloring.
             add_step();
+            if (formatter()) outer_prefix() << "Coloring: Tree " << itree << std::endl;
             tree.construct_coloring();
             coloring_ = tree.coloring();
-            if (formatter_) {
-              outer_prefix() << "Final coloring:" << std::endl;
-              format_numbers_list_as_ids(graph(), coloring_, true);
-            }
             return;
           }
         }
@@ -302,7 +304,7 @@ namespace cavcom {
         pgraph_.reset(new SimpleGraph(graph(), VertexNumbersList({ mis })));
         contracted = pgraph_->order() - 1;
       } else {
-        pgraph_.reset(new SimpleGraph(graph(), { mis }));
+        pgraph_.reset(new SimpleGraph(graph()));
         contracted = *mis.cbegin();
       }
 
@@ -666,8 +668,9 @@ namespace cavcom {
         coloring_[iv].insert(color.cbegin(), color.cend());
       }
 
-      // Color the removed vertices in the order removed using a greedy coloring.  No new colors should be used.
-      std::for_each(r.cbegin(), r.cend(),
+      // Color the removed vertices in reverse order removed using a greedy coloring.  No new colors should be
+      // used.
+      std::for_each(r.crbegin(), r.crend(),
                     [this, &gi](const VertexIDs &ids){
                       // Convert the IDs to numbers.
                       VertexNumbers numbers;

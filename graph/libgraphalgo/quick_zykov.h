@@ -112,8 +112,8 @@ namespace cavcom {
 
         // Constructs the final chromatic coloring based on the specified complete graph and removed vertex list.
         // Each vertex in the complete graph is assigned its own color, which is used for all of the contracted
-        // vertices.  The removed vertices are then greedy colored (without color interchange) in the order
-        // removed.
+        // vertices.  The removed vertices are then greedy colored (without color interchange) in reverse removal
+        // order.
         void construct_coloring();
 
         // Count steps and calls in the parent.

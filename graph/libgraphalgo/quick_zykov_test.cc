@@ -258,7 +258,7 @@ TEST(myclieski_graph) {
 }
 
 TEST(random_graphs) {
-  const VertexNumber ORDER = 6;
+  const VertexNumber ORDER = 10;
   const uint TRIALS = 100;
   for (uint ip = 10; ip <= 90; ip += 10) {
     for (uint it = 0; it < TRIALS; ++it) {

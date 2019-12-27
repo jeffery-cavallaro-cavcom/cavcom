@@ -8,5 +8,5 @@ namespace cavcom {
     ContainerFormatter::ContainerFormatter(std::ostream *out)
       : out_(out), start_("{"), end_("}"), separator_(", ") {}
 
-  }  // namespace name
+  }  // namespace utility
 }  // namespace cavcom

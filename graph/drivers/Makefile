@@ -40,7 +40,7 @@ CPPFLAGS +=	--std=c++17 \
 		-I../../utility/liblog \
 		-I../../utility/libutil
 
-CXXFLAGS = ${CPPFLAGS}
+CXXFLAGS += ${CPPFLAGS}
 
 LIBS +=	../libgraphalgo/libgraphalgo.a \
 	../libgraphutil/libgraphutil.a \
