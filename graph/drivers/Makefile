@@ -10,8 +10,11 @@ cf_source := cf.cc
 wang_source := wang.cc
 zykov_source := zykov.cc
 qz_sources := qz.cc
+timing_sources := timing.cc
 
-test_sources := \
+test_sources :=
+
+sources := \
 	$(edwards_sources) \
 	$(bron_sources) \
 	$(greedyerr_sources) \
@@ -21,13 +24,13 @@ test_sources := \
 	$(cf_sources) \
 	$(wang_sources) \
 	$(zykov_sources) \
-	$(qz_sources)
-
-sources := $(test_sources)
+	$(qz_sources) \
+	$(timing_sources) \
+	$(test_sources)
 
 libraries :=
 
-programs := edwards bron greedyerr greedyrun greedyinterr greedyintrun cf wang zykov qz
+programs := edwards bron greedyerr greedyrun greedyinterr greedyintrun cf wang zykov qz timing
 
 tests := 
 
@@ -60,5 +63,6 @@ cf:	cf.o $(LIBS)
 wang:	wang.o $(LIBS)
 zykov:	zykov.o $(LIBS)
 qz:	qz.o $(LIBS)
+timing:	timing.o $(LIBS)
 
 -include $(subst .cc,.d,$(sources))
