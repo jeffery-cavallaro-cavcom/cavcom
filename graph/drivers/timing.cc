@@ -33,12 +33,12 @@ class Statistics {
   void gather_stats(VertexNumber n, uint p, const QuickZykov &qz, const ChromaticWang &w, const Zykov &z) {
     order.datum().value(n);
     eprob.datum().value(p);
-    std::chrono::duration<double> dt = qz.duration();
-    quick.add_data(dt.count());
-    dt = w.duration();
-    wang.add_data(dt.count());
-    dt = z.duration();
-    zykov.add_data(dt.count());
+    std::chrono::duration<double> qzdt = qz.duration();
+    quick.add_data(qzdt.count());
+    std::chrono::duration<double> wdt = w.duration();
+    wang.add_data(wdt.count());
+    std::chrono::duration<double> zdt = z.duration();
+    zykov.add_data(zdt.count());
   }
 };
 
