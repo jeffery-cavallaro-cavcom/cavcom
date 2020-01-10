@@ -14,8 +14,18 @@ namespace cavcom {
       // The seed for the random number generator is obtained from the system time.
       RandomGraph(VertexNumber order, double eprob);
 
+      // Creates a new random graph with a non-uniform edge probability for each vertex.  First, the vertices are
+      // randomly shuffled.  A total of nep = (phigh - plow)/pstep probability buckets are created.  Each bucket is
+      // assigned n/nep vertices (from the shuffled list), with the extra n % nep vertices assigned to the lowest
+      // edge priority.  Edges are then assigned in shuffled order.  If a vertex already exceeds its assigned
+      // edge density then no additional edges are assigned.
+      RandomGraph(VertexNumber order, double phigh, double plow, double pstep);
+
      private:
       double eprob_;
+
+      // Generates a date/time-based seed for random number generation.
+      uint make_seed(void);
     };
 
   }  // namespace graph

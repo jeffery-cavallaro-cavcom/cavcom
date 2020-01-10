@@ -1,3 +1,4 @@
+#include <cmath>
 #include <chrono>
 #include <random>
 
@@ -10,8 +11,7 @@ namespace cavcom {
       if (eprob_ < 0.0) eprob_ = 0.0;
       if (eprob_ > 1.0) eprob_ = 1.0;
 
-      uint seed = std::chrono::system_clock::now().time_since_epoch().count();
-      std::default_random_engine rng(seed);
+      std::default_random_engine rng(make_seed());
       std::bernoulli_distribution dist(eprob_);
 
       VertexNumber last = order - 1;
@@ -20,6 +20,16 @@ namespace cavcom {
           if (dist(rng)) join(i, j);
         }
       }
+    }
+
+    RandomGraph(VertexNumber order, double phigh, double plow, double pstep) {
+      std::default_random_engine rng(make_seed());
+
+      uint np = std::round((phigh - plow)/pstep);
+    }
+
+    uint RandomGraph::make_seed(void) {
+      return std::chrono::system_clock::now().time_since_epoch().count();
     }
 
   }  // namespace graph
