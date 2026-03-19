@@ -15,7 +15,7 @@ import asyncio
 from signal import SIGUSR1, SIGUSR2, raise_signal
 from typing import ClassVar, Optional
 
-from osx.signal_ahandler import SignalHandler
+from events.signal_ahandler import SignalHandler
 
 class CallbackTask:
     """ Count Callback Calls """
