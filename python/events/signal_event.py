@@ -9,7 +9,7 @@ from typing import Any, Optional
 from events.signal_handler import SignalHandler
 from events.event_handler import EventHandler
 
-class SignalEventHandler(EventHandler):
+class SignalEvent(EventHandler):
     """ Signal Events """
     dispatcher : SignalHandler
 
@@ -20,7 +20,7 @@ class SignalEventHandler(EventHandler):
         event_data : Optional[Any] = None
     ):
         """
-        Create and register a new signal event handler
+        Create and register a new signal event
 
         Arguments:
             dispatcher:
@@ -28,11 +28,11 @@ class SignalEventHandler(EventHandler):
                 target signal number is inherent to this instance.
             selectors:
                 Target select loop to which the event is registered.
-            data:
+            event_data:
                 Opaque event data that is included in the triggered event's
                 SelectKey.  This is normally an event ID.
         """
-        super().__init__(selectors, data=event_data)
+        super().__init__(selectors, event_data=event_data)
         self.dispatcher = dispatcher
         self.dispatcher.register_callback(self.trigger_signal, None)
 

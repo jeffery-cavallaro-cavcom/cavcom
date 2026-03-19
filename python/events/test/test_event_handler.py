@@ -25,7 +25,9 @@ class TestEventHandler(unittest.TestCase):
     def setUp(self):
         """ Set up the event loop """
         self.selectors = DefaultSelector()
-        self.event_handler = EventHandler(self.selectors, data=self.EVENT_DATA)
+        self.event_handler = EventHandler(
+            self.selectors, event_data=self.EVENT_DATA
+        )
 
     def tearDown(self):
         """ Close the event loop """

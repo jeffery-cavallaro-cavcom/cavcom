@@ -19,7 +19,7 @@ class EventHandler:
     event_fd : int
 
     def __init__(
-        self, selectors : DefaultSelector, data : Optional[Any] = None
+        self, selectors : DefaultSelector, event_data : Optional[Any] = None
     ):
         """
         Create and register a new event handler
@@ -27,12 +27,12 @@ class EventHandler:
         Arguments:
             selectors:
                 Target select loop to which the event is registered.
-            data:
+            event_data:
                 Opaque event data that is included in the triggered event's
                 SelectKey.  This is normally an event ID.
         """
         self.selectors = selectors
-        self.event_data = data
+        self.event_data = event_data
         self.event_fd = os.eventfd(0, os.EFD_NONBLOCK)
         self.selectors.register(self.event_fd, EVENT_READ, data=self.event_data)
 

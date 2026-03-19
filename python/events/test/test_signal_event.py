@@ -1,5 +1,5 @@
 """
-Signal Event Handler Unit Tests
+Signal Event Unit Tests
 
 The goal is to deliver one or more signal events to one or more threads.  To
 avoid race conditions, the main thread and event threads are synchronized on
@@ -16,7 +16,7 @@ from time import sleep
 from typing import ClassVar
 
 from events.signal_handler import SignalHandler
-from events.signal_event_handler import SignalEventHandler
+from events.signal_event import SignalEvent
 
 from events.test.thread_sync import ThreadSync
 
@@ -45,10 +45,10 @@ class CallbackThread(Thread):
 
         try:
             selectors = DefaultSelector()
-            event_handler = SignalEventHandler(
+            event_handler = SignalEvent(
                 EVENT_HANDLER, selectors, event_data=self.E_EVENT
             )
-            exit_handler = SignalEventHandler(
+            exit_handler = SignalEvent(
                 EXIT_HANDLER, selectors, event_data=self.E_EXIT
             )
 
@@ -80,7 +80,7 @@ class CallbackThread(Thread):
                 selectors.close()
                 selectors = None
 
-class TestSignalEventHandler(unittest.TestCase):
+class TestSignalEvent(unittest.TestCase):
     """ Signal Event Handler Unit Tests """
     EVENT_SIGNAL : ClassVar[int] = SIGUSR1
     EXIT_SIGNAL : ClassVar[int] = SIGUSR2
