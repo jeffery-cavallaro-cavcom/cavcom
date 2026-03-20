@@ -68,7 +68,8 @@ class TestTimerEvent(unittest.IsolatedAsyncioTestCase):
             await task
             self.assertEqual(callback.count, 1)
         finally:
-            timer.close()
+            if timer:
+                timer.close()
 
     async def test_two(self):
         """ Two different timers """
@@ -113,6 +114,68 @@ class TestTimerEvent(unittest.IsolatedAsyncioTestCase):
         finally:
             for callback in tasks.values():
                 callback[1].close()
+
+    async def test_cancel(self):
+        """ Cancel a timer """
+        timer = None
+        task = None
+
+        try:
+            callback = CallbackTask()
+            task = asyncio.create_task(callback.run(self.EVENT_ID))
+            self.assertEqual(callback.count, 0)
+
+            timer = TimerEvent(
+                3.0, callback.trigger, event_data=self.EVENT_ID
+            )
+            timer.start()
+
+            done, pending = await asyncio.wait([task], timeout=1.0)
+            self.assertEqual(len(done), 0)
+            self.assertEqual(len(pending), 1)
+            self.assertTrue(task in pending)
+            self.assertEqual(callback.count, 0)
+
+            timer.cancel()
+            done, pending = await asyncio.wait([task], timeout=3.0)
+            self.assertEqual(len(done), 0)
+            self.assertTrue(task in pending)
+            self.assertEqual(callback.count, 0)
+        finally:
+            if timer:
+                timer.close()
+            if task:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+
+    async def test_restart(self):
+        """ Restart a timer """
+        timer = None
+
+        try:
+            callback = CallbackTask()
+            task = asyncio.create_task(callback.run(self.EVENT_ID))
+            self.assertEqual(callback.count, 0)
+
+            timer = TimerEvent(
+                5.0, callback.trigger, event_data=self.EVENT_ID
+            )
+            timer.start()
+
+            done, pending = await asyncio.wait([task], timeout=1.0)
+            self.assertEqual(len(done), 0)
+            self.assertEqual(len(pending), 1)
+            self.assertTrue(task in pending)
+
+            timer.duration = 1.0
+            timer.start()
+            await asyncio.wait_for(task, timeout=2.0)
+            self.assertEqual(callback.count, 1)
+        finally:
+            timer.close()
 
 if __name__ == '__main__':
     unittest.main()

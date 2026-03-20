@@ -31,7 +31,8 @@ class TestTimerEvent(unittest.TestCase):
                 events = selectors.select(timeout=0)
                 self.assertEqual(len(events), 0)
             finally:
-                timer.close()
+                if timer:
+                    timer.close()
 
     def test_two(self):
         """ Two different timers """
@@ -66,8 +67,10 @@ class TestTimerEvent(unittest.TestCase):
                 events = selectors.select(timeout=0)
                 self.assertEqual(len(events), 0)
             finally:
-                timer_1.close()
-                timer_2.close()
+                if timer_1:
+                    timer_1.close()
+                if timer_2:
+                    timer_2.close()
 
     def test_many(self):
         """ Many identical timers """
@@ -98,6 +101,53 @@ class TestTimerEvent(unittest.TestCase):
                 self.assertEqual(len(events), 0)
             finally:
                 for timer in timers.values():
+                    timer.close()
+
+    def test_cancel(self):
+        """ Cancel a timer """
+        with DefaultSelector() as selectors:
+            timer = None
+
+            try:
+                timer = TimerEvent(
+                    3.0, selectors=selectors, event_data=self.EVENT_DATA
+                )
+                timer.start()
+
+                events = selectors.select(timeout=1.0)
+                self.assertEqual(len(events), 0)
+
+                timer.cancel()
+                events = selectors.select(timeout=3.0)
+                self.assertEqual(len(events), 0)
+            finally:
+                if timer:
+                    timer.close()
+
+    def test_restart(self):
+        """ Restart a timer """
+        with DefaultSelector() as selectors:
+            timer = None
+
+            try:
+                timer = TimerEvent(
+                    5.0, selectors=selectors, event_data=self.EVENT_DATA
+                )
+                timer.start()
+
+                events = selectors.select(timeout=1.0)
+                self.assertEqual(len(events), 0)
+
+                timer.duration = 1.0
+                timer.start()
+                events = selectors.select(timeout=2.0)
+                self.assertEqual(len(events), 1)
+                timer.acknowledge()
+
+                events = selectors.select(timeout=2.0)
+                self.assertEqual(len(events), 0)
+            finally:
+                if timer:
                     timer.close()
 
 if __name__ == '__main__':
