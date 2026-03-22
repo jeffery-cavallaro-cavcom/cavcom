@@ -199,7 +199,15 @@ class TestIOEndpoint(unittest.TestCase):
                 endpoint.received_data = None
                 endpoint.write(self.TEST_DATA_2[:5])
                 endpoint.write(self.TEST_DATA_2[5:])
-                data = os.read(pty.master, 32)
+                # Read may be split due to split write!
+                more = True
+                data = b''
+                while more:
+                    try:
+                        new_data = os.read(pty.master, 32)
+                        data += new_data
+                    except BlockingIOError:
+                        more = False
                 self.assertEqual(data, self.TEST_DATA_2)
                 os.write(pty.master, self.TEST_DATA_1[:5])
                 os.write(pty.master, self.TEST_DATA_1[5:])
