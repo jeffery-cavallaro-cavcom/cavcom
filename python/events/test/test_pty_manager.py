@@ -18,6 +18,7 @@ class TestPTYManager(unittest.TestCase):
         with PTYManager() as pty:
             self.assertIsNotNone(pty.master)
             self.assertIsNotNone(pty.slave)
+            pty.set_nonblocking()
 
             # Master to slave:
             message = m2s_message + b"\n"
@@ -48,6 +49,7 @@ class TestPTYManager(unittest.TestCase):
         with PTYManager() as pty:
             self.assertIsNotNone(pty.master)
             self.assertIsNotNone(pty.slave)
+            pty.set_nonblocking()
             pty.disable_echo_crlf()
 
             # Master to slave:

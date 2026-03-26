@@ -7,6 +7,7 @@ suitable for an I/O endpoint.
 import os
 import pty
 import termios
+from typing import Optional
 
 class PTYManager:
     """ PTY Manager """
@@ -23,6 +24,19 @@ class PTYManager:
         attrs[1] &= ~termios.ONLCR
         attrs[3] &= ~termios.ECHO
         termios.tcsetattr(self.slave, termios.TCSANOW, attrs)
+
+    def set_nonblocking(self, blocking : Optional[bool] = True) -> None:
+        """
+        Set master and slave non-blocking state
+
+        Arguments:
+            blocking:
+                If True (default) then set both file descriptors to
+                non-blocking, otherwise blocking.
+        """
+        state = bool(blocking)
+        os.set_blocking(self.master, state)
+        os.set_blocking(self.slave, state)
 
     def close(self) -> None:
         """ Close the master and the slave """
