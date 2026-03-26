@@ -88,7 +88,7 @@ class Command(CommandBase):
     def enable_sigchld(self) -> None:
         """ Enable SIGCHLD events """
         if not self.sigchld:
-            self.ChildSignalDispatcher.register_callback(
+            Command.ChildSignalDispatcher.register_callback(
                 self.add_event, Command.E_SIGCHLD
             )
             self.sigchld = True
@@ -96,7 +96,7 @@ class Command(CommandBase):
     def disable_sigchld(self) -> None:
         """ Disable SIGCHLD events """
         if self.sigchld:
-            self.ChildSignalDispatcher.deregister_callback(self.add_event)
+            Command.ChildSignalDispatcher.deregister_callback(self.add_event)
             self.sigchld = False
 
     def start_timer(self, timeout : int) -> None:
@@ -116,6 +116,10 @@ class Command(CommandBase):
             self.timer.cancel()
             self.timer = None
 
+    def cancel(self, *_args, **_kwargs) -> None:
+        """ Trigger a stop event (can be used as a signal handler) """
+        self.add_event(Command.E_STOP)
+
     async def execute(self) -> None:
         """ Execute the command """
         self.event_wait = asyncio.Future()
@@ -130,10 +134,6 @@ class Command(CommandBase):
                 event_id = self.next_events.pop()
                 self.run(event_id)
             self.event_wait = asyncio.Future()
-
-    def cancel(self, *_args, **_kwargs) -> None:
-        """ Trigger a stop event (can be used as a signal handler) """
-        self.add_event(Command.E_STOP)
 
     def close(self) -> None:
         """ Tear down event loop and close endpoints """

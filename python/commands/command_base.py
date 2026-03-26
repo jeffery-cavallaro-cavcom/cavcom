@@ -404,7 +404,7 @@ class CommandBase(FiniteStateMachine):
         self.stdout.register_read()
 
         if self.stderr:
-            self.stdout.read_only()
+            self.stderr.read_only()
             self.stderr.register_read()
 
         self.setup_master(master)
@@ -428,7 +428,7 @@ class CommandBase(FiniteStateMachine):
             self.stderr.write_only()
             os.dup2(self.stderr.writer, sys.stderr.fileno())
         else:
-            os.dup2(self.stdout.writer, sys.stderr.fileno())
+            os.dup2(self.stderr.writer, sys.stderr.fileno())
 
         # Execute the command.
         os.execvp(self.command[0], self.command)
