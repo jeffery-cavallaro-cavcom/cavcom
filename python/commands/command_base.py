@@ -39,6 +39,7 @@ Derived classes provide methods to do the follow:
       the initial state.
     - Obtain the next event from the target event loop and call the command FSM
       run() method until the done state is achieved.
+    - Handle generation of the stop event.
 
 Note that the password challenge scenario must be explictly specified.  For
 example, if a sudo password challenge is expected, it must occur, and not be

@@ -5,7 +5,7 @@ current events.
 """
 
 import asyncio
-from signal import SIGCHLD
+import signal
 import sys
 from typing import ClassVar
 
@@ -38,7 +38,7 @@ class Command(CommandBase):
         super().__init__(*args, **kwargs)
 
         if not Command.ChildSignalDispatcher:
-            Command.ChildSignalDispatcher = SignalHandler(SIGCHLD)
+            Command.ChildSignalDispatcher = SignalHandler(signal.SIGCHLD)
 
         self.loop = asyncio.get_running_loop()
         self.sigchld = False
@@ -131,6 +131,10 @@ class Command(CommandBase):
                 self.run(event_id)
             self.event_wait = asyncio.Future()
 
+    def cancel(self, *_args, **_kwargs) -> None:
+        """ Trigger a stop event (can be used as a signal handler) """
+        self.add_event(Command.E_STOP)
+
     def close(self) -> None:
         """ Tear down event loop and close endpoints """
         super().close()
@@ -143,6 +147,9 @@ if __name__ == '__main__':
     async def main() -> None:
         """ Execute the command """
         with Command.create_command() as acommand:
+            for signo in [signal.SIGINT, signal.SIGTERM]:
+                signal.signal(signo, acommand.cancel)
+
             try:
                 await acommand.execute()
             except Exception as error:  # pylint: disable=broad-except

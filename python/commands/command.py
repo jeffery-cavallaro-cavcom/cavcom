@@ -6,11 +6,12 @@ events into the select event loop.
 """
 
 from selectors import DefaultSelector
-from signal import SIGCHLD
+import signal
 import sys
 from typing import ClassVar
 
 from events.select_endpoint import SelectEndpoint
+from events.event_handler import EventHandler
 from events.signal_event import SignalEvent
 from events.timer_event import TimerEvent
 from events.signal_handler import SignalHandler
@@ -20,11 +21,14 @@ from commands.command_base import CommandBase
 class Command(CommandBase):
     """ Execute a command """
     # pylint: disable=too-many-instance-attributes
-    ChildSignalDispatch : ClassVar[SignalHandler] = SignalHandler(SIGCHLD)
+    ChildSignalDispatch : ClassVar[SignalHandler] = SignalHandler(
+        signal.SIGCHLD
+    )
 
     select_loop : DefaultSelector
     sigchld : SignalEvent
     timer : TimerEvent
+    stop : EventHandler
 
     def __init__(self, *args, **kwargs):
         """
@@ -41,6 +45,7 @@ class Command(CommandBase):
         self.select_loop = DefaultSelector()
         self.sigchld = None
         self.timer = None
+        self.stop = None
 
     def setup_endpoints(self) -> None:
         """ Setup all endpoints """
@@ -101,11 +106,30 @@ class Command(CommandBase):
             self.timer.close()
             self.timer = None
 
+    def setup_stop(self) -> None:
+        """ Set up stop event """
+        if not self.stop:
+            self.stop = EventHandler(
+                self.select_loop, event_data=Command.E_STOP
+            )
+
+    def disable_stop(self) -> None:
+        """ Disable stop event """
+        if self.stop:
+            self.stop.close()
+            self.stop = None
+
+    def cancel(self, *_args, **_kwargs) -> None:
+        """ Trigger a stop event (can be used as a signal handler) """
+        self.stop.trigger()
+
     def execute(self) -> None:
         """ Execute the command """
         self.fork_and_exec()
 
         self.run()  # Establish initial state
+
+        self.setup_stop()
 
         while self.q_now != Command.Q_DONE:
             events = self.select_loop.select()
@@ -118,11 +142,16 @@ class Command(CommandBase):
                 elif event_id == Command.E_TIMEOUT:
                     if self.timer:
                         self.timer.acknowledge()
+                elif event_id == Command.E_STOP:
+                    if self.stop:
+                        self.stop.acknowledge()
 
                 self.run(event_id)
 
     def close(self) -> None:
         """ Tear down event loop and close endpoints """
+        self.disable_stop()
+
         super().close()
 
         if self.select_loop:
@@ -133,6 +162,9 @@ if __name__ == '__main__':
     def main() -> None:
         """ Execute the command """
         with Command.create_command() as command:
+            for signo in [signal.SIGINT, signal.SIGTERM]:
+                signal.signal(signo, command.cancel)
+
             try:
                 command.execute()
             except Exception as error:  # pylint: disable=broad-except
