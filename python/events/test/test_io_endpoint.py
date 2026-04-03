@@ -19,27 +19,22 @@ class IOEndpointForTest(IOEndpoint):
     read_registered : bool
     write_registered : bool
 
-    def __init__(
-        self, reader : Optional[int] = None,
-        writer : Optional[int] = None,
-        callback_data : Optional[Any] = None
-    ):
+    def __init__(self, fd : int, *, callback_data : Optional[Any] = None):
         """ Initialize call indicators """
+        super().__init__(
+            fd,
+            read_callback=self.count_read,
+            eof_callback=self.count_eof,
+            write_error_callback=self.count_error,
+            callback_data=callback_data
+        )
+
         self.read_called = 0
         self.eof_called = 0
         self.error_called = 0
         self.received_data = None
         self.read_registered = False
         self.write_registered = False
-
-        super().__init__(
-            reader=reader,
-            writer=writer,
-            read_callback=self.count_read,
-            eof_callback=self.count_eof,
-            write_error_callback=self.count_error,
-            callback_data=callback_data
-        )
 
     def count_read(self, data : Optional[Any] = None) -> None:
         """ Increment read count """
@@ -79,386 +74,340 @@ class TestIOEndpoint(unittest.TestCase):
     CALLBACK_DATA : ClassVar[int] = 42
 
     def test_pipe(self):
-        """ Create and use a pipe (default case) """
+        """ Create and use a pipe """
         # pylint: disable=too-many-statements
-        with IOEndpointForTest(callback_data=self.CALLBACK_DATA) as endpoint:
-            self.assertTrue(endpoint.is_reading)
-            self.assertTrue(endpoint.is_writing)
+        reader_side, writer_side = os.pipe()
 
-            endpoint.register_read()
-            endpoint.register_write()
-            self.assertTrue(endpoint.read_registered)
-            self.assertTrue(endpoint.write_registered)
+        try:
+            reader = IOEndpointForTest(
+                reader_side, callback_data=self.CALLBACK_DATA
+            )
+            writer = IOEndpointForTest(
+                writer_side, callback_data=self.CALLBACK_DATA
+            )
+
+            self.assertTrue(reader.is_open)
+            self.assertTrue(writer.is_open)
+
+            reader.register_read()
+            writer.register_write()
+            self.assertTrue(reader.read_registered)
+            self.assertTrue(writer.write_registered)
 
             # Standard read/write.
-            endpoint.received_data = None
-            endpoint.write(self.TEST_DATA_1)
-            endpoint.read()
-            data = endpoint.fetch_input()
+            reader.received_data = None
+            writer.write(self.TEST_DATA_1)
+            reader.read()
+            data = reader.fetch_input()
             self.assertEqual(data, self.TEST_DATA_1)
 
-            self.assertTrue(endpoint.read_registered)
-            self.assertFalse(endpoint.write_registered)
-            self.assertIsNone(endpoint.input_data)
-            self.assertIsNone(endpoint.output_data)
-            self.assertEqual(endpoint.read_called, 1)
-            self.assertEqual(endpoint.eof_called, 0)
-            self.assertEqual(endpoint.error_called, 0)
-            self.assertEqual(endpoint.received_data, self.CALLBACK_DATA)
-            self.assertIsNone(endpoint.read_error)
-            self.assertIsNone(endpoint.write_error)
+            self.assertTrue(reader.read_registered)
+            self.assertFalse(writer.write_registered)
+            self.assertIsNone(reader.input_data)
+            self.assertIsNone(writer.output_data)
+            self.assertEqual(reader.read_called, 1)
+            self.assertEqual(reader.eof_called, 0)
+            self.assertEqual(reader.error_called, 0)
+            self.assertEqual(reader.received_data, self.CALLBACK_DATA)
+            self.assertIsNone(reader.read_errno)
+            self.assertIsNone(writer.write_errno)
 
             # Cumulative read/write.
-            endpoint.received_data = None
-            endpoint.write(self.TEST_DATA_2[:5])
-            endpoint.read()
-            endpoint.write(self.TEST_DATA_2[5:])
-            endpoint.read()
-            data = endpoint.fetch_input()
+            reader.received_data = None
+            writer.write(self.TEST_DATA_2[:5])
+            reader.read()
+            writer.write(self.TEST_DATA_2[5:])
+            reader.read()
+            data = reader.fetch_input()
             self.assertEqual(data, self.TEST_DATA_2)
 
-            self.assertTrue(endpoint.read_registered)
-            self.assertFalse(endpoint.write_registered)
-            self.assertIsNone(endpoint.input_data)
-            self.assertIsNone(endpoint.output_data)
+            self.assertTrue(reader.read_registered)
+            self.assertFalse(writer.write_registered)
+            self.assertIsNone(reader.input_data)
+            self.assertIsNone(writer.output_data)
             # No buffering on a pipe so called twice!
-            self.assertEqual(endpoint.read_called, 3)
-            self.assertEqual(endpoint.eof_called, 0)
-            self.assertEqual(endpoint.error_called, 0)
-            self.assertEqual(endpoint.received_data, self.CALLBACK_DATA)
-            self.assertIsNone(endpoint.read_error)
-            self.assertIsNone(endpoint.write_error)
+            self.assertEqual(reader.read_called, 3)
+            self.assertEqual(reader.eof_called, 0)
+            self.assertEqual(writer.error_called, 0)
+            self.assertEqual(reader.received_data, self.CALLBACK_DATA)
+            self.assertIsNone(reader.read_errno)
+            self.assertIsNone(writer.write_errno)
 
             # EOF.
-            endpoint.received_data = None
-            endpoint.read_only()
-            endpoint.read()
-            data = endpoint.fetch_input()
+            reader.received_data = None
+            writer.close()
+            reader.read()
+            data = reader.fetch_input()
             self.assertIsNone(data)
 
-            self.assertFalse(endpoint.is_reading)
-            self.assertFalse(endpoint.is_writing)
-            self.assertFalse(endpoint.read_registered)
-            self.assertFalse(endpoint.write_registered)
-            self.assertIsNone(endpoint.input_data)
-            self.assertIsNone(endpoint.output_data)
-            self.assertEqual(endpoint.read_called, 3)
-            self.assertEqual(endpoint.eof_called, 1)
-            self.assertEqual(endpoint.error_called, 0)
-            self.assertEqual(endpoint.received_data, self.CALLBACK_DATA)
-            self.assertIsNone(endpoint.read_error)
-            self.assertIsNone(endpoint.write_error)
+            self.assertFalse(reader.is_open)
+            self.assertFalse(writer.is_open)
+            self.assertFalse(reader.read_registered)
+            self.assertFalse(writer.write_registered)
+            self.assertIsNone(reader.input_data)
+            self.assertIsNone(writer.output_data)
+            self.assertEqual(reader.read_called, 3)
+            self.assertEqual(reader.eof_called, 1)
+            self.assertEqual(reader.error_called, 0)
+            self.assertEqual(reader.received_data, self.CALLBACK_DATA)
+            self.assertIsNone(reader.read_errno)
+            self.assertIsNone(writer.write_errno)
+        finally:
+            reader.close()
+            writer.close()
 
-        self.assertFalse(endpoint.is_reading)
-        self.assertFalse(endpoint.is_writing)
+        self.assertFalse(reader.is_open)
+        self.assertFalse(writer.is_open)
 
-    def test_pty_slave(self):
-        """ Create a PTY and use the slave only """
+    def test_pty(self):
+        """ Allocate and use a PTY """
         # pylint: disable=too-many-statements
         with PTYManager() as pty:
             pty.disable_echo_crlf()
 
-            # Use the slave so we can send ^D to simulate EOF.
-            with IOEndpointForTest(
-                reader=pty.slave, callback_data=self.CALLBACK_DATA
-            ) as endpoint:
-                # Grab ownership of the slave for the endpoint.
-                pty.slave = None
-                os.set_blocking(pty.master, False)
+            master = IOEndpointForTest(
+                pty.master, callback_data=self.CALLBACK_DATA
+            )
+            slave = IOEndpointForTest(
+                pty.slave, callback_data=self.CALLBACK_DATA
+            )
 
-                self.assertTrue(endpoint.is_reading)
-                self.assertTrue(endpoint.is_writing)
+            self.assertTrue(master.is_open)
+            self.assertTrue(slave.is_open)
 
-                endpoint.register_read()
-                endpoint.register_write()
-                self.assertTrue(endpoint.read_registered)
-                self.assertTrue(endpoint.write_registered)
+            master.register_read()
+            master.register_write()
+            slave.register_read()
+            slave.register_write()
+            self.assertTrue(master.read_registered)
+            self.assertTrue(master.write_registered)
+            self.assertTrue(slave.read_registered)
+            self.assertTrue(slave.write_registered)
 
-                # Read/write.
-                endpoint.received_data = None
-                endpoint.write(self.TEST_DATA_1)
-                data = os.read(pty.master, 32)
-                self.assertEqual(data, self.TEST_DATA_1)
-                os.write(pty.master, self.TEST_DATA_2)
-                endpoint.read()
-                data = endpoint.fetch_input()
-                self.assertEqual(data, self.TEST_DATA_2)
+            # Read/write.
+            master.received_data = None
+            slave.received_data = None
+            master.write(self.TEST_DATA_1)
+            slave.read()
+            data = slave.fetch_input()
+            self.assertEqual(data, self.TEST_DATA_1)
 
-                self.assertTrue(endpoint.read_registered)
-                self.assertFalse(endpoint.write_registered)
-                self.assertIsNone(endpoint.input_data)
-                self.assertIsNone(endpoint.output_data)
-                self.assertEqual(endpoint.read_called, 1)
-                self.assertEqual(endpoint.eof_called, 0)
-                self.assertEqual(endpoint.error_called, 0)
-                self.assertEqual(endpoint.received_data, self.CALLBACK_DATA)
-                self.assertIsNone(endpoint.read_error)
-                self.assertIsNone(endpoint.write_error)
+            self.assertTrue(master.read_registered)
+            self.assertFalse(master.write_registered)
+            self.assertIsNone(master.input_data)
+            self.assertIsNone(master.output_data)
+            self.assertEqual(master.read_called, 0)
+            self.assertEqual(master.eof_called, 0)
+            self.assertEqual(master.error_called, 0)
+            self.assertIsNone(master.received_data)
+            self.assertIsNone(master.read_errno)
+            self.assertIsNone(master.write_errno)
 
-                # Cumulative read/write.
-                endpoint.received_data = None
-                endpoint.write(self.TEST_DATA_2[:5])
-                endpoint.write(self.TEST_DATA_2[5:])
-                # Read may be split due to split write!
-                more = True
-                data = b''
-                while more:
-                    try:
-                        new_data = os.read(pty.master, 32)
-                        data += new_data
-                    except BlockingIOError:
-                        more = False
-                self.assertEqual(data, self.TEST_DATA_2)
-                os.write(pty.master, self.TEST_DATA_1[:5])
-                os.write(pty.master, self.TEST_DATA_1[5:])
-                endpoint.read()
-                data = endpoint.fetch_input()
-                self.assertEqual(data, self.TEST_DATA_1)
+            self.assertTrue(slave.read_registered)
+            self.assertFalse(master.write_registered)
+            self.assertIsNone(slave.input_data)
+            self.assertIsNone(slave.output_data)
+            self.assertEqual(slave.read_called, 1)
+            self.assertEqual(slave.eof_called, 0)
+            self.assertEqual(slave.error_called, 0)
+            self.assertEqual(slave.received_data, self.CALLBACK_DATA)
+            self.assertIsNone(slave.read_errno)
+            self.assertIsNone(slave.write_errno)
 
-                self.assertTrue(endpoint.read_registered)
-                self.assertFalse(endpoint.write_registered)
-                self.assertIsNone(endpoint.input_data)
-                self.assertIsNone(endpoint.output_data)
-                # Buffering, so called only once!
-                self.assertEqual(endpoint.read_called, 2)
-                self.assertEqual(endpoint.eof_called, 0)
-                self.assertEqual(endpoint.error_called, 0)
-                self.assertEqual(endpoint.received_data, self.CALLBACK_DATA)
-                self.assertIsNone(endpoint.read_error)
-                self.assertIsNone(endpoint.write_error)
+            master.received_data = None
+            slave.received_data = None
+            slave.write(self.TEST_DATA_2)
+            master.read()
+            data = master.fetch_input()
+            self.assertEqual(data, self.TEST_DATA_2)
 
-                # EOF
-                endpoint.received_data = None
-                os.write(pty.master, b"\x04")  # ^D
-                endpoint.read()
-                data = endpoint.fetch_input()
-                self.assertIsNone(data)
+            self.assertTrue(master.read_registered)
+            self.assertFalse(master.write_registered)
+            self.assertIsNone(master.input_data)
+            self.assertIsNone(master.output_data)
+            self.assertEqual(master.read_called, 1)
+            self.assertEqual(master.eof_called, 0)
+            self.assertEqual(master.error_called, 0)
+            self.assertEqual(master.received_data, self.CALLBACK_DATA)
+            self.assertIsNone(master.read_errno)
+            self.assertIsNone(master.write_errno)
 
-                self.assertFalse(endpoint.is_reading)
-                self.assertTrue(endpoint.is_writing)
-                self.assertFalse(endpoint.read_registered)
-                self.assertFalse(endpoint.write_registered)
-                self.assertIsNone(endpoint.input_data)
-                self.assertIsNone(endpoint.output_data)
-                self.assertEqual(endpoint.read_called, 2)
-                self.assertEqual(endpoint.eof_called, 1)
-                self.assertEqual(endpoint.error_called, 0)
-                self.assertEqual(endpoint.received_data, self.CALLBACK_DATA)
-                self.assertIsNone(endpoint.read_error)
-                self.assertIsNone(endpoint.write_error)
+            self.assertTrue(slave.read_registered)
+            self.assertFalse(master.write_registered)
+            self.assertIsNone(slave.input_data)
+            self.assertIsNone(slave.output_data)
+            self.assertEqual(slave.read_called, 1)
+            self.assertEqual(slave.eof_called, 0)
+            self.assertEqual(slave.error_called, 0)
+            self.assertIsNone(slave.received_data)
+            self.assertIsNone(slave.read_errno)
+            self.assertIsNone(slave.write_errno)
 
-        self.assertFalse(endpoint.is_reading)
-        self.assertFalse(endpoint.is_writing)
+            # Cumulative read/write.
+            master.received_data = None
+            slave.received_data = None
+            master.write(self.TEST_DATA_2[:5])
+            slave.read()
+            master.write(self.TEST_DATA_2[5:])
+            slave.read()
+            data = slave.fetch_input()
+            self.assertEqual(data, self.TEST_DATA_2)
 
-    def test_pty_both(self):
-        """ Create a PTY and use the master and slave"""
-        # pylint: disable=too-many-statements
-        with PTYManager() as pty:
-            pty.disable_echo_crlf()
+            self.assertTrue(master.read_registered)
+            self.assertFalse(master.write_registered)
+            self.assertIsNone(master.input_data)
+            self.assertIsNone(master.output_data)
+            self.assertEqual(master.read_called, 1)
+            self.assertEqual(master.eof_called, 0)
+            self.assertEqual(master.error_called, 0)
+            self.assertIsNone(master.received_data)
+            self.assertIsNone(master.read_errno)
+            self.assertIsNone(master.write_errno)
 
-            # Use the master as the writer so we can send ^D to simulate EOF.
-            with IOEndpointForTest(
-                reader=pty.slave,
-                writer=pty.master,
-                callback_data=self.CALLBACK_DATA
-            ) as endpoint:
-                # Grab ownership for the endpoint.
-                pty.master = None
-                pty.slave = None
+            self.assertTrue(slave.read_registered)
+            self.assertFalse(slave.write_registered)
+            self.assertIsNone(slave.input_data)
+            self.assertIsNone(slave.output_data)
+            # Buffering, so called only once!
+            self.assertEqual(slave.read_called, 2)
+            self.assertEqual(slave.eof_called, 0)
+            self.assertEqual(slave.error_called, 0)
+            self.assertEqual(slave.received_data, self.CALLBACK_DATA)
+            self.assertIsNone(slave.read_errno)
+            self.assertIsNone(slave.write_errno)
 
-                self.assertTrue(endpoint.is_reading)
-                self.assertTrue(endpoint.is_writing)
+            # EOF
+            master.received_data = None
+            slave.received_data = None
+            master.write(b"\x04")  # ^D
+            slave.read()
+            data = slave.fetch_input()
+            self.assertIsNone(data)
 
-                endpoint.register_read()
-                endpoint.register_write()
-                self.assertTrue(endpoint.read_registered)
-                self.assertTrue(endpoint.write_registered)
+            self.assertTrue(master.is_open)
+            self.assertTrue(master.read_registered)
+            self.assertFalse(master.write_registered)
+            self.assertIsNone(master.input_data)
+            self.assertIsNone(master.output_data)
+            self.assertEqual(master.read_called, 1)
+            self.assertEqual(master.eof_called, 0)
+            self.assertEqual(master.error_called, 0)
+            self.assertIsNone(master.received_data)
+            self.assertIsNone(master.read_errno)
+            self.assertIsNone(master.write_errno)
 
-                # Read/write.
-                endpoint.received_data = None
-                endpoint.write(self.TEST_DATA_1)
-                endpoint.read()
-                data = endpoint.fetch_input()
-                self.assertEqual(data, self.TEST_DATA_1)
+            self.assertFalse(slave.is_open)
+            pty.slave = None
+            self.assertFalse(slave.read_registered)
+            self.assertFalse(slave.write_registered)
+            self.assertIsNone(slave.input_data)
+            self.assertIsNone(slave.output_data)
+            self.assertEqual(slave.read_called, 2)
+            self.assertEqual(slave.eof_called, 1)
+            self.assertEqual(slave.error_called, 0)
+            self.assertEqual(slave.received_data, self.CALLBACK_DATA)
+            self.assertIsNone(slave.read_errno)
+            self.assertIsNone(slave.write_errno)
 
-                self.assertTrue(endpoint.read_registered)
-                self.assertFalse(endpoint.write_registered)
-                self.assertIsNone(endpoint.input_data)
-                self.assertIsNone(endpoint.output_data)
-                self.assertEqual(endpoint.read_called, 1)
-                self.assertEqual(endpoint.eof_called, 0)
-                self.assertEqual(endpoint.error_called, 0)
-                self.assertEqual(endpoint.received_data, self.CALLBACK_DATA)
-                self.assertIsNone(endpoint.read_error)
-                self.assertIsNone(endpoint.write_error)
-
-                # Cumulative read/write.
-                endpoint.received_data = None
-                endpoint.write(self.TEST_DATA_2[:5])
-                endpoint.read()
-                endpoint.write(self.TEST_DATA_2[5:])
-                endpoint.read()
-                data = endpoint.fetch_input()
-                self.assertEqual(data, self.TEST_DATA_2)
-
-                self.assertTrue(endpoint.read_registered)
-                self.assertFalse(endpoint.write_registered)
-                self.assertIsNone(endpoint.input_data)
-                self.assertIsNone(endpoint.output_data)
-                # Buffering, so called only once!
-                self.assertEqual(endpoint.read_called, 2)
-                self.assertEqual(endpoint.eof_called, 0)
-                self.assertEqual(endpoint.error_called, 0)
-                self.assertEqual(endpoint.received_data, self.CALLBACK_DATA)
-                self.assertIsNone(endpoint.read_error)
-                self.assertIsNone(endpoint.write_error)
-
-                # EOF
-                endpoint.received_data = None
-                endpoint.write(b"\x04")  # ^D
-                endpoint.read()
-                data = endpoint.fetch_input()
-                self.assertIsNone(data)
-
-                self.assertFalse(endpoint.is_reading)
-                self.assertTrue(endpoint.is_writing)
-                self.assertFalse(endpoint.read_registered)
-                self.assertFalse(endpoint.write_registered)
-                self.assertIsNone(endpoint.input_data)
-                self.assertIsNone(endpoint.output_data)
-                self.assertEqual(endpoint.read_called, 2)
-                self.assertEqual(endpoint.eof_called, 1)
-                self.assertEqual(endpoint.error_called, 0)
-                self.assertEqual(endpoint.received_data, self.CALLBACK_DATA)
-                self.assertIsNone(endpoint.read_error)
-                self.assertIsNone(endpoint.write_error)
-
-        self.assertFalse(endpoint.is_reading)
-        self.assertFalse(endpoint.is_writing)
+            master.close()
+            pty.master = None
 
     def test_read_error(self):
         """ Force a read error """
         with PTYManager() as pty:
             pty.disable_echo_crlf()
 
-            with IOEndpointForTest(
-                reader=pty.master, callback_data=self.CALLBACK_DATA
-            ) as endpoint:
-                # Grab ownership for the endpoint.
-                pty.master = None
-                os.set_blocking(pty.slave, False)
+            master = IOEndpointForTest(
+                pty.master, callback_data=self.CALLBACK_DATA
+            )
+            slave = IOEndpointForTest(
+                pty.slave, callback_data=self.CALLBACK_DATA
+            )
 
-                self.assertTrue(endpoint.is_reading)
-                self.assertTrue(endpoint.is_writing)
+            master.register_read()
+            slave.register_read()
 
-                endpoint.register_read()
-                endpoint.register_write()
-                self.assertTrue(endpoint.read_registered)
-                self.assertTrue(endpoint.write_registered)
+            # Read/write.
+            master.write(self.TEST_DATA_1)
+            slave.read()
+            data = slave.fetch_input()
+            self.assertEqual(data, self.TEST_DATA_1)
 
-                # Read/write.
-                endpoint.received_data = None
-                endpoint.write(self.TEST_DATA_1)
-                data = os.read(pty.slave, 32)
-                self.assertEqual(data, self.TEST_DATA_1)
-                os.write(pty.slave, self.TEST_DATA_2)
-                endpoint.read()
-                data = endpoint.fetch_input()
-                self.assertEqual(data, self.TEST_DATA_2)
+            slave.write(self.TEST_DATA_2)
+            master.read()
+            data = master.fetch_input()
+            self.assertEqual(data, self.TEST_DATA_2)
 
-                self.assertTrue(endpoint.read_registered)
-                self.assertFalse(endpoint.write_registered)
-                self.assertIsNone(endpoint.input_data)
-                self.assertIsNone(endpoint.output_data)
-                self.assertEqual(endpoint.read_called, 1)
-                self.assertEqual(endpoint.eof_called, 0)
-                self.assertEqual(endpoint.error_called, 0)
-                self.assertEqual(endpoint.received_data, self.CALLBACK_DATA)
-                self.assertIsNone(endpoint.read_error)
-                self.assertIsNone(endpoint.write_error)
+            # Close the slave.
+            slave.close()
+            pty.slave = None
 
-                # Close the slave.
-                endpoint.received_data = None
-                pty.close()
-                endpoint.read()
-                data = endpoint.fetch_input()
-                self.assertIsNone(data)
+            master.read()
+            data = master.fetch_input()
+            self.assertIsNone(data)
 
-                self.assertFalse(endpoint.is_reading)
-                self.assertTrue(endpoint.is_writing)
-                self.assertFalse(endpoint.read_registered)
-                self.assertFalse(endpoint.write_registered)
-                self.assertIsNone(endpoint.input_data)
-                self.assertIsNone(endpoint.output_data)
-                self.assertEqual(endpoint.read_called, 1)
-                self.assertEqual(endpoint.eof_called, 1)
-                self.assertEqual(endpoint.error_called, 0)
-                self.assertEqual(endpoint.received_data, self.CALLBACK_DATA)
-                error = endpoint.read_error
-                self.assertEqual(error[0], EIO)
-                self.assertEqual(error[1], os.strerror(error[0]))
-                self.assertIsNone(endpoint.write_error)
+            self.assertFalse(master.is_open)
+            pty.master = None
+            self.assertFalse(master.read_registered)
+            self.assertFalse(master.write_registered)
+            self.assertIsNone(master.input_data)
+            self.assertIsNone(master.output_data)
+            self.assertEqual(master.read_called, 1)
+            self.assertEqual(master.eof_called, 1)
+            self.assertEqual(master.error_called, 0)
+            self.assertEqual(master.received_data, self.CALLBACK_DATA)
+            self.assertEqual(master.read_errno, EIO)
+            self.assertEqual(
+                master.read_error_text, os.strerror(master.read_errno)
+            )
+            self.assertIsNone(master.write_errno)
 
     def test_write_error(self):
         """ Force a write error """
         with PTYManager() as pty:
             pty.disable_echo_crlf()
-            # Use the slave because the master may buffer and not fail.
-            with IOEndpointForTest(
-                writer=pty.slave, callback_data=self.CALLBACK_DATA
-            ) as endpoint:
-                # Grab ownership for the endpoint.
-                pty.slave = None
-                os.set_blocking(pty.master, False)
 
-                self.assertTrue(endpoint.is_reading)
-                self.assertTrue(endpoint.is_writing)
+            master = IOEndpointForTest(
+                pty.master, callback_data=self.CALLBACK_DATA
+            )
+            slave = IOEndpointForTest(
+                pty.slave, callback_data=self.CALLBACK_DATA
+            )
 
-                endpoint.register_read()
-                endpoint.register_write()
-                self.assertTrue(endpoint.read_registered)
-                self.assertTrue(endpoint.write_registered)
+            master.register_read()
+            slave.register_read()
 
-                # Read/write.
-                endpoint.received_data = None
-                endpoint.write(self.TEST_DATA_1)
-                data = os.read(pty.master, 32)
-                self.assertEqual(data, self.TEST_DATA_1)
-                os.write(pty.master, self.TEST_DATA_2)
-                endpoint.read()
-                data = endpoint.fetch_input()
-                self.assertEqual(data, self.TEST_DATA_2)
+            # Read/write.
+            master.write(self.TEST_DATA_1)
+            slave.read()
+            data = slave.fetch_input()
+            self.assertEqual(data, self.TEST_DATA_1)
 
-                self.assertTrue(endpoint.read_registered)
-                self.assertFalse(endpoint.write_registered)
-                self.assertIsNone(endpoint.input_data)
-                self.assertIsNone(endpoint.output_data)
-                self.assertEqual(endpoint.read_called, 1)
-                self.assertEqual(endpoint.eof_called, 0)
-                self.assertEqual(endpoint.error_called, 0)
-                self.assertEqual(endpoint.received_data, self.CALLBACK_DATA)
-                self.assertIsNone(endpoint.read_error)
-                self.assertIsNone(endpoint.write_error)
+            slave.write(self.TEST_DATA_2)
+            master.read()
+            data = master.fetch_input()
+            self.assertEqual(data, self.TEST_DATA_2)
 
-                # Close the master.
-                endpoint.received_data = None
-                pty.close()
-                endpoint.write(self.TEST_DATA_1)
+            # Close the master.
+            master.close()
+            pty.master = None
+            slave.write(self.TEST_DATA_1)
 
-                self.assertTrue(endpoint.is_reading)
-                self.assertFalse(endpoint.is_writing)
-                self.assertTrue(endpoint.read_registered)
-                self.assertFalse(endpoint.write_registered)
-                self.assertIsNone(endpoint.input_data)
-                self.assertEqual(bytes(endpoint.output_data), self.TEST_DATA_1)
-                self.assertEqual(endpoint.read_called, 1)
-                self.assertEqual(endpoint.eof_called, 0)
-                self.assertEqual(endpoint.error_called, 1)
-                self.assertEqual(endpoint.received_data, self.CALLBACK_DATA)
-                self.assertIsNone(endpoint.read_error)
-                error = endpoint.write_error
-                self.assertEqual(error[0], EIO)
-                self.assertEqual(error[1], os.strerror(error[0]))
+            self.assertFalse(slave.is_open)
+            pty.slave = None
+            self.assertFalse(slave.read_registered)
+            self.assertFalse(slave.write_registered)
+            self.assertIsNone(slave.input_data)
+            self.assertEqual(bytes(slave.output_data), self.TEST_DATA_1)
+            self.assertEqual(slave.read_called, 1)
+            self.assertEqual(slave.eof_called, 0)
+            self.assertEqual(slave.error_called, 1)
+            self.assertEqual(slave.received_data, self.CALLBACK_DATA)
+            self.assertIsNone(slave.read_errno)
+            self.assertEqual(slave.write_errno, EIO)
+            self.assertEqual(
+                slave.write_error_text, os.strerror(slave.write_errno)
+            )
 
 if __name__ == '__main__':
     unittest.main()

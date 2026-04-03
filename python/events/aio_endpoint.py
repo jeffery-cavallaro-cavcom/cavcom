@@ -26,6 +26,8 @@ class AIOEndpoint(IOEndpoint):
 
     def __init__(
         self,
+        fd : int,
+        *,
         event_callback : IOEndpoint.Callback,
         read_data : Optional[Any] = None,
         write_data : Optional[Any] = None,
@@ -35,6 +37,8 @@ class AIOEndpoint(IOEndpoint):
         Initialize an AIO endpoint
 
         Arguments:
+            fd:
+                Open file descriptor (>=0) for the target I/O endpoint.
             event_callback:
                 Callback to handle read or write event.
             read_data:
@@ -44,7 +48,7 @@ class AIOEndpoint(IOEndpoint):
             kwargs:
                 Other keyword arguments for IOEndpoint().
         """
-        super().__init__(**kwargs)
+        super().__init__(fd, **kwargs)
 
         self.event_callback = event_callback
         self.read_data = read_data
@@ -55,28 +59,24 @@ class AIOEndpoint(IOEndpoint):
 
     def register_read(self) -> None:
         """ Register for read events """
-        if self.reader and not self.read_active:
-            self.loop.add_reader(
-                self.reader, self.event_callback, self.read_data
-            )
+        if self.is_open and not self.read_active:
+            self.loop.add_reader(self.fd, self.event_callback, self.read_data)
             self.read_active = True
 
     def unregister_read(self) -> None:
         """ Unregister read events """
-        if self.reader and self.read_active:
-            self.loop.remove_reader(self.reader)
+        if self.read_active:
+            self.loop.remove_reader(self.fd)
             self.read_active = False
 
     def register_write(self) -> None:
         """ Register for write events """
-        if self.writer and not self.write_active:
-            self.loop.add_writer(
-                self.writer, self.event_callback, self.write_data
-            )
+        if self.is_open and not self.write_active:
+            self.loop.add_writer(self.fd, self.event_callback, self.write_data)
             self.write_active = True
 
     def unregister_write(self) -> None:
         """ Unregister write events """
-        if self.writer and self.write_active:
-            self.loop.remove_writer(self.writer)
+        if self.write_active:
+            self.loop.remove_writer(self.fd)
             self.write_active = False
