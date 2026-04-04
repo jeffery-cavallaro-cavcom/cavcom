@@ -7,44 +7,69 @@ import unittest
 import asyncio
 from errno import EIO
 import os
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 from events.aio_endpoint import AIOEndpoint
 from events.pty_manager import PTYManager
 
 class EventHandlerForTest:
     """ Awaitable Event Handler """
+    pending : set[int]
     event_future : asyncio.Future
 
     def __init__(self):
         """ Initialize the context """
-        self.event_future = None
+        self.pending = set()
+        self.event_future = asyncio.Future()
 
     def event_callback(self, event_id : int) -> None:
-        """ Set the future value """
-        if self.event_future:
-            self.event_future.set_result(event_id)
+        """
+        Set the future value
 
-    async def next_event(self, expected : int) -> bool:
-        """ Wait for the next expected event """
+        Arguments:
+            event_id:
+                Event ID for set future value.
+        """
+        self.pending.add(event_id)
+
+        if not self.event_future.done():
+            self.event_future.set_result(self.pending)
+
+    async def next_event(self, expected : Optional[int] = None) -> int:
+        """
+        Wait for the next expected event
+
+        Arguments:
+            expected:
+                If None then wait for the next event.  Otherwise, wait for the
+                specified event.
+
+        Returns:
+            Next event, or None if the expected event did not occur.
+        """
         while True:
-            if not self.event_future:
-                self.event_future = asyncio.Future()
-            try:
-                await asyncio.wait_for(self.event_future, timeout=5)
-            except:  # pylint: disable=bare-except
-                return False
-            event_id = self.event_future.result()
-            self.event_future = None
-            if event_id == expected:
+            if not self.pending:
+                if self.event_future.done():
+                    self.event_future = asyncio.Future()
+                try:
+                    await asyncio.wait_for(self.event_future, timeout=5)
+                except:  # pylint: disable=bare-except
+                    event_id = None
+                    break
+
+            if not self.pending:
+                continue
+
+            event_id = self.pending.pop()
+            if expected is None or event_id == expected:
                 break
 
-        return True
+        return event_id
 
 class TestAIOEndpoint(unittest.IsolatedAsyncioTestCase):
     """ Asynchronous I/O Endpoint Unit Tests """
-    TEST_DATA_1 : ClassVar[bytes] = b"Hello, World!\n"
-    TEST_DATA_2 : ClassVar[bytes] = b"The answer is 42\n"
+    TEST_ADATA_1 : ClassVar[bytes] = b"Hello, World!\n"
+    TEST_ADATA_2 : ClassVar[bytes] = b"The answer is 42\n"
 
     E_READ_1 : ClassVar[int] = 1
     E_WRITE_1 : ClassVar[int] = 2
@@ -58,53 +83,56 @@ class TestAIOEndpoint(unittest.IsolatedAsyncioTestCase):
         reader_side, writer_side = os.pipe()
 
         try:
-            reader = AIOEndpoint(
+            areader = AIOEndpoint(
                 reader_side,
                 event_callback=event_handler.event_callback,
                 read_data=self.E_READ_1
             )
-            writer = AIOEndpoint(
+            awriter = AIOEndpoint(
                 writer_side,
                 event_callback=event_handler.event_callback,
                 write_data=self.E_WRITE_1
             )
-            reader.register_read()
-            writer.register_write()
+            areader.register_read()
+            awriter.register_write()
 
-            self.assertTrue(reader.is_open)
-            self.assertTrue(reader.read_active)
-            self.assertFalse(reader.write_active)
+            self.assertTrue(areader.is_open)
+            self.assertTrue(areader.read_active)
+            self.assertFalse(areader.write_active)
 
-            self.assertTrue(writer.is_open)
-            self.assertFalse(writer.read_active)
-            self.assertTrue(writer.write_active)
+            self.assertTrue(awriter.is_open)
+            self.assertFalse(awriter.read_active)
+            self.assertTrue(awriter.write_active)
 
             # A write event is expected.
-            self.assertTrue(await event_handler.next_event(self.E_WRITE_1))
-            writer.write()
-            self.assertFalse(writer.write_active)
+            event_id = await event_handler.next_event(self.E_WRITE_1)
+            self.assertEqual(event_id, self.E_WRITE_1)
+            awriter.write()
+            self.assertFalse(awriter.write_active)
 
             # Read/write.
-            writer.write(self.TEST_DATA_1)
-            self.assertTrue(await event_handler.next_event(self.E_READ_1))
-            reader.read()
-            data = reader.fetch_input()
-            self.assertEqual(data, self.TEST_DATA_1)
-            self.assertFalse(writer.write_active)
-            self.assertTrue(reader.read_active)
+            awriter.write(self.TEST_ADATA_1)
+            event_id = await event_handler.next_event(self.E_READ_1)
+            self.assertEqual(event_id, self.E_READ_1)
+            areader.read()
+            data = areader.fetch_input()
+            self.assertEqual(data, self.TEST_ADATA_1)
+            self.assertFalse(awriter.write_active)
+            self.assertTrue(areader.read_active)
 
             # EOF.
-            writer.close()
-            self.assertTrue(await event_handler.next_event(self.E_READ_1))
-            reader.read()
-            data = reader.fetch_input()
+            awriter.close()
+            event_id = await event_handler.next_event(self.E_READ_1)
+            self.assertEqual(event_id, self.E_READ_1)
+            areader.read()
+            data = areader.fetch_input()
             self.assertIsNone(data)
-            self.assertFalse(reader.read_active)
-            self.assertFalse(reader.is_open)
-            self.assertFalse(writer.write_active)
+            self.assertFalse(areader.read_active)
+            self.assertFalse(areader.is_open)
+            self.assertFalse(awriter.write_active)
         finally:
-            reader.close()
-            writer.close()
+            areader.close()
+            awriter.close()
 
     async def test_pty(self):
         """ Allocate and use a PTY """
@@ -112,58 +140,107 @@ class TestAIOEndpoint(unittest.IsolatedAsyncioTestCase):
 
         with PTYManager() as pty:
             pty.disable_echo_crlf()
+            pty.set_nonblocking()
 
-            master = AIOEndpoint(
+            amaster = AIOEndpoint(
                 pty.master,
                 event_callback=event_handler.event_callback,
                 read_data=self.E_READ_1,
                 write_data=self.E_WRITE_1
             )
-            slave = AIOEndpoint(
+            aslave = AIOEndpoint(
                 pty.slave,
                 event_callback=event_handler.event_callback,
                 read_data=self.E_READ_2,
                 write_data=self.E_WRITE_2
             )
 
-            master.register_read()
-            master.register_write()
-            slave.register_read()
+            amaster.register_read()
+            amaster.register_write()
+            aslave.register_read()
 
-            self.assertTrue(master.is_open)
-            self.assertTrue(master.read_active)
-            self.assertTrue(master.write_active)
+            self.assertTrue(amaster.is_open)
+            self.assertTrue(amaster.read_active)
+            self.assertTrue(amaster.write_active)
 
-            self.assertTrue(slave.is_open)
-            self.assertTrue(slave.read_active)
-            self.assertFalse(slave.write_active)
+            self.assertTrue(aslave.is_open)
+            self.assertTrue(aslave.read_active)
+            self.assertFalse(aslave.write_active)
 
             # A master write event is expected.
-            self.assertTrue(await event_handler.next_event(self.E_WRITE_1))
-            master.write()
-            self.assertFalse(master.write_active)
+            event_id = await event_handler.next_event(self.E_WRITE_1)
+            self.assertEqual(event_id, self.E_WRITE_1)
+            amaster.write()
+            self.assertFalse(amaster.write_active)
 
             # Read/write.
-            master.write(self.TEST_DATA_1)
-            self.assertTrue(await event_handler.next_event(self.E_READ_2))
-            slave.read()
-            data = slave.fetch_input()
-            self.assertEqual(data, self.TEST_DATA_1)
+            amaster.write(self.TEST_ADATA_1)
+            event_id = await event_handler.next_event(self.E_READ_2)
+            self.assertEqual(event_id, self.E_READ_2)
+            aslave.read()
+            data = aslave.fetch_input()
+            self.assertEqual(data, self.TEST_ADATA_1)
 
-            slave.write(self.TEST_DATA_2)
-            self.assertTrue(await event_handler.next_event(self.E_READ_1))
-            master.read()
-            data = master.fetch_input()
-            self.assertEqual(data, self.TEST_DATA_2)
+            aslave.write(self.TEST_ADATA_2)
+            event_id = await event_handler.next_event(self.E_READ_1)
+            self.assertEqual(event_id, self.E_READ_1)
+            amaster.read()
+            data = amaster.fetch_input()
+            self.assertEqual(data, self.TEST_ADATA_2)
 
             # EOF
-            master.write(b"\x04")  # ^D
-            self.assertTrue(await event_handler.next_event(self.E_READ_2))
-            slave.read()
-            data = slave.fetch_input()
+            amaster.write(b"\x04")  # ^D
+            event_id = await event_handler.next_event(self.E_READ_2)
+            self.assertEqual(event_id, self.E_READ_2)
+            aslave.read()
+            data = aslave.fetch_input()
             self.assertIsNone(data)
-            self.assertFalse(slave.is_open)
+            self.assertFalse(aslave.is_open)
             pty.slave = None
+
+    async def test_both(self):
+        """ Read and write event on the same endpoint """
+        event_handler = EventHandlerForTest()
+
+        with PTYManager() as pty:
+            pty.disable_echo_crlf()
+            pty.set_nonblocking()
+
+            amaster = AIOEndpoint(
+                pty.master,
+                event_callback=event_handler.event_callback,
+                read_data=self.E_READ_1,
+                write_data=self.E_WRITE_1
+            )
+            aslave = AIOEndpoint(
+                pty.slave,
+                event_callback=event_handler.event_callback,
+                read_data=self.E_READ_2,
+                write_data=self.E_WRITE_2
+            )
+
+            amaster.register_read()
+            amaster.register_write()
+
+            self.assertTrue(amaster.is_open)
+            self.assertTrue(amaster.read_active)
+            self.assertTrue(amaster.write_active)
+
+            aslave.write(self.TEST_ADATA_1)
+            events = set()
+            while len(events) < 2:
+                events.add(await event_handler.next_event())
+            self.assertEqual(len(events), 2)
+            self.assertIn(self.E_READ_1, events)
+            self.assertIn(self.E_WRITE_1, events)
+
+            amaster.write()
+            amaster.read()
+            data = amaster.fetch_input()
+
+            self.assertEqual(data, self.TEST_ADATA_1)
+            self.assertTrue(amaster.read_active)
+            self.assertFalse(amaster.write_active)
 
     async def test_read_error(self):
         """ Force a read error """
@@ -171,56 +248,60 @@ class TestAIOEndpoint(unittest.IsolatedAsyncioTestCase):
 
         with PTYManager() as pty:
             pty.disable_echo_crlf()
+            pty.set_nonblocking()
 
-            master = AIOEndpoint(
+            amaster = AIOEndpoint(
                 pty.master,
                 event_callback=event_handler.event_callback,
                 read_data=self.E_READ_1,
                 write_data=self.E_WRITE_1
             )
-            slave = AIOEndpoint(
+            aslave = AIOEndpoint(
                 pty.slave,
                 event_callback=event_handler.event_callback,
                 read_data=self.E_READ_2,
                 write_data=self.E_WRITE_2
             )
 
-            master.register_read()
-            slave.register_read()
+            amaster.register_read()
+            aslave.register_read()
 
             # Read/write.
-            master.write(self.TEST_DATA_1)
-            self.assertTrue(await event_handler.next_event(self.E_READ_2))
-            slave.read()
-            data = slave.fetch_input()
-            self.assertEqual(data, self.TEST_DATA_1)
+            amaster.write(self.TEST_ADATA_1)
+            event_id = await event_handler.next_event(self.E_READ_2)
+            self.assertEqual(event_id, self.E_READ_2)
+            aslave.read()
+            data = aslave.fetch_input()
+            self.assertEqual(data, self.TEST_ADATA_1)
 
-            slave.write(self.TEST_DATA_2)
-            self.assertTrue(await event_handler.next_event(self.E_READ_1))
-            master.read()
-            data = master.fetch_input()
-            self.assertEqual(data, self.TEST_DATA_2)
+            aslave.write(self.TEST_ADATA_2)
+            event_id = await event_handler.next_event(self.E_READ_1)
+            self.assertEqual(event_id, self.E_READ_1)
+            amaster.read()
+            data = amaster.fetch_input()
+            self.assertEqual(data, self.TEST_ADATA_2)
 
             # Close the slave.
-            slave.close()
+            aslave.close()
             pty.slave = None
 
-            self.assertTrue(await event_handler.next_event(self.E_READ_1))
-            master.read()
-            data = master.fetch_input()
+            event_id = await event_handler.next_event(self.E_READ_1)
+            self.assertEqual(event_id, self.E_READ_1)
+            amaster.read()
+            data = amaster.fetch_input()
             self.assertIsNone(data)
 
-            self.assertFalse(master.is_open)
+            self.assertFalse(amaster.is_open)
             pty.master = None
-            self.assertFalse(master.read_active)
-            self.assertFalse(master.write_active)
-            self.assertIsNone(master.input_data)
-            self.assertIsNone(master.output_data)
-            self.assertEqual(master.read_errno, EIO)
+            self.assertFalse(amaster.read_active)
+            self.assertFalse(amaster.write_active)
+            self.assertIsNone(amaster.input_data)
+            self.assertIsNone(amaster.output_data)
+            self.assertEqual(amaster.read_errno, EIO)
             self.assertEqual(
-                master.read_error_text, os.strerror(master.read_errno)
+                amaster.read_error_text, os.strerror(amaster.read_errno)
             )
-            self.assertIsNone(master.write_errno)
+            self.assertIsNone(amaster.write_errno)
 
     async def test_write_error(self):
         """ Force a write error """
@@ -228,50 +309,54 @@ class TestAIOEndpoint(unittest.IsolatedAsyncioTestCase):
 
         with PTYManager() as pty:
             pty.disable_echo_crlf()
+            pty.set_nonblocking()
 
-            master = AIOEndpoint(
+            amaster = AIOEndpoint(
                 pty.master,
                 event_callback=event_handler.event_callback,
                 read_data=self.E_READ_1,
                 write_data=self.E_WRITE_1
             )
-            slave = AIOEndpoint(
+            aslave = AIOEndpoint(
                 pty.slave,
                 event_callback=event_handler.event_callback,
                 read_data=self.E_READ_2,
                 write_data=self.E_WRITE_2
             )
 
-            master.register_read()
-            slave.register_read()
+            amaster.register_read()
+            aslave.register_read()
 
-            master.write(self.TEST_DATA_1)
-            self.assertTrue(await event_handler.next_event(self.E_READ_2))
-            slave.read()
-            data = slave.fetch_input()
-            self.assertEqual(data, self.TEST_DATA_1)
+            # Read/write.
+            amaster.write(self.TEST_ADATA_1)
+            event_id = await event_handler.next_event(self.E_READ_2)
+            self.assertEqual(event_id, self.E_READ_2)
+            aslave.read()
+            data = aslave.fetch_input()
+            self.assertEqual(data, self.TEST_ADATA_1)
 
-            slave.write(self.TEST_DATA_2)
-            self.assertTrue(await event_handler.next_event(self.E_READ_1))
-            master.read()
-            data = master.fetch_input()
-            self.assertEqual(data, self.TEST_DATA_2)
+            aslave.write(self.TEST_ADATA_2)
+            event_id = await event_handler.next_event(self.E_READ_1)
+            self.assertEqual(event_id, self.E_READ_1)
+            amaster.read()
+            data = amaster.fetch_input()
+            self.assertEqual(data, self.TEST_ADATA_2)
 
             # Close the master.
-            master.close()
+            amaster.close()
             pty.master = None
-            slave.write(self.TEST_DATA_1)
+            aslave.write(self.TEST_ADATA_1)
 
-            self.assertFalse(slave.is_open)
+            self.assertFalse(aslave.is_open)
             pty.slave = None
-            self.assertFalse(slave.read_active)
-            self.assertFalse(slave.write_active)
-            self.assertIsNone(slave.input_data)
-            self.assertEqual(slave.output_data, self.TEST_DATA_1)
-            self.assertIsNone(slave.read_errno)
-            self.assertEqual(slave.write_errno, EIO)
+            self.assertFalse(aslave.read_active)
+            self.assertFalse(aslave.write_active)
+            self.assertIsNone(aslave.input_data)
+            self.assertEqual(aslave.output_data, self.TEST_ADATA_1)
+            self.assertIsNone(aslave.read_errno)
+            self.assertEqual(aslave.write_errno, EIO)
             self.assertEqual(
-                slave.write_error_text, os.strerror(slave.write_errno)
+                aslave.write_error_text, os.strerror(aslave.write_errno)
             )
 
 if __name__ == '__main__':
