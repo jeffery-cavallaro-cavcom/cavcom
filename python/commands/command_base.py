@@ -522,7 +522,6 @@ class CommandBase:
 
         if self.master:
             self.master.close()
-            self.master = None
 
         if self.pty:
             self.pty.close()

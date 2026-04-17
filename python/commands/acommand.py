@@ -390,7 +390,7 @@ class Command(asyncio.SubprocessProtocol, FiniteStateMachine, CommandBase):
         ]
 
     def sudo_stdio(self, _state : int, _event : int, _data : Any) -> int:
-        """ SUDO authentication action method (on master) """
+        """ SUDO authentication action method (on stdio) """
         if not self.match_sudo_prompt(self.stdout.data):
             return None
 

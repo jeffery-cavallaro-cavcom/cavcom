@@ -1,21 +1,24 @@
 """
-This class extends the event handler class for select loop signal events.  The
-event trigger() method is registered with a signal handler dispatcher.
+This class extends the event handler class for select loop signal events.
 """
 
 from selectors import DefaultSelector
-from typing import Any, Optional
+from signal import signal, Handlers
+from types import FrameType
+from typing import Any, Callable, Optional, Union
 
-from events.signal_handler import SignalHandler
 from events.event_handler import EventHandler
 
 class SignalEvent(EventHandler):
     """ Signal Events """
-    dispatcher : SignalHandler
+    Callback = Callable[[int, FrameType], None]
+
+    signo : int
+    old_handler : Union[Callback, Handlers]
 
     def __init__(
         self,
-        dispatcher : SignalHandler,
+        signo : int,
         selectors : DefaultSelector,
         event_data : Optional[Any] = None
     ):
@@ -23,9 +26,8 @@ class SignalEvent(EventHandler):
         Create and register a new signal event
 
         Arguments:
-            dispatcher:
-                Process-global signal dispatcher singleton.  Note that the
-                target signal number is inherent to this instance.
+            signo:
+                Target signal number.
             selectors:
                 Target select loop to which the event is registered.
             event_data:
@@ -33,15 +35,16 @@ class SignalEvent(EventHandler):
                 SelectKey.  This is normally an event ID.
         """
         super().__init__(selectors, event_data=event_data)
-        self.dispatcher = dispatcher
-        self.dispatcher.register_callback(self.trigger_signal, None)
 
-    def trigger_signal(self, _data) -> None:
+        self.signo = signo
+        self.old_handler = signal(self.signo, self.trigger_signal)
+
+    def trigger_signal(self, _signo : int, _frame : FrameType) -> None:
         """ Match call signature """
-        super().trigger()
+        self.trigger()
         return True  # never auto-deregister
 
     def close(self) -> None:
         """ Unregister signal event """
-        self.dispatcher.deregister_callback(self.trigger_signal)
+        signal(self.signo, self.old_handler)
         super().close()
