@@ -148,7 +148,10 @@ class Command(FiniteStateMachine, CommandBase):
         while self.q_now != Command.Q_DONE:
             events = self.select_loop.select()
             for key, which in events:
-                event_ids = SelectEndpoint.get_events(key, which)
+                if isinstance(key.data, tuple):
+                    event_ids = SelectEndpoint.get_events(key, which)
+                else:
+                    event_ids = [key.data]
                 for event_id in event_ids:
                     if event_id == Command.E_TIMEOUT:
                         if self.timer:
@@ -369,13 +372,13 @@ class Command(FiniteStateMachine, CommandBase):
         """ Collect output """
         if stdout:
             if self.stdout:
-                self.stdout.append(stdout)
+                self.stdout.extend(stdout)
             else:
                 self.stdout = bytearray(stdout)
 
         if stderr:
             if self.stderr:
-                self.stderr.append(stderr)
+                self.stderr.extend(stderr)
             else:
                 self.stderr = bytearray(stderr)
 
@@ -399,6 +402,7 @@ if __name__ == '__main__':
             try:
                 command.execute()
             except Exception as error:  # pylint: disable=broad-except
+                raise
                 sys.exit(error)
 
             print('STATUS:', command.status)
