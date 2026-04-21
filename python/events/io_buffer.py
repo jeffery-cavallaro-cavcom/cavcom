@@ -28,6 +28,25 @@ class IOBuffer:
         """
         self.buffer.extend(data)
 
+    def reset(self, count : Optional[int] = None) -> None:
+        """
+        Reset the buffer
+
+        Arguments:
+            count:
+                If specified then a maximum of this many bytes are removed from
+                the start of the buffer.  Otherwise, the buffer is reset to
+                empty.
+        """
+        if count is None:
+            self.buffer = bytearray()
+        else:
+            self.buffer = self.buffer[count:]
+
+    def __len__(self) -> int:
+        """ Get number of bytes in buffer """
+        return len(self.buffer)
+
     def fetch_bytes(self, reset : Optional[bool] = False) -> bytes:
         """
         Extract data from the buffer
@@ -44,7 +63,7 @@ class IOBuffer:
 
         data = bytes(self.buffer)
         if reset:
-            self.buffer = bytearray()
+            self.reset()
 
         return data
 
@@ -67,7 +86,7 @@ class IOBuffer:
         try:
             text = self.buffer.decode()
             if reset:
-                self.buffer = bytearray()
+                self.reset()
         except UnicodeDecodeError as error:
             if error.end < len(self.buffer):
                 raise

@@ -13,13 +13,14 @@ from typing import Any, ClassVar, Optional
 
 from events.aio_endpoint import AIOEndpoint
 from events.fsm import FiniteStateMachine, State
+from events.io_buffer import IOBuffer
 
 from commands.command_base import CommandBase
 
 class IOManager:
     """ Manage a STDIO Endpoint """
     mode : int
-    data : bytearray
+    data : IOBuffer
     closed : bool
     errno : int
     error_text : str
@@ -35,7 +36,7 @@ class IOManager:
                 PIPE or STDOUT for stderr.
         """
         self.mode = mode
-        self.data = None
+        self.data = IOBuffer()
         self.closed = mode != PIPE
         self.errno = None
         self.error_text = None
@@ -48,10 +49,7 @@ class IOManager:
             data:
                 Data to append.
         """
-        if self.data:
-            self.data.extend(data)
-        else:
-            self.data = bytearray(data)
+        self.data.append(data)
 
     def close(self, error : Optional[Exception] = None) -> None:
         """
@@ -391,7 +389,8 @@ class Command(asyncio.SubprocessProtocol, FiniteStateMachine, CommandBase):
 
     def sudo_stdio(self, _state : int, _event : int, _data : Any) -> int:
         """ SUDO authentication action method (on stdio) """
-        if not self.match_sudo_prompt(self.stdout.data):
+        text = self.stdout.data.fetch_text()
+        if not self.sudo_prompt.search(text):
             return None
 
         self.transport.get_pipe_transport(0).write(self.password)
@@ -443,17 +442,23 @@ if __name__ == '__main__':
             print('STATUS:', acommand.status)
             print('REASON:', acommand.reason)
 
-            if acommand.master and acommand.master.input_data:
-                print('MASTER:')
-                print(acommand.master.input_data.decode())
+            if acommand.master:
+                text = acommand.master.fetch_input(text=True)
+                if text:
+                    print('MASTER:')
+                    print(text)
 
-            if acommand.stdout and acommand.stdout.data:
-                print('STDOUT:')
-                print(acommand.stdout.data.decode())
+            if acommand.stdout:
+                text = acommand.stdout.data.fetch_text()
+                if text:
+                    print('STDOUT:')
+                    print(text)
 
-            if acommand.stderr and acommand.stderr.data:
-                print('STDERR:')
-                print(acommand.stderr.data.decode())
+            if acommand.stderr:
+                text = acommand.stderr.data.fetch_text()
+                if text:
+                    print('STDERR:')
+                    print(text)
 
         sys.exit(acommand.status)
 

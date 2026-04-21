@@ -328,42 +328,6 @@ class CommandBase:
     def cancel_timer(self) -> None:
         """ Cancel any started timer """
 
-    def match_ssh_prompt(self, prompt : bytes) -> bool:
-        """
-        Check for a matching ssh password prompt
-
-        Returns:
-            True if the specified raw input matches the expected prompt.
-        """
-        if not bytes:
-            return None
-
-        try:
-            text = prompt.decode()
-        except:  # pylint: disable=bare-except
-            # Unicode sequence may be incomplete.
-            return None
-
-        return bool(self.ssh_prompt.search(text))
-
-    def match_sudo_prompt(self, prompt : bytes) -> int:
-        """
-        Check for a matching sudo password prompt
-
-        Returns:
-            True if the specified raw input matches the expected prompt.
-        """
-        if not bytes:
-            return None
-
-        try:
-            text = prompt.decode()
-        except:  # pylint: disable=bare-except
-            # Unicode sequence may be incomplete.
-            return None
-
-        return bool(self.sudo_prompt.search(text))
-
     def initial_state(self, _state : int, _event : int, _data : Any) -> int:
         """ Q_START begin method to determine the initial state """
         if self.use_ssh_password:
@@ -417,7 +381,8 @@ class CommandBase:
         if q_next is not None:
             return q_next
 
-        if not self.match_ssh_prompt(self.master.input_data):
+        text = self.master.fetch_input(text=True)
+        if not self.ssh_prompt.search(text):
             return None
 
         self.master.write(self.password)
@@ -438,7 +403,8 @@ class CommandBase:
         if q_next is not None:
             return q_next
 
-        if not self.match_sudo_prompt(self.master.input_data):
+        text = self.master.fetch_input(text=True)
+        if not self.sudo_prompt.search(text):
             return None
 
         self.master.write(self.password)

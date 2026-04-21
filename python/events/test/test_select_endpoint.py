@@ -70,7 +70,7 @@ class TestSelectEndpoint(unittest.TestCase):
                 self.assertEqual(len(data), 1)
                 self.assertEqual(data[0], self.E_READ_1)
                 sreader.read()
-                data = sreader.fetch_input()
+                data = sreader.fetch_input(reset=True)
                 self.assertEqual(data, self.TEST_SDATA_1)
                 self.assertTrue(sreader.reading)
                 self.assertFalse(swriter.writing)
@@ -84,7 +84,7 @@ class TestSelectEndpoint(unittest.TestCase):
                 self.assertEqual(len(data), 1)
                 self.assertEqual(data[0], self.E_READ_1)
                 sreader.read()
-                data = sreader.fetch_input()
+                data = sreader.fetch_input(reset=True)
                 self.assertIsNone(data)
                 self.assertFalse(sreader.reading)
                 self.assertFalse(swriter.writing)
@@ -144,7 +144,7 @@ class TestSelectEndpoint(unittest.TestCase):
                 self.assertEqual(len(data), 1)
                 self.assertEqual(data[0], self.E_READ_2)
                 sslave.read()
-                data = sslave.fetch_input()
+                data = sslave.fetch_input(reset=True)
                 self.assertEqual(data, self.TEST_SDATA_1)
 
                 sslave.write(self.TEST_SDATA_2)
@@ -155,7 +155,7 @@ class TestSelectEndpoint(unittest.TestCase):
                 self.assertEqual(len(data), 1)
                 self.assertEqual(data[0], self.E_READ_1)
                 smaster.read()
-                data = smaster.fetch_input()
+                data = smaster.fetch_input(reset=True)
                 self.assertEqual(data, self.TEST_SDATA_2)
 
                 # EOF
@@ -167,7 +167,7 @@ class TestSelectEndpoint(unittest.TestCase):
                 self.assertEqual(len(data), 1)
                 self.assertEqual(data[0], self.E_READ_2)
                 sslave.read()
-                data = sslave.fetch_input()
+                data = sslave.fetch_input(reset=True)
                 self.assertIsNone(data)
                 self.assertFalse(sslave.is_open)
                 pty.slave = None
@@ -212,7 +212,7 @@ class TestSelectEndpoint(unittest.TestCase):
                 smaster.write()
                 smaster.read()
 
-                data = smaster.fetch_input()
+                data = smaster.fetch_input(reset=True)
                 self.assertEqual(data, self.TEST_SDATA_1)
 
                 self.assertTrue(smaster.reading)
@@ -252,7 +252,7 @@ class TestSelectEndpoint(unittest.TestCase):
                 self.assertEqual(len(data), 1)
                 self.assertEqual(data[0], self.E_READ_2)
                 sslave.read()
-                data = sslave.fetch_input()
+                data = sslave.fetch_input(reset=True)
                 self.assertEqual(data, self.TEST_SDATA_1)
 
                 sslave.write(self.TEST_SDATA_2)
@@ -263,7 +263,7 @@ class TestSelectEndpoint(unittest.TestCase):
                 self.assertEqual(len(data), 1)
                 self.assertEqual(data[0], self.E_READ_1)
                 smaster.read()
-                data = smaster.fetch_input()
+                data = smaster.fetch_input(reset=True)
                 self.assertEqual(data, self.TEST_SDATA_2)
 
                 # Close the slave.
@@ -271,15 +271,15 @@ class TestSelectEndpoint(unittest.TestCase):
                 pty.slave = None
 
                 smaster.read()
-                data = smaster.fetch_input()
+                data = smaster.fetch_input(reset=True)
                 self.assertIsNone(data)
 
                 self.assertFalse(smaster.is_open)
                 pty.master = None
                 self.assertFalse(smaster.reading)
                 self.assertFalse(smaster.writing)
-                self.assertIsNone(smaster.input_data)
-                self.assertIsNone(smaster.output_data)
+                self.assertIsNone(smaster.fetch_input())
+                self.assertEqual(len(smaster.output_data), 0)
                 self.assertEqual(smaster.read_errno, EIO)
                 self.assertEqual(
                     smaster.read_error_text, os.strerror(smaster.read_errno)
@@ -319,7 +319,7 @@ class TestSelectEndpoint(unittest.TestCase):
                 self.assertEqual(len(data), 1)
                 self.assertEqual(data[0], self.E_READ_2)
                 sslave.read()
-                data = sslave.fetch_input()
+                data = sslave.fetch_input(reset=True)
                 self.assertEqual(data, self.TEST_SDATA_1)
 
                 sslave.write(self.TEST_SDATA_2)
@@ -330,7 +330,7 @@ class TestSelectEndpoint(unittest.TestCase):
                 self.assertEqual(len(data), 1)
                 self.assertEqual(data[0], self.E_READ_1)
                 smaster.read()
-                data = smaster.fetch_input()
+                data = smaster.fetch_input(reset=True)
                 self.assertEqual(data, self.TEST_SDATA_2)
 
                 # Close the master.
@@ -343,8 +343,10 @@ class TestSelectEndpoint(unittest.TestCase):
 
                 self.assertFalse(sslave.reading)
                 self.assertFalse(sslave.writing)
-                self.assertIsNone(sslave.input_data)
-                self.assertEqual(sslave.output_data, self.TEST_SDATA_1)
+                self.assertIsNone(sslave.fetch_input())
+                self.assertEqual(
+                    len(sslave.output_data), len(self.TEST_SDATA_1)
+                )
                 self.assertIsNone(sslave.read_errno)
                 self.assertEqual(sslave.write_errno, EIO)
                 self.assertEqual(

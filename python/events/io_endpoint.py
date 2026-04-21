@@ -15,15 +15,15 @@ type bytes.
 
 When the read() method is called, os.read() is called on the underlying file
 descriptor and any newly read data is appended to the input buffer.  The input
-buffer will continue to grow until the fetch_input() method is called, which
-returns all oustanding input data and resets the input buffer to empty.  If
-there is new input data then the optional read callback is called with the
-opaque callback argument.  If EOF is encountered then any read event is
-unregistered, the file descriptor is closed, and the optional EOF callback is
-called with the opaque callback argument.  All read errors (except
-BlockingIOError) are treated as EOF; however, the corresponding error code and
-reason text are saved.  Note that EOF or an error does not clear the input
-buffer.
+buffer will continue to grow until the fetch_input() method is called with a
+reset value of True, which returns all oustanding input data and resets the
+input buffer to empty.  If there is new input data then the optional read
+callback is called with the opaque callback argument.  If EOF is encountered
+then any read event is unregistered, the file descriptor is closed, and the
+optional EOF callback is called with the opaque callback argument.  All read
+errors (except BlockingIOError) are treated as EOF; however, the corresponding
+error code and reason text are saved.  Note that EOF or an error does not clear
+the input buffer.
 
 The assumption is that write events are only applicable when there is
 outstanding data in the output buffer to write.  Thus, the write() method will
@@ -42,7 +42,9 @@ be gleaned from the saved error codes and reason texts.
 
 from errno import EIO
 import os
-from typing import Any, Callable, ClassVar, Optional
+from typing import Any, Callable, ClassVar, Optional, Union
+
+from events.io_buffer import IOBuffer
 
 class IOEndpoint:
     """ Manage an I/O Endpoint """
@@ -53,14 +55,14 @@ class IOEndpoint:
 
     reader : int
     read_size : int
-    input_data : bytearray
+    input_data : IOBuffer
     read_callback : Callback
     eof_callback : Callback
     read_errno : int
     read_error_text : str
 
     writer : int
-    output_data : bytearray
+    output_data : IOBuffer
     write_error_callback : Callback
     write_errno : int
     write_error_text : str
@@ -104,13 +106,13 @@ class IOEndpoint:
         os.set_blocking(self.fd, False)
 
         self.read_size = read_size or self.DEFAULT_READ_SIZE
-        self.input_data = None
+        self.input_data = IOBuffer()
         self.read_callback = read_callback
         self.eof_callback = eof_callback
         self.read_errno = None
         self.read_error_text = None
 
-        self.output_data = None
+        self.output_data = IOBuffer()
         self.write_error_callback = write_error_callback
         self.write_errno = None
         self.write_error_text = None
@@ -159,10 +161,7 @@ class IOEndpoint:
                 self.eof_callback(self.callback_data)
             return
 
-        if self.input_data:
-            self.input_data.extend(new_data)
-        else:
-            self.input_data = bytearray(new_data)
+        self.input_data.append(new_data)
 
         if self.read_callback:
             self.read_callback(self.callback_data)
@@ -180,18 +179,14 @@ class IOEndpoint:
             return
 
         if data:
-            if self.output_data:
-                self.output_data.extend(data)
-            else:
-                self.output_data = bytearray(data)
+            self.output_data.append(data)
 
-        if not self.output_data:
-            self.output_data = None
+        if len(self.output_data) <= 0:
             self.unregister_write()
             return
 
         try:
-            actual = os.write(self.fd, self.output_data)
+            actual = os.write(self.fd, self.output_data.fetch_bytes())
         except BlockingIOError:
             actual = 0
         except OSError as error:
@@ -210,16 +205,32 @@ class IOEndpoint:
             return
 
         if actual >= len(self.output_data):
-            self.output_data = None
+            self.output_data.reset()
             self.unregister_write()
         else:
-            self.output_data[:] = self.output_data[actual:]
+            self.output_data.reset(count=actual)
             self.register_write()
 
-    def fetch_input(self) -> bytes:
-        """ Fetch outstanding input data and clear input buffer """
-        data = bytes(self.input_data) if self.input_data else None
-        self.input_data = None
+    def fetch_input(
+        self, text : Optional[bool] = False, reset : Optional[bool] = False
+    ) -> Union[bytes, str]:
+        """
+        Fetch outstanding input data and clear input buffer
+
+        Arguments:
+            text:
+                If True then returned decoded text.
+            reset:
+                If True then any returned data is flushed from the buffer.
+
+        Returns:
+            Outstanding bytes or decoded text.
+        """
+        if text:
+            data = self.input_data.fetch_text(reset=reset)
+        else:
+            data = self.input_data.fetch_bytes(reset=reset)
+
         return data
 
     def close(self) -> None:

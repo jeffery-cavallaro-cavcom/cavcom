@@ -25,7 +25,7 @@ class TestACommand(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(acommand.status, 0)
         self.assertIsNone(acommand.reason)
-        self.assertEqual(acommand.stdout.data.decode().strip(), self.HOST)
+        self.assertEqual(acommand.stdout.data.fetch_text().strip(), self.HOST)
 
     async def test_two_local(self):
         """ Execute two different commands locally """
@@ -52,12 +52,12 @@ class TestACommand(unittest.IsolatedAsyncioTestCase):
         command = commands[0]
         self.assertEqual(command.status, 0)
         self.assertIsNone(command.reason)
-        self.assertEqual(command.stdout.data.decode().strip(), self.HOST)
+        self.assertEqual(command.stdout.data.fetch_text().strip(), self.HOST)
 
         command = commands[1]
         self.assertEqual(command.status, 0)
         self.assertIsNone(command.reason)
-        self.assertEqual(command.stdout.data.decode().strip(), self.USER)
+        self.assertEqual(command.stdout.data.fetch_text().strip(), self.USER)
 
     async def test_many_local(self):
         """ Execute many commands locally """
@@ -81,7 +81,18 @@ class TestACommand(unittest.IsolatedAsyncioTestCase):
         for command in commands:
             self.assertEqual(command.status, 0)
             self.assertIsNone(command.reason)
-            self.assertEqual(command.stdout.data.decode().strip(), self.HOST)
+            self.assertEqual(command.stdout.data.fetch_text().strip(), self.HOST)
+
+    async def test_timeout(self):
+        """ Execute a command that times out """
+        with Command(
+            ['sleep', '10'],
+            command_timeout=1.0,
+        ) as acommand:
+            await acommand.execute()
+
+        self.assertEqual(acommand.status, -15)
+        self.assertIn('timeout', acommand.reason)
 
     async def test_one_remote(self):
         """ Execute a single command remotely (ssh key) """
@@ -94,7 +105,7 @@ class TestACommand(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(acommand.status, 0)
         self.assertIsNone(acommand.reason)
-        self.assertEqual(acommand.stdout.data.decode().strip(), self.HOST)
+        self.assertEqual(acommand.stdout.data.fetch_text().strip(), self.HOST)
 
     async def test_two_remote(self):
         """ Execute two different commands remotely (ssh key) """
@@ -123,12 +134,12 @@ class TestACommand(unittest.IsolatedAsyncioTestCase):
         command = commands[0]
         self.assertEqual(command.status, 0)
         self.assertIsNone(command.reason)
-        self.assertEqual(command.stdout.data.decode().strip(), self.HOST)
+        self.assertEqual(command.stdout.data.fetch_text().strip(), self.HOST)
 
         command = commands[1]
         self.assertEqual(command.status, 0)
         self.assertIsNone(command.reason)
-        self.assertEqual(command.stdout.data.decode().strip(), self.USER)
+        self.assertEqual(command.stdout.data.fetch_text().strip(), self.USER)
 
     async def test_many_remote(self):
         """ Execute many commands remotely (ssh key) """
@@ -153,7 +164,7 @@ class TestACommand(unittest.IsolatedAsyncioTestCase):
         for command in commands:
             self.assertEqual(command.status, 0)
             self.assertIsNone(command.reason)
-            self.assertEqual(command.stdout.data.decode().strip(), self.HOST)
+            self.assertEqual(command.stdout.data.fetch_text().strip(), self.HOST)
 
 if __name__ == '__main__':
     unittest.main()

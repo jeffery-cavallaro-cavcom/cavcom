@@ -115,7 +115,7 @@ class TestAIOEndpoint(unittest.IsolatedAsyncioTestCase):
             event_id = await event_handler.next_event(self.E_READ_1)
             self.assertEqual(event_id, self.E_READ_1)
             areader.read()
-            data = areader.fetch_input()
+            data = areader.fetch_input(reset=True)
             self.assertEqual(data, self.TEST_ADATA_1)
             self.assertFalse(awriter.write_active)
             self.assertTrue(areader.read_active)
@@ -125,7 +125,7 @@ class TestAIOEndpoint(unittest.IsolatedAsyncioTestCase):
             event_id = await event_handler.next_event(self.E_READ_1)
             self.assertEqual(event_id, self.E_READ_1)
             areader.read()
-            data = areader.fetch_input()
+            data = areader.fetch_input(reset=True)
             self.assertIsNone(data)
             self.assertFalse(areader.read_active)
             self.assertFalse(areader.is_open)
@@ -178,14 +178,14 @@ class TestAIOEndpoint(unittest.IsolatedAsyncioTestCase):
             event_id = await event_handler.next_event(self.E_READ_2)
             self.assertEqual(event_id, self.E_READ_2)
             aslave.read()
-            data = aslave.fetch_input()
+            data = aslave.fetch_input(reset=True)
             self.assertEqual(data, self.TEST_ADATA_1)
 
             aslave.write(self.TEST_ADATA_2)
             event_id = await event_handler.next_event(self.E_READ_1)
             self.assertEqual(event_id, self.E_READ_1)
             amaster.read()
-            data = amaster.fetch_input()
+            data = amaster.fetch_input(reset=True)
             self.assertEqual(data, self.TEST_ADATA_2)
 
             # EOF
@@ -193,7 +193,7 @@ class TestAIOEndpoint(unittest.IsolatedAsyncioTestCase):
             event_id = await event_handler.next_event(self.E_READ_2)
             self.assertEqual(event_id, self.E_READ_2)
             aslave.read()
-            data = aslave.fetch_input()
+            data = aslave.fetch_input(reset=True)
             self.assertIsNone(data)
             self.assertFalse(aslave.is_open)
             pty.slave = None
@@ -236,7 +236,7 @@ class TestAIOEndpoint(unittest.IsolatedAsyncioTestCase):
 
             amaster.write()
             amaster.read()
-            data = amaster.fetch_input()
+            data = amaster.fetch_input(reset=True)
 
             self.assertEqual(data, self.TEST_ADATA_1)
             self.assertTrue(amaster.read_active)
@@ -271,14 +271,14 @@ class TestAIOEndpoint(unittest.IsolatedAsyncioTestCase):
             event_id = await event_handler.next_event(self.E_READ_2)
             self.assertEqual(event_id, self.E_READ_2)
             aslave.read()
-            data = aslave.fetch_input()
+            data = aslave.fetch_input(reset=True)
             self.assertEqual(data, self.TEST_ADATA_1)
 
             aslave.write(self.TEST_ADATA_2)
             event_id = await event_handler.next_event(self.E_READ_1)
             self.assertEqual(event_id, self.E_READ_1)
             amaster.read()
-            data = amaster.fetch_input()
+            data = amaster.fetch_input(reset=True)
             self.assertEqual(data, self.TEST_ADATA_2)
 
             # Close the slave.
@@ -288,15 +288,15 @@ class TestAIOEndpoint(unittest.IsolatedAsyncioTestCase):
             event_id = await event_handler.next_event(self.E_READ_1)
             self.assertEqual(event_id, self.E_READ_1)
             amaster.read()
-            data = amaster.fetch_input()
+            data = amaster.fetch_input(reset=True)
             self.assertIsNone(data)
 
             self.assertFalse(amaster.is_open)
             pty.master = None
             self.assertFalse(amaster.read_active)
             self.assertFalse(amaster.write_active)
-            self.assertIsNone(amaster.input_data)
-            self.assertIsNone(amaster.output_data)
+            self.assertIsNone(amaster.fetch_input())
+            self.assertEqual(len(amaster.output_data), 0)
             self.assertEqual(amaster.read_errno, EIO)
             self.assertEqual(
                 amaster.read_error_text, os.strerror(amaster.read_errno)
@@ -332,14 +332,14 @@ class TestAIOEndpoint(unittest.IsolatedAsyncioTestCase):
             event_id = await event_handler.next_event(self.E_READ_2)
             self.assertEqual(event_id, self.E_READ_2)
             aslave.read()
-            data = aslave.fetch_input()
+            data = aslave.fetch_input(reset=True)
             self.assertEqual(data, self.TEST_ADATA_1)
 
             aslave.write(self.TEST_ADATA_2)
             event_id = await event_handler.next_event(self.E_READ_1)
             self.assertEqual(event_id, self.E_READ_1)
             amaster.read()
-            data = amaster.fetch_input()
+            data = amaster.fetch_input(reset=True)
             self.assertEqual(data, self.TEST_ADATA_2)
 
             # Close the master.
@@ -351,8 +351,8 @@ class TestAIOEndpoint(unittest.IsolatedAsyncioTestCase):
             pty.slave = None
             self.assertFalse(aslave.read_active)
             self.assertFalse(aslave.write_active)
-            self.assertIsNone(aslave.input_data)
-            self.assertEqual(aslave.output_data, self.TEST_ADATA_1)
+            self.assertIsNone(aslave.fetch_input())
+            self.assertEqual(len(aslave.output_data), len(self.TEST_ADATA_1))
             self.assertIsNone(aslave.read_errno)
             self.assertEqual(aslave.write_errno, EIO)
             self.assertEqual(

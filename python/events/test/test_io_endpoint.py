@@ -98,13 +98,13 @@ class TestIOEndpoint(unittest.TestCase):
             reader.received_data = None
             writer.write(self.TEST_DATA_1)
             reader.read()
-            data = reader.fetch_input()
+            data = reader.fetch_input(reset=True)
             self.assertEqual(data, self.TEST_DATA_1)
 
             self.assertTrue(reader.read_registered)
             self.assertFalse(writer.write_registered)
-            self.assertIsNone(reader.input_data)
-            self.assertIsNone(writer.output_data)
+            self.assertIsNone(reader.fetch_input())
+            self.assertEqual(len(writer.output_data), 0)
             self.assertEqual(reader.read_called, 1)
             self.assertEqual(reader.eof_called, 0)
             self.assertEqual(reader.error_called, 0)
@@ -118,13 +118,13 @@ class TestIOEndpoint(unittest.TestCase):
             reader.read()
             writer.write(self.TEST_DATA_2[5:])
             reader.read()
-            data = reader.fetch_input()
+            data = reader.fetch_input(reset=True)
             self.assertEqual(data, self.TEST_DATA_2)
 
             self.assertTrue(reader.read_registered)
             self.assertFalse(writer.write_registered)
-            self.assertIsNone(reader.input_data)
-            self.assertIsNone(writer.output_data)
+            self.assertIsNone(reader.fetch_input())
+            self.assertEqual(len(writer.output_data), 0)
             # No buffering on a pipe so called twice!
             self.assertEqual(reader.read_called, 3)
             self.assertEqual(reader.eof_called, 0)
@@ -144,8 +144,8 @@ class TestIOEndpoint(unittest.TestCase):
             self.assertFalse(writer.is_open)
             self.assertFalse(reader.read_registered)
             self.assertFalse(writer.write_registered)
-            self.assertIsNone(reader.input_data)
-            self.assertIsNone(writer.output_data)
+            self.assertIsNone(reader.fetch_input())
+            self.assertEqual(len(writer.output_data), 0)
             self.assertEqual(reader.read_called, 3)
             self.assertEqual(reader.eof_called, 1)
             self.assertEqual(reader.error_called, 0)
@@ -189,13 +189,13 @@ class TestIOEndpoint(unittest.TestCase):
             slave.received_data = None
             master.write(self.TEST_DATA_1)
             slave.read()
-            data = slave.fetch_input()
+            data = slave.fetch_input(reset=True)
             self.assertEqual(data, self.TEST_DATA_1)
 
             self.assertTrue(master.read_registered)
             self.assertFalse(master.write_registered)
-            self.assertIsNone(master.input_data)
-            self.assertIsNone(master.output_data)
+            self.assertIsNone(master.fetch_input())
+            self.assertEqual(len(master.output_data), 0)
             self.assertEqual(master.read_called, 0)
             self.assertEqual(master.eof_called, 0)
             self.assertEqual(master.error_called, 0)
@@ -205,8 +205,8 @@ class TestIOEndpoint(unittest.TestCase):
 
             self.assertTrue(slave.read_registered)
             self.assertFalse(master.write_registered)
-            self.assertIsNone(slave.input_data)
-            self.assertIsNone(slave.output_data)
+            self.assertIsNone(slave.fetch_input())
+            self.assertEqual(len(slave.output_data), 0)
             self.assertEqual(slave.read_called, 1)
             self.assertEqual(slave.eof_called, 0)
             self.assertEqual(slave.error_called, 0)
@@ -218,13 +218,13 @@ class TestIOEndpoint(unittest.TestCase):
             slave.received_data = None
             slave.write(self.TEST_DATA_2)
             master.read()
-            data = master.fetch_input()
+            data = master.fetch_input(reset=True)
             self.assertEqual(data, self.TEST_DATA_2)
 
             self.assertTrue(master.read_registered)
             self.assertFalse(master.write_registered)
-            self.assertIsNone(master.input_data)
-            self.assertIsNone(master.output_data)
+            self.assertIsNone(master.fetch_input())
+            self.assertEqual(len(master.output_data), 0)
             self.assertEqual(master.read_called, 1)
             self.assertEqual(master.eof_called, 0)
             self.assertEqual(master.error_called, 0)
@@ -234,8 +234,8 @@ class TestIOEndpoint(unittest.TestCase):
 
             self.assertTrue(slave.read_registered)
             self.assertFalse(master.write_registered)
-            self.assertIsNone(slave.input_data)
-            self.assertIsNone(slave.output_data)
+            self.assertIsNone(slave.fetch_input())
+            self.assertEqual(len(slave.output_data), 0)
             self.assertEqual(slave.read_called, 1)
             self.assertEqual(slave.eof_called, 0)
             self.assertEqual(slave.error_called, 0)
@@ -250,13 +250,13 @@ class TestIOEndpoint(unittest.TestCase):
             slave.read()
             master.write(self.TEST_DATA_2[5:])
             slave.read()
-            data = slave.fetch_input()
+            data = slave.fetch_input(reset=True)
             self.assertEqual(data, self.TEST_DATA_2)
 
             self.assertTrue(master.read_registered)
             self.assertFalse(master.write_registered)
-            self.assertIsNone(master.input_data)
-            self.assertIsNone(master.output_data)
+            self.assertIsNone(master.fetch_input())
+            self.assertEqual(len(master.output_data), 0)
             self.assertEqual(master.read_called, 1)
             self.assertEqual(master.eof_called, 0)
             self.assertEqual(master.error_called, 0)
@@ -266,8 +266,8 @@ class TestIOEndpoint(unittest.TestCase):
 
             self.assertTrue(slave.read_registered)
             self.assertFalse(slave.write_registered)
-            self.assertIsNone(slave.input_data)
-            self.assertIsNone(slave.output_data)
+            self.assertIsNone(slave.fetch_input())
+            self.assertEqual(len(slave.output_data), 0)
             # Buffering, so called only once!
             self.assertEqual(slave.read_called, 2)
             self.assertEqual(slave.eof_called, 0)
@@ -281,14 +281,14 @@ class TestIOEndpoint(unittest.TestCase):
             slave.received_data = None
             master.write(b"\x04")  # ^D
             slave.read()
-            data = slave.fetch_input()
+            data = slave.fetch_input(reset=True)
             self.assertIsNone(data)
 
             self.assertTrue(master.is_open)
             self.assertTrue(master.read_registered)
             self.assertFalse(master.write_registered)
-            self.assertIsNone(master.input_data)
-            self.assertIsNone(master.output_data)
+            self.assertIsNone(master.fetch_input())
+            self.assertEqual(len(master.output_data), 0)
             self.assertEqual(master.read_called, 1)
             self.assertEqual(master.eof_called, 0)
             self.assertEqual(master.error_called, 0)
@@ -300,8 +300,8 @@ class TestIOEndpoint(unittest.TestCase):
             pty.slave = None
             self.assertFalse(slave.read_registered)
             self.assertFalse(slave.write_registered)
-            self.assertIsNone(slave.input_data)
-            self.assertIsNone(slave.output_data)
+            self.assertIsNone(slave.fetch_input())
+            self.assertEqual(len(slave.output_data), 0)
             self.assertEqual(slave.read_called, 2)
             self.assertEqual(slave.eof_called, 1)
             self.assertEqual(slave.error_called, 0)
@@ -330,12 +330,12 @@ class TestIOEndpoint(unittest.TestCase):
             # Read/write.
             master.write(self.TEST_DATA_1)
             slave.read()
-            data = slave.fetch_input()
+            data = slave.fetch_input(reset=True)
             self.assertEqual(data, self.TEST_DATA_1)
 
             slave.write(self.TEST_DATA_2)
             master.read()
-            data = master.fetch_input()
+            data = master.fetch_input(reset=True)
             self.assertEqual(data, self.TEST_DATA_2)
 
             # Close the slave.
@@ -343,15 +343,15 @@ class TestIOEndpoint(unittest.TestCase):
             pty.slave = None
 
             master.read()
-            data = master.fetch_input()
+            data = master.fetch_input(reset=True)
             self.assertIsNone(data)
 
             self.assertFalse(master.is_open)
             pty.master = None
             self.assertFalse(master.read_registered)
             self.assertFalse(master.write_registered)
-            self.assertIsNone(master.input_data)
-            self.assertIsNone(master.output_data)
+            self.assertIsNone(master.fetch_input())
+            self.assertEqual(len(master.output_data), 0)
             self.assertEqual(master.read_called, 1)
             self.assertEqual(master.eof_called, 1)
             self.assertEqual(master.error_called, 0)
@@ -380,12 +380,12 @@ class TestIOEndpoint(unittest.TestCase):
             # Read/write.
             master.write(self.TEST_DATA_1)
             slave.read()
-            data = slave.fetch_input()
+            data = slave.fetch_input(reset=True)
             self.assertEqual(data, self.TEST_DATA_1)
 
             slave.write(self.TEST_DATA_2)
             master.read()
-            data = master.fetch_input()
+            data = master.fetch_input(reset=True)
             self.assertEqual(data, self.TEST_DATA_2)
 
             # Close the master.
@@ -397,8 +397,8 @@ class TestIOEndpoint(unittest.TestCase):
             pty.slave = None
             self.assertFalse(slave.read_registered)
             self.assertFalse(slave.write_registered)
-            self.assertIsNone(slave.input_data)
-            self.assertEqual(bytes(slave.output_data), self.TEST_DATA_1)
+            self.assertIsNone(slave.fetch_input())
+            self.assertEqual(len(slave.output_data), len(self.TEST_DATA_1))
             self.assertEqual(slave.read_called, 1)
             self.assertEqual(slave.eof_called, 0)
             self.assertEqual(slave.error_called, 1)

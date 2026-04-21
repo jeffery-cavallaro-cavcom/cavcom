@@ -16,6 +16,7 @@ from events.select_endpoint import SelectEndpoint
 from events.event_handler import EventHandler
 from events.timer_event import TimerEvent
 from events.fsm import FiniteStateMachine, State
+from events.io_buffer import IOBuffer
 
 from commands.command_base import CommandBase
 
@@ -36,8 +37,8 @@ class Command(FiniteStateMachine, CommandBase):
     child : Popen
     stdout_blocking : bool
     stdout_key : SelectorKey
-    stdout : bytearray
-    stderr : bytearray
+    stdout : IOBuffer
+    stderr : IOBuffer
 
     def __init__(self, *args, **kwargs):
         """
@@ -58,8 +59,8 @@ class Command(FiniteStateMachine, CommandBase):
         self.child = None
         self.stdout_blocking = None
         self.stdout_key = None
-        self.stdout = None
-        self.stderr = None
+        self.stdout = IOBuffer()
+        self.stderr = IOBuffer()
 
     def setup_master(self) -> None:
         """ Setup master endpoint """
@@ -306,7 +307,8 @@ class Command(FiniteStateMachine, CommandBase):
 
         self.collect_output(data, None)
 
-        if not self.match_sudo_prompt(self.stdout):
+        text = self.stdout.fetch_text()
+        if not self.sudo_prompt.search(text):
             return None
 
         return self.Q_RUNNING
@@ -371,16 +373,10 @@ class Command(FiniteStateMachine, CommandBase):
     def collect_output(self, stdout : bytes, stderr : bytes) -> None:
         """ Collect output """
         if stdout:
-            if self.stdout:
-                self.stdout.extend(stdout)
-            else:
-                self.stdout = bytearray(stdout)
+            self.stdout.append(stdout)
 
         if stderr:
-            if self.stderr:
-                self.stderr.extend(stderr)
-            else:
-                self.stderr = bytearray(stderr)
+            self.stderr.append(stderr)
 
     def close(self) -> None:
         """ Tear down event loop and close endpoints """
@@ -402,23 +398,28 @@ if __name__ == '__main__':
             try:
                 command.execute()
             except Exception as error:  # pylint: disable=broad-except
-                raise
                 sys.exit(error)
 
             print('STATUS:', command.status)
             print('REASON:', command.reason)
 
-            if command.master and command.master.input_data:
-                print('MASTER:')
-                print(command.master.input_data.decode())
+            if command.master:
+                text = command.master.fetch_input(text=True)
+                if text:
+                    print('MASTER:')
+                    print(text)
 
-            if command.stdout and command.stdout:
-                print('STDOUT:')
-                print(command.stdout.decode())
+            if command.stdout:
+                text = command.stdout.fetch_text()
+                if text:
+                    print('STDOUT:')
+                    print(text)
 
-            if command.stderr and command.stderr:
-                print('STDERR:')
-                print(command.stderr.decode())
+            if command.stderr:
+                text = command.stderr.fetch_text()
+                if text:
+                    print('STDERR:')
+                    print(text)
 
         sys.exit(command.status)
 
