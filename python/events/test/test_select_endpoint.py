@@ -27,19 +27,20 @@ class TestSelectEndpoint(unittest.TestCase):
         reader_side, writer_side = os.pipe()
 
         with DefaultSelector() as select_loop:
-            try:
-                sreader = SelectEndpoint(
+            with (
+                SelectEndpoint(
                     select_loop,
                     reader_side,
                     read_data=self.E_READ_1,
                     write_data=None
-                )
-                swriter = SelectEndpoint(
+                ) as sreader,
+                SelectEndpoint(
                     select_loop,
                     writer_side,
                     read_data=None,
                     write_data=self.E_WRITE_2
-                )
+                ) as swriter
+            ):
                 sreader.register_read()
                 swriter.register_write()
 
@@ -88,270 +89,297 @@ class TestSelectEndpoint(unittest.TestCase):
                 self.assertIsNone(data)
                 self.assertFalse(sreader.reading)
                 self.assertFalse(swriter.writing)
-            finally:
-                sreader.close()
-                swriter.close()
+
+            self.assertFalse(sreader.is_open)
+            self.assertFalse(swriter.is_open)
 
     def test_pty(self):
         """ Allocate and use a PTY """
         # pylint: disable=too-many-statements
-        with PTYManager() as pty:
-            pty.disable_echo_crlf()
-            pty.set_nonblocking()
+        with PTYManager() as spty:
+            spty.disable_echo_crlf()
+            spty.set_nonblocking()
 
             with DefaultSelector() as select_loop:
-                smaster = SelectEndpoint(
-                    select_loop,
-                    pty.master,
-                    read_data=self.E_READ_1,
-                    write_data=self.E_WRITE_1
-                )
-                sslave = SelectEndpoint(
-                    select_loop,
-                    pty.slave,
-                    read_data=self.E_READ_2,
-                    write_data=self.E_WRITE_2
-                )
+                with (
+                    SelectEndpoint(
+                        select_loop,
+                        spty.master,
+                        no_close=True,
+                        read_data=self.E_READ_1,
+                        write_data=self.E_WRITE_1
+                    ) as smaster,
+                    SelectEndpoint(
+                        select_loop,
+                        spty.slave,
+                        no_close=True,
+                        read_data=self.E_READ_2,
+                        write_data=self.E_WRITE_2
+                    ) as sslave
+                ):
+                    smaster.register_read()
+                    smaster.register_write()
+                    sslave.register_read()
 
-                smaster.register_read()
-                smaster.register_write()
-                sslave.register_read()
+                    self.assertTrue(smaster.is_open)
+                    self.assertTrue(smaster.reading)
+                    self.assertTrue(smaster.writing)
 
-                self.assertTrue(smaster.is_open)
-                self.assertTrue(smaster.reading)
-                self.assertTrue(smaster.writing)
+                    self.assertTrue(sslave.is_open)
+                    self.assertTrue(sslave.reading)
+                    self.assertFalse(sslave.writing)
 
-                self.assertTrue(sslave.is_open)
-                self.assertTrue(sslave.reading)
-                self.assertFalse(sslave.writing)
+                    # A master write event is expected.
+                    events = select_loop.select()
+                    self.assertEqual(len(events), 1)
+                    key, event = events[0]
+                    data = SelectEndpoint.get_events(key, event)
+                    self.assertEqual(len(data), 1)
+                    self.assertEqual(data[0], self.E_WRITE_1)
+                    smaster.write()
+                    self.assertFalse(smaster.writing)
 
-                # A master write event is expected.
-                events = select_loop.select()
-                self.assertEqual(len(events), 1)
-                key, event = events[0]
-                data = SelectEndpoint.get_events(key, event)
-                self.assertEqual(len(data), 1)
-                self.assertEqual(data[0], self.E_WRITE_1)
-                smaster.write()
-                self.assertFalse(smaster.writing)
+                    # Read/write.
+                    smaster.write(self.TEST_SDATA_1)
+                    events = select_loop.select()
+                    self.assertEqual(len(events), 1)
+                    key, event = events[0]
+                    data = SelectEndpoint.get_events(key, event)
+                    self.assertEqual(len(data), 1)
+                    self.assertEqual(data[0], self.E_READ_2)
+                    sslave.read()
+                    data = sslave.fetch_input(reset=True)
+                    self.assertEqual(data, self.TEST_SDATA_1)
 
-                # Read/write.
-                smaster.write(self.TEST_SDATA_1)
-                events = select_loop.select()
-                self.assertEqual(len(events), 1)
-                key, event = events[0]
-                data = SelectEndpoint.get_events(key, event)
-                self.assertEqual(len(data), 1)
-                self.assertEqual(data[0], self.E_READ_2)
-                sslave.read()
-                data = sslave.fetch_input(reset=True)
-                self.assertEqual(data, self.TEST_SDATA_1)
+                    sslave.write(self.TEST_SDATA_2)
+                    events = select_loop.select()
+                    self.assertEqual(len(events), 1)
+                    key, event = events[0]
+                    data = SelectEndpoint.get_events(key, event)
+                    self.assertEqual(len(data), 1)
+                    self.assertEqual(data[0], self.E_READ_1)
+                    smaster.read()
+                    data = smaster.fetch_input(reset=True)
+                    self.assertEqual(data, self.TEST_SDATA_2)
 
-                sslave.write(self.TEST_SDATA_2)
-                events = select_loop.select()
-                self.assertEqual(len(events), 1)
-                key, event = events[0]
-                data = SelectEndpoint.get_events(key, event)
-                self.assertEqual(len(data), 1)
-                self.assertEqual(data[0], self.E_READ_1)
-                smaster.read()
-                data = smaster.fetch_input(reset=True)
-                self.assertEqual(data, self.TEST_SDATA_2)
+                    # EOF
+                    smaster.write(b"\x04")  # ^D
+                    events = select_loop.select()
+                    self.assertEqual(len(events), 1)
+                    key, event = events[0]
+                    data = SelectEndpoint.get_events(key, event)
+                    self.assertEqual(len(data), 1)
+                    self.assertEqual(data[0], self.E_READ_2)
+                    sslave.read()
+                    data = sslave.fetch_input(reset=True)
+                    self.assertIsNone(data)
+                    self.assertFalse(sslave.is_open)
 
-                # EOF
-                smaster.write(b"\x04")  # ^D
-                events = select_loop.select()
-                self.assertEqual(len(events), 1)
-                key, event = events[0]
-                data = SelectEndpoint.get_events(key, event)
-                self.assertEqual(len(data), 1)
-                self.assertEqual(data[0], self.E_READ_2)
-                sslave.read()
-                data = sslave.fetch_input(reset=True)
-                self.assertIsNone(data)
+                self.assertFalse(smaster.is_open)
                 self.assertFalse(sslave.is_open)
-                pty.slave = None
+
+        self.assertIsNone(spty.master)
+        self.assertIsNone(spty.slave)
 
     def test_both(self):
         """ Read and write event on the same endpoint """
-        with PTYManager() as pty:
-            pty.disable_echo_crlf()
-            pty.set_nonblocking()
+        with PTYManager() as spty:
+            spty.disable_echo_crlf()
+            spty.set_nonblocking()
 
             with DefaultSelector() as select_loop:
-                smaster = SelectEndpoint(
-                    select_loop,
-                    pty.master,
-                    read_data=self.E_READ_1,
-                    write_data=self.E_WRITE_1
-                )
-                sslave = SelectEndpoint(
-                    select_loop,
-                    pty.slave,
-                    read_data=self.E_READ_2,
-                    write_data=self.E_WRITE_2
-                )
+                with (
+                    SelectEndpoint(
+                        select_loop,
+                        spty.master,
+                        no_close=True,
+                        read_data=self.E_READ_1,
+                        write_data=self.E_WRITE_1
+                    ) as smaster,
+                    SelectEndpoint(
+                        select_loop,
+                        spty.slave,
+                        no_close=True,
+                        read_data=self.E_READ_2,
+                        write_data=self.E_WRITE_2
+                    ) as sslave
+                ):
+                    smaster.register_read()
+                    smaster.register_write()
 
-                smaster.register_read()
-                smaster.register_write()
+                    self.assertTrue(smaster.is_open)
+                    self.assertTrue(smaster.reading)
+                    self.assertTrue(smaster.writing)
 
-                self.assertTrue(smaster.is_open)
-                self.assertTrue(smaster.reading)
-                self.assertTrue(smaster.writing)
+                    sslave.write(self.TEST_SDATA_1)
+                    events = select_loop.select()
+                    self.assertEqual(len(events), 1)
+                    data = SelectEndpoint.get_events(*events[0])
+                    self.assertEqual(len(data), 2)
+                    self.assertIn(self.E_READ_1, data)
+                    self.assertIn(self.E_WRITE_1, data)
 
-                sslave.write(self.TEST_SDATA_1)
-                events = select_loop.select()
-                self.assertEqual(len(events), 1)
-                data = []
-                for event in events:
-                    data.extend(SelectEndpoint.get_events(*event))
-                self.assertEqual(len(data), 2)
-                self.assertIn(self.E_READ_1, data)
-                self.assertIn(self.E_WRITE_1, data)
+                    smaster.write()
+                    smaster.read()
 
-                smaster.write()
-                smaster.read()
+                    data = smaster.fetch_input(reset=True)
+                    self.assertEqual(data, self.TEST_SDATA_1)
 
-                data = smaster.fetch_input(reset=True)
-                self.assertEqual(data, self.TEST_SDATA_1)
+                    self.assertTrue(smaster.reading)
+                    self.assertFalse(smaster.writing)
+                    self.assertFalse(sslave.reading)
+                    self.assertFalse(sslave.writing)
 
-                self.assertTrue(smaster.reading)
-                self.assertFalse(smaster.writing)
-                self.assertFalse(sslave.reading)
-                self.assertFalse(sslave.writing)
+                self.assertFalse(smaster.is_open)
+                self.assertFalse(sslave.is_open)
+
+        self.assertIsNone(spty.master)
+        self.assertIsNone(spty.slave)
 
     def test_read_error(self):
         """ Force a read error """
-        with PTYManager() as pty:
-            pty.disable_echo_crlf()
-            pty.set_nonblocking()
+        with PTYManager() as spty:
+            spty.disable_echo_crlf()
+            spty.set_nonblocking()
 
             with DefaultSelector() as select_loop:
-                smaster = SelectEndpoint(
-                    select_loop,
-                    pty.master,
-                    read_data=self.E_READ_1,
-                    write_data=self.E_WRITE_1
-                )
-                sslave = SelectEndpoint(
-                    select_loop,
-                    pty.slave,
-                    read_data=self.E_READ_2,
-                    write_data=self.E_WRITE_2
-                )
+                with (
+                    SelectEndpoint(
+                        select_loop,
+                        spty.master,
+                        no_close=True,
+                        read_data=self.E_READ_1,
+                        write_data=self.E_WRITE_1
+                    ) as smaster,
+                    SelectEndpoint(
+                        select_loop,
+                        spty.slave,
+                        read_data=self.E_READ_2,
+                        write_data=self.E_WRITE_2
+                    ) as sslave
+                ):
+                    spty.slave = None  # Grab ownership
 
-                smaster.register_read()
-                sslave.register_read()
+                    smaster.register_read()
+                    sslave.register_read()
 
-                # Read/write.
-                smaster.write(self.TEST_SDATA_1)
-                events = select_loop.select()
-                self.assertEqual(len(events), 1)
-                key, event = events[0]
-                data = SelectEndpoint.get_events(key, event)
-                self.assertEqual(len(data), 1)
-                self.assertEqual(data[0], self.E_READ_2)
-                sslave.read()
-                data = sslave.fetch_input(reset=True)
-                self.assertEqual(data, self.TEST_SDATA_1)
+                    # Read/write.
+                    smaster.write(self.TEST_SDATA_1)
+                    events = select_loop.select()
+                    self.assertEqual(len(events), 1)
+                    key, event = events[0]
+                    data = SelectEndpoint.get_events(key, event)
+                    self.assertEqual(len(data), 1)
+                    self.assertEqual(data[0], self.E_READ_2)
+                    sslave.read()
+                    data = sslave.fetch_input(reset=True)
+                    self.assertEqual(data, self.TEST_SDATA_1)
 
-                sslave.write(self.TEST_SDATA_2)
-                events = select_loop.select()
-                self.assertEqual(len(events), 1)
-                key, event = events[0]
-                data = SelectEndpoint.get_events(key, event)
-                self.assertEqual(len(data), 1)
-                self.assertEqual(data[0], self.E_READ_1)
-                smaster.read()
-                data = smaster.fetch_input(reset=True)
-                self.assertEqual(data, self.TEST_SDATA_2)
+                    sslave.write(self.TEST_SDATA_2)
+                    events = select_loop.select()
+                    self.assertEqual(len(events), 1)
+                    key, event = events[0]
+                    data = SelectEndpoint.get_events(key, event)
+                    self.assertEqual(len(data), 1)
+                    self.assertEqual(data[0], self.E_READ_1)
+                    smaster.read()
+                    data = smaster.fetch_input(reset=True)
+                    self.assertEqual(data, self.TEST_SDATA_2)
 
-                # Close the slave.
-                sslave.close()
-                pty.slave = None
+                    # Close the slave to force a read error on the master.
+                    sslave.close()
 
-                smaster.read()
-                data = smaster.fetch_input(reset=True)
-                self.assertIsNone(data)
+                    smaster.read()
+                    data = smaster.fetch_input(reset=True)
+                    self.assertIsNone(data)
+
+                    self.assertFalse(smaster.is_open)
+                    self.assertFalse(smaster.reading)
+                    self.assertFalse(smaster.writing)
+                    self.assertIsNone(smaster.fetch_input())
+                    self.assertEqual(len(smaster.output_data), 0)
+                    self.assertEqual(smaster.errno, EIO)
+                    self.assertEqual(
+                        smaster.error_text, os.strerror(smaster.errno)
+                    )
 
                 self.assertFalse(smaster.is_open)
-                pty.master = None
-                self.assertFalse(smaster.reading)
-                self.assertFalse(smaster.writing)
-                self.assertIsNone(smaster.fetch_input())
-                self.assertEqual(len(smaster.output_data), 0)
-                self.assertEqual(smaster.read_errno, EIO)
-                self.assertEqual(
-                    smaster.read_error_text, os.strerror(smaster.read_errno)
-                )
-                self.assertIsNone(smaster.write_errno)
+                self.assertFalse(sslave.is_open)
+
+        self.assertIsNone(spty.master)
+        self.assertIsNone(spty.slave)
 
     def test_write_error(self):
         """ Force a write error """
-
-        with PTYManager() as pty:
-            pty.disable_echo_crlf()
-            pty.set_nonblocking()
+        with PTYManager() as spty:
+            spty.disable_echo_crlf()
+            spty.set_nonblocking()
 
             with DefaultSelector() as select_loop:
-                smaster = SelectEndpoint(
-                    select_loop,
-                    pty.master,
-                    read_data=self.E_READ_1,
-                    write_data=self.E_WRITE_1
-                )
-                sslave = SelectEndpoint(
-                    select_loop,
-                    pty.slave,
-                    read_data=self.E_READ_2,
-                    write_data=self.E_WRITE_2
-                )
+                with (
+                    SelectEndpoint(
+                        select_loop,
+                        spty.master,
+                        read_data=self.E_READ_1,
+                        write_data=self.E_WRITE_1
+                    ) as smaster,
+                    SelectEndpoint(
+                        select_loop,
+                        spty.slave,
+                        no_close=True,
+                        read_data=self.E_READ_2,
+                        write_data=self.E_WRITE_2
+                    ) as sslave
+                ):
+                    spty.master = None  # Grab ownership
 
-                smaster.register_read()
-                sslave.register_read()
+                    smaster.register_read()
+                    sslave.register_read()
 
-                # Read/write.
-                smaster.write(self.TEST_SDATA_1)
-                events = select_loop.select()
-                self.assertEqual(len(events), 1)
-                key, event = events[0]
-                data = SelectEndpoint.get_events(key, event)
-                self.assertEqual(len(data), 1)
-                self.assertEqual(data[0], self.E_READ_2)
-                sslave.read()
-                data = sslave.fetch_input(reset=True)
-                self.assertEqual(data, self.TEST_SDATA_1)
+                    # Read/write.
+                    smaster.write(self.TEST_SDATA_1)
+                    events = select_loop.select()
+                    self.assertEqual(len(events), 1)
+                    key, event = events[0]
+                    data = SelectEndpoint.get_events(key, event)
+                    self.assertEqual(len(data), 1)
+                    self.assertEqual(data[0], self.E_READ_2)
+                    sslave.read()
+                    data = sslave.fetch_input(reset=True)
+                    self.assertEqual(data, self.TEST_SDATA_1)
 
-                sslave.write(self.TEST_SDATA_2)
-                events = select_loop.select()
-                self.assertEqual(len(events), 1)
-                key, event = events[0]
-                data = SelectEndpoint.get_events(key, event)
-                self.assertEqual(len(data), 1)
-                self.assertEqual(data[0], self.E_READ_1)
-                smaster.read()
-                data = smaster.fetch_input(reset=True)
-                self.assertEqual(data, self.TEST_SDATA_2)
+                    sslave.write(self.TEST_SDATA_2)
+                    events = select_loop.select()
+                    self.assertEqual(len(events), 1)
+                    key, event = events[0]
+                    data = SelectEndpoint.get_events(key, event)
+                    self.assertEqual(len(data), 1)
+                    self.assertEqual(data[0], self.E_READ_1)
+                    smaster.read()
+                    data = smaster.fetch_input(reset=True)
+                    self.assertEqual(data, self.TEST_SDATA_2)
 
-                # Close the master.
-                smaster.close()
-                pty.master = None
-                sslave.write(self.TEST_SDATA_1)
+                    # Close the master to force a write error on the slave.
+                    smaster.close()
 
+                    sslave.write(self.TEST_SDATA_1)
+                    self.assertFalse(sslave.is_open)
+                    self.assertFalse(sslave.reading)
+                    self.assertFalse(sslave.writing)
+                    self.assertIsNone(sslave.fetch_input())
+                    self.assertEqual(
+                        len(sslave.output_data), len(self.TEST_SDATA_1)
+                    )
+                    self.assertEqual(sslave.errno, EIO)
+                    self.assertEqual(
+                        sslave.error_text, os.strerror(sslave.errno)
+                    )
+
+                self.assertFalse(smaster.is_open)
                 self.assertFalse(sslave.is_open)
-                pty.slave = None
 
-                self.assertFalse(sslave.reading)
-                self.assertFalse(sslave.writing)
-                self.assertIsNone(sslave.fetch_input())
-                self.assertEqual(
-                    len(sslave.output_data), len(self.TEST_SDATA_1)
-                )
-                self.assertIsNone(sslave.read_errno)
-                self.assertEqual(sslave.write_errno, EIO)
-                self.assertEqual(
-                    sslave.write_error_text, os.strerror(sslave.write_errno)
-                )
+        self.assertIsNone(spty.master)
+        self.assertIsNone(spty.slave)
 
 if __name__ == '__main__':
     unittest.main()

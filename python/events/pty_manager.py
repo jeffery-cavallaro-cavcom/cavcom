@@ -25,16 +25,16 @@ class PTYManager:
         attrs[3] &= ~termios.ECHO
         termios.tcsetattr(self.slave, termios.TCSANOW, attrs)
 
-    def set_nonblocking(self, blocking : Optional[bool] = True) -> None:
+    def set_nonblocking(self, state : Optional[bool] = True) -> None:
         """
-        Set master and slave non-blocking state
+        Set master and slave blocking state
 
         Arguments:
-            blocking:
+            state:
                 If True (default) then set both file descriptors to
                 non-blocking, otherwise blocking.
         """
-        state = bool(blocking)
+        state = not bool(state)
         os.set_blocking(self.master, state)
         os.set_blocking(self.slave, state)
 

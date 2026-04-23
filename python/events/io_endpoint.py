@@ -3,27 +3,23 @@ This base class is used to manage events associated with I/O endpoints.  All
 endpoints are implemented as non-blocking file descriptors and all I/O is
 performed using os.read(), os.write, and os.close().
 
-It is assumed that I/O endpoints will be used in some sort of event framework,
-such as a select loop or asynchronous I/O.  Thus, this base class provides
-abstract methods to "register" and "unregister" read and write events for the
-endpoint file descriptors.  Since these events tend to be notifications of
-readability or writeability, the derived events should call the endpoint read
-or write methods when they fire.  Note that the derived register/unregister
-methods must be robust enough to handle the cases when an existing event may or
-may not be registered.  Also note that all read and written data must be of
-type bytes.
+It is assumed that I/O endpoints are used in some sort of an event loop
+framework, such as a select loop or asynchronous I/O.  Thus, this base class
+provides abstract methods to "register" and "unregister" read and write events
+for the endpoint file descriptor per the target event loop.  Since these events
+tend to be notifications of readability or writeability, the target event loop
+should call the endpoint read or write methods when the corresponding events
+occur.  Note that the derived register/unregister methods must be robust enough
+to handle the cases when an existing event may or may not be registered.  Also
+note that all read and written data must be of type bytes.
 
 When the read() method is called, os.read() is called on the underlying file
 descriptor and any newly read data is appended to the input buffer.  The input
 buffer will continue to grow until the fetch_input() method is called with a
-reset value of True, which returns all oustanding input data and resets the
-input buffer to empty.  If there is new input data then the optional read
-callback is called with the opaque callback argument.  If EOF is encountered
-then any read event is unregistered, the file descriptor is closed, and the
-optional EOF callback is called with the opaque callback argument.  All read
-errors (except BlockingIOError) are treated as EOF; however, the corresponding
-error code and reason text are saved.  Note that EOF or an error does not clear
-the input buffer.
+reset value of True.  If EOF or a read error is encountered then any read event
+is unregistered, the file descriptor is closed, and the read error is recorded
+in the errno and error_text attributes.  Note that EOF or an error does not
+clear the input buffer.
 
 The assumption is that write events are only applicable when there is
 outstanding data in the output buffer to write.  Thus, the write() method will
@@ -33,8 +29,8 @@ then any write event is unregistered and the output buffer is set to empty.
 Otherwise, the successfully written data is removed from the output buffer and
 the output event is registered (just in case it was not before).  If a write
 error is encountered then any write event is unregistered, the file descriptor
-is closed, and the optional write error callback is called with the opaque
-callback argument.  Note that a write error does not clear the output buffer.
+is closed, and the write error is recorded in the errno and error_text
+attributes.  Note that an error does not clear the output buffer.
 
 Note that the overall strategy is to not raise any exceptions; all errors can
 be gleaned from the saved error codes and reason texts.
@@ -42,7 +38,7 @@ be gleaned from the saved error codes and reason texts.
 
 from errno import EIO
 import os
-from typing import Any, Callable, ClassVar, Optional, Union
+from typing import Any, ClassVar, Optional, Union
 
 from events.io_buffer import IOBuffer
 
@@ -51,34 +47,26 @@ class IOEndpoint:
     # pylint: disable=too-many-instance-attributes
     DEFAULT_READ_SIZE : ClassVar[int] = 1024*1024  # 1Mb
 
-    Callback = Callable[[Any], None]
-
-    reader : int
+    fd : int
+    old_blocking : bool
+    no_close : bool
     read_size : int
     input_data : IOBuffer
-    read_callback : Callback
-    eof_callback : Callback
-    read_errno : int
-    read_error_text : str
-
-    writer : int
     output_data : IOBuffer
-    write_error_callback : Callback
-    write_errno : int
-    write_error_text : str
-
-    callback_data : Any
+    read_data : Any
+    write_data : Any
+    errno : int
+    error_text : str
 
     def __init__(
         # pylint: disable=too-many-arguments
         self,
         fd : int,
         *,
+        no_close : Optional[bool] = False,
         read_size : Optional[int] = DEFAULT_READ_SIZE,
-        read_callback : Optional[Callback] = None,
-        eof_callback : Optional[Callback] = None,
-        write_error_callback : Optional[Callback] = None,
-        callback_data : Optional[Any] = None
+        read_data : Optional[Any] = None,
+        write_data : Optional[Any] = None
     ):
         """
         Initialize an endpoint
@@ -88,36 +76,31 @@ class IOEndpoint:
                 Open file descriptor (>=0) for the target I/O endpoint.  Note
                 that the descriptor type is not checked.  So, for example, if
                 the descriptor represents the read end of a pipe then no write
-                operations should be performed.  The descriptor is set to
-                non-blocking mode and the new I/O endpoint instance assumes
-                ownership of the descriptor.
+                operations should be performed.
+            no_close:
+                If False then the I/O endpoint assumes ownership of the file
+                descriptor and the close() method will close it.  Otherwise,
+                the close() method does not close the file descriptor.
             read_size:
                 Read size to use in all os.read() calls.
-            read_callback:
-                Callback to call when new input data is read.
-            eof_callback:
-                Callback to call when EOF (or a read error) occurs.
-            write_error_callback:
-                Callback to call when a write error occurs.
-            callback_data:
-                Opaque data passed to read, EOF, and write error callback calls.
+            read_data:
+            write_data:
+                Opaque data corresponding the read and write events.  These
+                values are for use by the derived register/unregister methods
+                and are usually used to represent event IDs.
         """
         self.fd = fd
+        self.old_blocking = os.get_blocking(self.fd)
         os.set_blocking(self.fd, False)
 
+        self.no_close = bool(no_close)
         self.read_size = read_size or self.DEFAULT_READ_SIZE
         self.input_data = IOBuffer()
-        self.read_callback = read_callback
-        self.eof_callback = eof_callback
-        self.read_errno = None
-        self.read_error_text = None
-
         self.output_data = IOBuffer()
-        self.write_error_callback = write_error_callback
-        self.write_errno = None
-        self.write_error_text = None
-
-        self.callback_data = callback_data
+        self.read_data = read_data
+        self.write_data = write_data
+        self.errno = None
+        self.error_text = None
 
     def register_read(self) -> None:
         """ Register a read event (if not already registered) """
@@ -147,24 +130,19 @@ class IOEndpoint:
             return
         # All other errors are treated as EOF.
         except OSError as error:
-            self.read_errno = error.errno
-            self.read_error_text = error.strerror
+            self.errno = error.errno
+            self.error_text = error.strerror
             new_data = b''
         except Exception as error:  # pylint: disable=broad-except
-            self.read_errno = EIO
-            self.read_error_text = str(error)
+            self.errno = EIO
+            self.error_text = str(error)
             new_data = b''
 
         if not new_data:
             self.close()
-            if self.eof_callback:
-                self.eof_callback(self.callback_data)
             return
 
         self.input_data.append(new_data)
-
-        if self.read_callback:
-            self.read_callback(self.callback_data)
 
     def write(self, data : Optional[bytes] = None) -> None:
         """
@@ -191,17 +169,13 @@ class IOEndpoint:
             actual = 0
         except OSError as error:
             self.close()
-            self.write_errno = error.errno
-            self.write_error_text = error.strerror
-            if self.write_error_callback:
-                self.write_error_callback(self.callback_data)
+            self.errno = error.errno
+            self.error_text = error.strerror
             return
         except Exception as error:  # pylint: disable=broad-except
             self.close()
-            self.write_errno = EIO
-            self.write_error_text = str(error)
-            if self.write_error_callback:
-                self.write_error_callback(self.callback_data)
+            self.errno = EIO
+            self.error_text = str(error)
             return
 
         if actual >= len(self.output_data):
@@ -219,7 +193,7 @@ class IOEndpoint:
 
         Arguments:
             text:
-                If True then returned decoded text.
+                If True then return decoded text.
             reset:
                 If True then any returned data is flushed from the buffer.
 
@@ -234,12 +208,19 @@ class IOEndpoint:
         return data
 
     def close(self) -> None:
-        """ Clean up the endpoint """
-        if self.is_open:
-            self.unregister_read()
-            self.unregister_write()
+        """ Close the endpoint """
+        if not self.is_open:
+            return
+
+        self.unregister_read()
+        self.unregister_write()
+
+        if self.no_close:
+            os.set_blocking(self.fd, self.old_blocking)
+        else:
             os.close(self.fd)
-            self.fd = None
+
+        self.fd = None
 
     def __enter__(self):
         """ Return self """

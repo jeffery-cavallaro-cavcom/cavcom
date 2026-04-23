@@ -1,23 +1,21 @@
 """
-This class extends the I/O endpoint class to add support for select loop read
-and write events.  Since each file descriptor can only be registered once with
-a select loop, the code handles updating the registration depending on whether a
-read event, write event, both, or neither is desired.  Opaque read and write
-data values are supported and both are returned as a tuple in a fired event
-select key; a get_events() method is provided to determine which data value(s)
-to use based on the read/write indicator for a fired event.  These opaque data
-values can be used to identify specific events in the event loop.
+This class extends the I/O endpoint base class to add support for select loop
+read and write events.  Since each file descriptor can only be registered once
+with a select loop, the code handles updating the registration depending on
+whether a read event, a write event, both, or neither is desired.  The opaque
+read and write data values are returned as a tuple in a fired event select key;
+a get_events() method is provided to determine which data value(s) to use based
+on the read/write indicator for a fired event.
 """
 
 from selectors import BaseSelector, SelectorKey, EVENT_READ, EVENT_WRITE
-from typing import Any, Optional
+from typing import Any
 
 from events.io_endpoint import IOEndpoint
 
 class SelectEndpoint(IOEndpoint):
     """ Manage a Selectable I/O Endpoint """
     selectors : BaseSelector
-    event_data = tuple[Any, Any]
     reading : bool
     writing : bool
     select_key : SelectorKey
@@ -26,9 +24,6 @@ class SelectEndpoint(IOEndpoint):
         self,
         selectors : BaseSelector,
         fd : int,
-        *,
-        read_data : Optional[Any] = None,
-        write_data : Optional[Any] = None,
         **kwargs
     ):
         """
@@ -39,42 +34,37 @@ class SelectEndpoint(IOEndpoint):
                 Selectors used in target select loop.
             fd:
                 Open file descriptor (>=0) for the target I/O endpoint.
-            read_data:
-                Opaque data to return with read events.
-            write_data:
-                Opaque data to return with write events.
             kwargs:
                 Other keyword arguments for IOEndpoint().
         """
         super().__init__(fd, **kwargs)
 
         self.selectors = selectors
-        self.event_data = (read_data, write_data)
         self.reading = False
         self.writing = False
         self.select_key = None
 
     def register_read(self) -> None:
         """ Register for read events """
-        if not self.reading:
+        if self.is_open and not self.reading:
             self.reading = True
             self.update_events()
 
     def unregister_read(self) -> None:
         """ Unregister read events """
-        if self.reading:
+        if self.is_open and self.reading:
             self.reading = False
             self.update_events()
 
     def register_write(self) -> None:
         """ Register for write events """
-        if not self.writing:
+        if self.is_open and not self.writing:
             self.writing = True
             self.update_events()
 
     def unregister_write(self) -> None:
         """ Unregister write events """
-        if self.writing:
+        if self.is_open and self.writing:
             self.writing = False
             self.update_events()
 
@@ -117,9 +107,9 @@ class SelectEndpoint(IOEndpoint):
             self.select_key = None
         elif self.select_key:
             self.select_key = self.selectors.modify(
-                self.fd, events, self.event_data
+                self.fd, events, (self.read_data, self.write_data)
             )
         else:
             self.select_key = self.selectors.register(
-                self.fd, events, self.event_data
+                self.fd, events, (self.read_data, self.write_data)
             )
