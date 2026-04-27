@@ -5,40 +5,27 @@ events use the "write to a descriptor" trick to introduced signal and timeout
 events into the select event loop.
 """
 
-import os
-from selectors import DefaultSelector, SelectorKey, EVENT_READ
-import signal
-from subprocess import Popen, DEVNULL, PIPE, STDOUT
+from selectors import DefaultSelector
+from signal import signal, SIGINT, SIGTERM
+from subprocess import Popen, PIPE, DEVNULL, STDOUT
 import sys
-from typing import Any, ClassVar
+from typing import Any
 
-from events.select_endpoint import SelectEndpoint
-from events.event_handler import EventHandler
 from events.timer_event import TimerEvent
-from events.fsm import FiniteStateMachine, State
-from events.io_buffer import IOBuffer
-
+from events.event_handler import EventHandler
+from events.io_endpoint import IOEndpoint
+from events.select_endpoint import SelectEndpoint
 from commands.command_base import CommandBase
 
-class Command(FiniteStateMachine, CommandBase):
+# pylint: disable=duplicate-code
+
+class Command(CommandBase):
     """ Execute a command """
     # pylint: disable=too-many-instance-attributes
-
-    # EVENTS
-    E_STDOUT_READ : ClassVar[int] = 0
-    E_MASTER_READ : ClassVar[int] = 1
-    E_MASTER_WRITE : ClassVar[int] = 2
-    E_TIMEOUT : ClassVar[int] = 3
-    E_STOP : ClassVar[int] = 4
-
-    select_loop : DefaultSelector
+    event_loop : DefaultSelector
     timer : TimerEvent
     stop : EventHandler
     child : Popen
-    stdout_blocking : bool
-    stdout_key : SelectorKey
-    stdout : IOBuffer
-    stderr : IOBuffer
 
     def __init__(self, *args, **kwargs):
         """
@@ -50,27 +37,22 @@ class Command(FiniteStateMachine, CommandBase):
             kwargs:
                 Additional keyword arguments for BaseCommand().
         """
-        FiniteStateMachine.__init__(self, self.setup_fsm())
-        CommandBase.__init__(self, *args, **kwargs)
-
-        self.select_loop = DefaultSelector()
+        self.event_loop = DefaultSelector()
         self.timer = None
         self.stop = None
         self.child = None
-        self.stdout_blocking = None
-        self.stdout_key = None
-        self.stdout = IOBuffer()
-        self.stderr = IOBuffer()
+
+        super().__init__(*args, **kwargs)
 
     def setup_master(self) -> None:
         """ Setup master endpoint """
         self.master = SelectEndpoint(
-            self.select_loop,
+            self.event_loop,
             self.pty.master,
-            read_data=Command.E_MASTER_READ,
-            write_data=Command.E_MASTER_WRITE
+            no_close=True,
+            read_data=self.E_MASTER_READ,
+            write_data=self.E_MASTER_WRITE
         )
-        self.pty.master = None  # Take ownership
         self.master.register_read()
 
     def start_timer(self, timeout : float) -> None:
@@ -81,7 +63,7 @@ class Command(FiniteStateMachine, CommandBase):
             self.timer = None
         else:
             self.timer = TimerEvent(
-                timeout, self.select_loop, event_data=Command.E_TIMEOUT
+                timeout, self.event_loop, event_data=self.E_TIMEOUT
             )
             self.timer.start()
 
@@ -94,9 +76,7 @@ class Command(FiniteStateMachine, CommandBase):
     def setup_stop(self) -> None:
         """ Set up stop event """
         if not self.stop:
-            self.stop = EventHandler(
-                self.select_loop, event_data=Command.E_STOP
-            )
+            self.stop = EventHandler(self.event_loop, event_data=self.E_STOP)
 
     def disable_stop(self) -> None:
         """ Disable stop event """
@@ -111,15 +91,13 @@ class Command(FiniteStateMachine, CommandBase):
         else:
             self.child.terminate()
 
-        self.reason = 'Command canceled'
+        if not self.reason:
+            self.reason = 'Command canceled'
 
     def execute(self) -> None:
         """ Execute the command """
-        self.allocate_pty()
-        self.setup_master()
-
         # We only need stdin if doing sudo password authentication on stdio.
-        if self.use_ssh_password and self.use_sudo_password:
+        if self.use_sudo_password and self.remote:
             stdin_mode = PIPE
         else:
             stdin_mode = DEVNULL
@@ -137,17 +115,31 @@ class Command(FiniteStateMachine, CommandBase):
             stdin=stdin_mode,
             stdout=PIPE,
             stderr=stderr_mode,
-            pass_fds=[self.pty.slave],
+            pass_fds=[self.pty.slave] if self.pty else [],
             start_new_session=True,
-            preexec_fn=self.set_terminal
+            preexec_fn=self.set_terminal if self.pty else None
         )
+
+        self.stdout = SelectEndpoint(
+            self.event_loop,
+            self.child.stdout.fileno(),
+            no_close=True,
+            read_data=self.E_STDOUT_READ
+        )
+
+        if not self.redirect_stderr:
+            self.stderr = IOEndpoint(self.child.stderr.fileno(), no_close=True)
 
         self.setup_stop()
 
         self.run()  # Establish initial state
 
+        self.run_event_loop()
+
+    def run_event_loop(self) -> None:
+        """ Run the event loop until done """
         while self.q_now != Command.Q_DONE:
-            events = self.select_loop.select()
+            events = self.event_loop.select()
             for key, which in events:
                 if isinstance(key.data, tuple):
                     event_ids = SelectEndpoint.get_events(key, which)
@@ -162,152 +154,25 @@ class Command(FiniteStateMachine, CommandBase):
                             self.stop.acknowledge()
                     self.run(event_id)
 
-    def setup_fsm(self) -> list[State]:
-        """ Create an instance of the command FSM """
-        return [
-            # Q_START
-            State(
-                self.initial_state, None,
-                [
-                    None,  # E_STDOUT_READ
-                    None,  # E_MASTER_READ
-                    None,  # E_MASTER_WRITE
-                    None,  # E_TIMEOUT
-                    None   # E_STOP
-                ]
-            ),
-
-            # Q_SSH_MASTER
-            State(
-                self.start_auth_timer, self.stop_timer,
-                [
-                    None,               # E_STDOUT_READ
-                    self.ssh_password,  # E_MASTER_READ
-                    self.write_master,  # E_MASTER_WRITE
-                    self.ssh_timeout,   # E_TIMEOUT
-                    self.stop_command   # E_STOP
-                ]
-            ),
-
-            # Q_SUDO_MASTER
-            State(
-                self.start_auth_timer, self.stop_timer,
-                [
-                    None,               # E_STDOUT_READ
-                    self.sudo_master,   # E_MASTER_READ
-                    self.write_master,  # E_MASTER_WRITE
-                    self.sudo_timeout,  # E_TIMEOUT
-                    self.stop_command   # E_STOP
-                ]
-            ),
-
-            # Q_SUDO_STDIO
-            State(
-                self.start_sudo_stdio, self.end_sudo_stdio,
-                [
-                    self.sudo_stdio,    # E_STDOUT_READ
-                    self.read_master,   # E_MASTER_READ
-                    self.write_master,  # E_MASTER_WRITE
-                    self.sudo_timeout,  # E_TIMEOUT
-                    self.stop_command   # E_STOP
-                ]
-            ),
-
-            # Q_RUNNING
-            State(
-                self.wait_for_exit, None,
-                [
-                    None,  # E_STDOUT_READ
-                    None,  # E_MASTER_READ
-                    None,  # E_MASTER_WRITE
-                    None,  # E_TIMEOUT
-                    None   # E_STOP
-                ]
-            ),
-
-            # Q_EXITED (unused)
-            State(
-                None, None,
-                [
-                    None,  # E_STDOUT_READ
-                    None,  # E_MASTER_READ
-                    None,  # E_MASTER_WRITE
-                    None,  # E_TIMEOUT
-                    None   # E_STOP
-                ]
-            ),
-
-            # Q_TERM
-            State(
-                self.term_child, None,
-                [
-                    None,  # E_STDOUT_READ
-                    None,  # E_MASTER_READ
-                    None,  # E_MASTER_WRITE
-                    None,  # E_TIMEOUT
-                    None   # E_STOP
-                ]
-            ),
-
-            # Q_KILL
-            State(
-                self.kill_child, None,
-                [
-                    None,  # E_STDOUT_READ
-                    None,  # E_MASTER_READ
-                    None,  # E_MASTER_WRITE
-                    None,  # E_TIMEOUT
-                    None   # E_STOP
-                ]
-            ),
-
-            # Q_DONE
-            State(
-                self.close_all, None,
-                [
-                    None,  # E_STDOUT_READ
-                    None,  # E_MASTER_READ
-                    None,  # E_MASTER_WRITE
-                    None,  # E_TIMEOUT
-                    None   # E_STOP
-                ]
-            )
-        ]
-
     def start_sudo_stdio(self, state : int, event : int, data : Any) -> int:
-        """ Start SUDO password on stdio """
-        self.stdout_blocking = os.get_blocking(self.child.stdout.fileno())
-        os.set_blocking(self.child.stdout.fileno(), False)
-
-        self.stdout_key = self.select_loop.register(
-            self.child.stdout, EVENT_READ, self.E_STDOUT_READ
-        )
-
+        """ Start SUDO authentication on stdio """
+        self.stdout.register_read()
         self.start_auth_timer(state, event, data)
 
     def end_sudo_stdio(self, state : int, event : int, data : Any) -> int:
-        """ Start SUDO password on stdio """
+        """ Stop SUDO authentication on stdio """
         self.stop_timer(state, event, data)
-
-        if self.stdout_key:
-            self.select_loop.unregister(self.child.stdout)
-            self.stdout_key = None
-
-        os.set_blocking(self.child.stdout.fileno(), self.stdout_blocking)
+        self.stdout.unregister_read()
 
     def sudo_stdio(self, _state : int, _event : int, _data : Any) -> int:
-        """ SUDO authentication action method (on stdio) """
-        try:
-            data = self.child.stdout.read()
-        except BlockingIOError:
-            return None
-        except:  # pylint: disable=bare-except
-            self.reason = 'Read error'
+        """ Attempt SUDO authentication (on stdio) """
+        self.stdout.read()
+        if self.stdout.errno:
+            self.status = self.status or self.stdout.errno
+            self.reason = self.reason or self.stdout.error_text
             return self.Q_TERM
 
-        self.collect_output(data, None)
-
-        text = self.stdout.fetch_text()
+        text = self.stdout.fetch_input(text=True)
         if not self.sudo_prompt.search(text):
             return None
 
@@ -329,7 +194,8 @@ class Command(FiniteStateMachine, CommandBase):
         except TimeoutError:
             return self.run_timeout(state, event, data)
         except Exception as error:  # pylint: disable=broad-except
-            self.reason = str(error)
+            self.status = self.status or 1
+            self.reason = self.reason or str(error)
             return self.Q_TERM
 
         self.collect_output(stdout, stderr)
@@ -337,8 +203,16 @@ class Command(FiniteStateMachine, CommandBase):
 
         return self.Q_DONE
 
+    def collect_output(self, stdout : bytes, stderr : bytes) -> None:
+        """ Collect output from stdout and/or stderr """
+        if stdout:
+            self.stdout.input_data.append(stdout)
+
+        if stderr and self.stderr:
+            self.stderr.input_data.append(stderr)
+
     def term_child(self, _state : int, _event : int, _data : Any) -> int:
-        """ Terminate the child process """
+        """ Start child command process termination (derived override) """
         self.child.terminate()
 
         try:
@@ -354,7 +228,7 @@ class Command(FiniteStateMachine, CommandBase):
         return self.Q_DONE
 
     def kill_child(self, state : int, event : int, data : Any) -> int:
-        """ Kill the child process """
+        """ Kill child command process """
         self.child.kill()
 
         try:
@@ -370,30 +244,21 @@ class Command(FiniteStateMachine, CommandBase):
 
         return self.Q_DONE
 
-    def collect_output(self, stdout : bytes, stderr : bytes) -> None:
-        """ Collect output """
-        if stdout:
-            self.stdout.append(stdout)
-
-        if stderr:
-            self.stderr.append(stderr)
-
     def close(self) -> None:
         """ Tear down event loop and close endpoints """
         self.disable_stop()
 
         super().close()
 
-        if self.select_loop:
-            self.select_loop.close()
-            self.select_loop = None
+        if self.event_loop:
+            self.event_loop.close()
 
 if __name__ == '__main__':
     def main() -> None:
         """ Execute the command """
         with Command.create_command() as command:
-            for signo in [signal.SIGINT, signal.SIGTERM]:
-                signal.signal(signo, command.cancel)
+            for signo in [SIGINT, SIGTERM]:
+                signal(signo, command.cancel)
 
             try:
                 command.execute()
@@ -410,13 +275,13 @@ if __name__ == '__main__':
                     print(text)
 
             if command.stdout:
-                text = command.stdout.fetch_text()
+                text = command.stdout.fetch_input(text=True)
                 if text:
                     print('STDOUT:')
                     print(text)
 
             if command.stderr:
-                text = command.stderr.fetch_text()
+                text = command.stderr.fetch_input(text=True)
                 if text:
                     print('STDERR:')
                     print(text)

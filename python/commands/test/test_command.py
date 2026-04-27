@@ -9,6 +9,8 @@ from typing import ClassVar
 
 from commands.command import Command
 
+# pylint: disable=duplicate-code
+
 class TestCommand(unittest.TestCase):
     """ Synchronous Command Unit Tests """
     HOST : ClassVar[str] = gethostname().split('.')[0]
@@ -25,7 +27,11 @@ class TestCommand(unittest.TestCase):
 
         self.assertEqual(command.status, 0)
         self.assertIsNone(command.reason)
-        self.assertEqual(command.stdout.fetch_text().strip(), self.HOST)
+        self.assertEqual(
+            command.stdout.fetch_input(text=True, reset=True).strip(),
+            self.HOST
+        )
+        self.assertIsNone(command.stdout.fetch_input())
 
     def test_many_local(self):
         """ Execute many commands locally """
@@ -48,7 +54,9 @@ class TestCommand(unittest.TestCase):
             command.close()
             self.assertEqual(command.status, 0)
             self.assertIsNone(command.reason)
-            self.assertEqual(command.stdout.fetch_text().strip(), self.HOST)
+            self.assertEqual(
+                command.stdout.fetch_input(text=True).strip(), self.HOST
+            )
 
     def test_timeout(self):
         """ Execute a command that times out """
@@ -72,7 +80,9 @@ class TestCommand(unittest.TestCase):
 
         self.assertEqual(command.status, 0)
         self.assertIsNone(command.reason)
-        self.assertEqual(command.stdout.fetch_text().strip(), self.HOST)
+        self.assertEqual(
+            command.stdout.fetch_input(text=True).strip(), self.HOST
+        )
 
     def test_many_remote(self):
         """ Execute many commands remotely (ssh key) """
@@ -96,7 +106,9 @@ class TestCommand(unittest.TestCase):
             command.close()
             self.assertEqual(command.status, 0)
             self.assertIsNone(command.reason)
-            self.assertEqual(command.stdout.fetch_text().strip(), self.HOST)
+            self.assertEqual(
+                command.stdout.fetch_input(text=True).strip(), self.HOST
+            )
 
 if __name__ == '__main__':
     unittest.main()

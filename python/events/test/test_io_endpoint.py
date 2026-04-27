@@ -44,6 +44,19 @@ class TestIOEndpoint(unittest.TestCase):
     TEST_DATA_1 : ClassVar[bytes] = b"Hello, World!\n"
     TEST_DATA_2 : ClassVar[bytes] = b"The answer is 42\n"
 
+    def test_none(self):
+        """ No actual file descriptor (buffer only) """
+        with IOEndpoint(None) as endpoint:
+            self.assertFalse(endpoint.is_open)
+            endpoint.input_data.append(self.TEST_DATA_1)
+
+        self.assertFalse(endpoint.is_open)
+        self.assertEqual(
+            endpoint.fetch_input(text=True, reset=True),
+            self.TEST_DATA_1.decode()
+        )
+        self.assertIsNone(endpoint.fetch_input())
+
     def test_pipe(self):
         """ Create and use a pipe """
         # pylint: disable=too-many-statements

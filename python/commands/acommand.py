@@ -7,91 +7,24 @@ current events.
 import asyncio
 from asyncio.subprocess import DEVNULL, PIPE, STDOUT
 from errno import EIO
-import signal
+from signal import signal, SIGINT, SIGTERM
 import sys
-from typing import Any, ClassVar, Optional
+from typing import Any, Optional
 
+from events.aevent_loop import AEventLoop
+from events.io_endpoint import IOEndpoint
 from events.aio_endpoint import AIOEndpoint
-from events.fsm import FiniteStateMachine, State
-from events.io_buffer import IOBuffer
-
 from commands.command_base import CommandBase
 
-class IOManager:
-    """ Manage a STDIO Endpoint """
-    mode : int
-    data : IOBuffer
-    closed : bool
-    errno : int
-    error_text : str
+# pylint: disable=duplicate-code
 
-    def __init__(self, mode : int):
-        """
-        Initialize the endpoint
-
-        Arguments:
-            mode:
-                Input type code (from asyncio.subprocess).  This can be DEVNULL
-                or PIPE for stdin, should always be PIPE for stdout, and can be
-                PIPE or STDOUT for stderr.
-        """
-        self.mode = mode
-        self.data = IOBuffer()
-        self.closed = mode != PIPE
-        self.errno = None
-        self.error_text = None
-
-    def add_data(self, data : bytes) -> None:
-        """
-        Append data to the data buffer
-
-        Arguments:
-            data:
-                Data to append.
-        """
-        self.data.append(data)
-
-    def close(self, error : Optional[Exception] = None) -> None:
-        """
-        Close the endpoint
-
-        Arguments:
-            exception:
-                Reason for abnormal close.
-        """
-        self.closed = True
-
-        if error:
-            if isinstance(error, OSError):
-                self.errno = error.errno
-                self.error_text = error.strerror
-            else:
-                self.errno = EIO
-                self.error_text = str(error)
-
-class Command(asyncio.SubprocessProtocol, FiniteStateMachine, CommandBase):
+class Command(asyncio.SubprocessProtocol, CommandBase):
     """ Execute a command """
     # pylint: disable=too-many-instance-attributes
-
-    # EVENTS
-    E_STDOUT_READ : ClassVar[int] = 0
-    E_MASTER_READ : ClassVar[int] = 1
-    E_MASTER_WRITE : ClassVar[int] = 2
-    E_CLOSED : ClassVar[int] = 3
-    E_EXIT : ClassVar[int] = 4
-    E_TIMEOUT : ClassVar[int] = 5
-    E_STOP : ClassVar[int] = 6
-
-    loop : asyncio.AbstractEventLoop
+    event_loop : AEventLoop
     timer : asyncio.TimerHandle
-    event_wait : asyncio.Future
-    next_events : set[int]
-
     transport : asyncio.SubprocessTransport
     protocol : asyncio.SubprocessProtocol
-    stdin : IOManager
-    stdout : IOManager
-    stderr : IOManager
 
     def __init__(self, *args, **kwargs):
         """
@@ -103,56 +36,23 @@ class Command(asyncio.SubprocessProtocol, FiniteStateMachine, CommandBase):
             kwargs:
                 Additional keyword arguments for BaseCommand().
         """
-        asyncio.SubprocessProtocol.__init__(self)
-        FiniteStateMachine.__init__(self, self.setup_fsm())
-        CommandBase.__init__(self, *args, **kwargs)
-
-        self.loop = asyncio.get_running_loop()
+        self.event_loop = AEventLoop()
         self.timer = None
-        self.event_wait = None
-        self.next_events = set()
-
         self.transport = None
         self.protocol = None
 
-        # We only need stdin if doing sudo password authentication on stdio.
-        if self.use_ssh_password and self.use_sudo_password:
-            mode = PIPE
-        else:
-            mode = DEVNULL
-        self.stdin = IOManager(mode)
-
-        self.stdout = IOManager(PIPE)
-
-        # No need for stderr if redirecting to stdout.
-        if self.redirect_stderr:
-            mode = STDOUT
-        else:
-            mode = PIPE
-        self.stderr = IOManager(mode)
-
-    def add_event(self, event_id : int) -> None:
-        """
-        Add a new event to the event queue
-
-        Arguments:
-            event_id:
-                Event ID to add to event queue.
-        """
-        self.next_events.add(event_id)
-
-        if not self.event_wait.done():
-            self.event_wait.set_result(self.next_events)
+        asyncio.SubprocessProtocol.__init__(self)
+        CommandBase.__init__(self, *args, **kwargs)
 
     def setup_master(self) -> None:
         """ Setup master endpoint """
         self.master = AIOEndpoint(
             self.pty.master,
-            event_callback=self.add_event,
-            read_data=Command.E_MASTER_READ,
-            write_data=Command.E_MASTER_WRITE,
+            no_close=True,
+            event_callback=self.event_loop.add_event,
+            read_data=self.E_MASTER_READ,
+            write_data=self.E_MASTER_WRITE
         )
-        self.pty.master = None  # Take ownership
         self.master.register_read()
 
     def start_timer(self, timeout : float) -> None:
@@ -167,8 +67,8 @@ class Command(asyncio.SubprocessProtocol, FiniteStateMachine, CommandBase):
         if timeout is None:
             self.timer = None
         else:
-            self.timer = self.loop.call_later(
-                timeout, self.add_event, Command.E_TIMEOUT
+            self.timer = self.event_loop.loop.call_later(
+                timeout, self.event_loop.add_event, self.E_TIMEOUT
             )
 
     def cancel_timer(self) -> None:
@@ -179,34 +79,47 @@ class Command(asyncio.SubprocessProtocol, FiniteStateMachine, CommandBase):
 
     def cancel(self, *_args, **_kwargs) -> None:
         """ Trigger a stop event (can be used as a signal handler) """
-        self.add_event(Command.E_STOP)
+        self.event_loop.add_event(self.E_STOP)
+
+        if not self.reason:
+            self.reason = 'Command canceled'
 
     async def execute(self) -> None:
         """ Execute the command """
-        self.event_wait = asyncio.Future()
+        # We only need stdin if doing sudo password authentication on stdio.
+        sudo_stdio = self.use_sudo_password and self.remote
+        if sudo_stdio:
+            stdin_mode = PIPE
+            self.stdin = IOEndpoint(None, no_close=True)
+        else:
+            stdin_mode = DEVNULL
 
-        self.allocate_pty()
-        self.setup_master()
+        self.stdout = IOEndpoint(None, no_close=True)
 
-        self.transport, self.protocol = await self.loop.subprocess_exec(
+        # No need for stderr if redirecting to stdout.
+        if self.redirect_stderr:
+            stderr_mode = STDOUT
+        else:
+            stderr_mode = PIPE
+            self.stderr = IOEndpoint(None, no_close=True)
+
+        mechanisms = await self.event_loop.loop.subprocess_exec(
             lambda: self,
             *self.command,
-            stdin=self.stdin.mode,
-            stdout=self.stdout.mode,
-            stderr=self.stderr.mode,
-            pass_fds=[self.pty.slave],
+            stdin=stdin_mode,
+            stdout=PIPE,
+            stderr=stderr_mode,
+            pass_fds=[self.pty.slave] if self.pty else [],
             start_new_session=True,
-            preexec_fn=self.set_terminal
+            preexec_fn=self.set_terminal if self.pty else None
         )
+        self.transport, self.protocol = mechanisms
 
         self.run()  # Establish the initial state
 
         while self.q_now != Command.Q_DONE:
-            await self.event_wait
-            while self.next_events:
-                event_id = self.next_events.pop()
-                self.run(event_id)
-            self.event_wait = asyncio.Future()
+            event_id = await self.event_loop.wait_for_event()
+            self.run(event_id)
 
     def pipe_data_received(self, fd: int, data: bytes) -> None:
         """
@@ -222,12 +135,12 @@ class Command(asyncio.SubprocessProtocol, FiniteStateMachine, CommandBase):
             return
 
         if fd == 1:
-            self.stdout.add_data(data)
+            self.stdout.input_data.append(data)
             if self.q_now == self.Q_SUDO_STDIO:
                 # SUDO password authentication over stdio.
-                self.add_event(self.E_STDOUT_READ)
-        elif fd == 2:
-            self.stderr.add_data(data)
+                self.event_loop.add_event(self.E_STDOUT_READ)
+        elif fd == 2 and self.stderr:
+            self.stderr.input_data.append(data)
 
     def pipe_connection_lost(
         self, fd: int, exc: Optional[Exception] = None
@@ -242,154 +155,51 @@ class Command(asyncio.SubprocessProtocol, FiniteStateMachine, CommandBase):
                 Exception for closed due to an error.
         """
         if fd == 0:
-            self.stdin.close(exc)
+            endpoint = self.stdin
         elif fd == 1:
-            self.stdout.close(exc)
+            endpoint = self.stdout
         elif fd == 2:
-            self.stderr.close(exc)
+            endpoint = self.stderr
         else:
+            endpoint = None
+
+        if not endpoint:
             return
 
-        self.add_event(self.E_CLOSED)
+        endpoint.close()
+
+        if exc:
+            if isinstance(exc, IOError):
+                endpoint.errno = exc.errno
+                endpoint.error_text = exc.strerror
+            else:
+                endpoint.errno = EIO
+                endpoint.error_text = str(exc)
+
+        self.event_loop.add_event(self.E_CLOSED)
 
     def process_exited(self) -> None:
         """ Trigger an exited event """
-        self.add_event(self.E_EXIT)
+        self.event_loop.add_event(self.E_EXIT)
 
-    def setup_fsm(self) -> list[State]:
-        """ Create an instance of the command FSM """
-        return [
-            # Q_START
-            State(
-                self.initial_state, None,
-                [
-                    None,  # E_STDOUT_READ
-                    None,  # E_MASTER_READ
-                    None,  # E_MASTER_WRITE
-                    None,  # E_CLOSED
-                    None,  # E_EXIT
-                    None,  # E_TIMEOUT
-                    None   # E_STOP
-                ]
-            ),
+    def check_done(self, state : int, _event : int, _data : Any) -> int:
+        """ Check for all stdio closed action method """
+        self.status = self.transport.get_returncode()
 
-            # Q_SSH_MASTER
-            State(
-                self.start_auth_timer, self.stop_timer,
-                [
-                    None,               # E_STDOUT_READ
-                    self.ssh_password,  # E_MASTER_READ
-                    self.write_master,  # E_MASTER_WRITE
-                    None,               # E_CLOSED
-                    self.check_done,    # E_EXIT
-                    self.ssh_timeout,   # E_TIMEOUT
-                    self.stop_command   # E_STOP
-                ]
-            ),
+        all_closed  = (
+            (not self.stdin or not self.stdin.is_open) and
+            (not self.stdout or not self.stdout.is_open) and
+            (not self.stderr or not self.stderr.is_open)
+        )
 
-            # Q_SUDO_MASTER
-            State(
-                self.start_auth_timer, self.stop_timer,
-                [
-                    None,               # E_STDOUT_READ
-                    self.sudo_master,   # E_MASTER_READ
-                    self.write_master,  # E_MASTER_WRITE
-                    None,               # E_CLOSED
-                    self.check_done,    # E_EXIT
-                    self.sudo_timeout,  # E_TIMEOUT
-                    self.stop_command   # E_STOP
-                ]
-            ),
+        if all_closed or state > self.Q_EXITED:
+            return self.Q_DONE
 
-            # Q_SUDO_STDIO
-            State(
-                self.start_auth_timer, self.stop_timer,
-                [
-                    self.sudo_stdio,    # E_STDOUT_READ
-                    self.read_master,   # E_MASTER_READ
-                    self.write_master,  # E_MASTER_WRITE
-                    None,               # E_CLOSED
-                    self.check_done,    # E_EXIT
-                    self.sudo_timeout,  # E_TIMEOUT
-                    self.stop_command   # E_STOP
-                ]
-            ),
-
-            # Q_RUNNING
-            State(
-                self.start_command_timer, None,
-                [
-                    None,               # E_STDOUT_READ
-                    self.read_master,   # E_MASTER_READ
-                    self.write_master,  # E_MASTER_WRITE
-                    None,               # E_CLOSED
-                    self.check_done,    # E_EXIT
-                    self.run_timeout,   # E_TIMEOUT
-                    self.stop_command   # E_STOP
-                ]
-            ),
-
-            # Q_EXITED
-            State(
-                None, self.stop_timer,
-                [
-                    None,               # E_STDOUT_READ
-                    self.read_master,   # E_MASTER_READ
-                    self.write_master,  # E_MASTER_WRITE
-                    self.check_done,    # E_CLOSED
-                    None,               # E_EXIT
-                    self.no_close,      # E_TIMEOUT
-                    self.stop_command   # E_STOP
-                ]
-            ),
-
-            # Q_TERM
-            State(
-                self.term_child, self.stop_timer,
-                [
-                    None,               # E_STDOUT_READ
-                    self.read_master,   # E_MASTER_READ
-                    self.write_master,  # E_MASTER_WRITE
-                    None,               # E_CLOSED
-                    self.check_done,    # E_EXIT
-                    self.term_failed,   # E_TIMEOUT
-                    None                # E_STOP
-                ]
-            ),
-
-            # Q_KILL
-            State(
-                self.kill_child, self.stop_timer,
-                [
-                    None,               # E_STDOUT_READ
-                    self.read_master,   # E_MASTER_READ
-                    self.write_master,  # E_MASTER_WRITE
-                    None,               # E_CLOSED
-                    self.check_done,    # E_EXIT
-                    self.kill_failed,   # E_TIMEOUT
-                    None                # E_STOP
-                ]
-            ),
-
-            # Q_DONE
-            State(
-                self.close_all, None,
-                [
-                    None,  # E_STDIN_WRITE
-                    None,  # E_STDOUT_READ
-                    None,  # E_STDERR_READ
-                    None,  # E_MASTER_READ
-                    None,  # E_MASTER_WRITE
-                    None,  # E_SIGCHLD
-                    None,  # E_TIMEOUT
-                    None   # E_STOP
-                ]
-            )
-        ]
+        return self.Q_EXITED
 
     def sudo_stdio(self, _state : int, _event : int, _data : Any) -> int:
-        """ SUDO authentication action method (on stdio) """
-        text = self.stdout.data.fetch_text()
+        """ Attempt SUDO authentication (on stdio) """
+        text = self.stdout.fetch_input(text=True)
         if not self.sudo_prompt.search(text):
             return None
 
@@ -397,24 +207,12 @@ class Command(asyncio.SubprocessProtocol, FiniteStateMachine, CommandBase):
 
         return self.Q_RUNNING
 
-    def check_done(self, state : int, _event : int, _data : Any) -> int:
-        """ Check for all stdio closed action method """
-        self.status = self.transport.get_returncode()
-
-        if (
-            self.stdin.closed and self.stdout.closed and self.stderr.closed or
-            state > self.Q_EXITED
-        ):
-            return self.Q_DONE
-
-        return self.Q_EXITED
-
     def term_child(self, _state : int, _event : int, _data : Any) -> int:
-        """ Start child process termination begin method """
+        """ Start child command process termination """
         self.transport.terminate()
 
     def kill_child(self, _state : int, _event : int, _data : Any) -> int:
-        """ Start child process kill begin method """
+        """ Kill child command process """
         self.transport.kill()
 
     def close(self) -> None:
@@ -425,14 +223,12 @@ class Command(asyncio.SubprocessProtocol, FiniteStateMachine, CommandBase):
             self.transport.close()
             self.transport = None
 
-        self.protocol = None
-
 if __name__ == '__main__':
     async def main() -> None:
         """ Execute the command """
         with Command.create_command() as acommand:
-            for signo in [signal.SIGINT, signal.SIGTERM]:
-                signal.signal(signo, acommand.cancel)
+            for signo in [SIGINT, SIGTERM]:
+                signal(signo, acommand.cancel)
 
             try:
                 await acommand.execute()
@@ -449,13 +245,13 @@ if __name__ == '__main__':
                     print(text)
 
             if acommand.stdout:
-                text = acommand.stdout.data.fetch_text()
+                text = acommand.stdout.fetch_input(text=True)
                 if text:
                     print('STDOUT:')
                     print(text)
 
             if acommand.stderr:
-                text = acommand.stderr.data.fetch_text()
+                text = acommand.stderr.fetch_input(text=True)
                 if text:
                     print('STDERR:')
                     print(text)

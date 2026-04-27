@@ -5,15 +5,16 @@ sudo privilege.  The reason to use this facility instead of one of the existing
 subprocess packages is for proper handling of the ssh and sudo password
 challenges.
 
-A pty is always allocated and the slave side is configured to disable echo and
-CRLF mapping.  Password challenges, if needed, occur as follows:
+If a ssh and/or sudo password challenge is expected then a pty is allocated and
+the slave side is configured to disable echo and CRLF mapping.  Password
+challenges, if needed, occur as follows:
 
-    - For ssh or sudo (but not both), the password challenge occurs on the
-      PTY master.
+    - Ssh password challenges always occur on the pty master.
 
-    - For ssh and sudo, the ssh password challenge occurs on the PTY master;
-      however, the sudo password challenge occurs on stdin and stdout; this is a
-      limitation of sudo over ssh.
+    - Sudo password challenges when not ssh-ing also occur on the pty master.
+
+    - If ssh-ing then sudo password challenges occur on stdin and stdout; this
+      is a limitation of sudo over ssh.
 
 The ssh and sudo passwords are assumed to be the same.  Note that the password
 challenge scenario must be explictly specified.  For example, if a sudo password
@@ -27,8 +28,9 @@ allocating a PTY and using the "preexec_fn" argument to make the proper fcntl()
 call to set the slave side as the controlling terminal.
 
 The base class is responsible for constructing the command, allocating the PTY,
-and password management.  The derived classes are responsible for actually
-executing the command.
+password management, and defined the base FSM for executing the command.  The
+derived classes are responsible for providing an event loop and overriding the
+base FSM action methods as necessary.
 
 It is important to note that although the derived classes call the close()
 method at command completion, either the context manager form should be used or
@@ -43,10 +45,11 @@ from typing import Any, ClassVar, Iterable, Optional
 
 from arguments.integer import Integer
 from arguments.string import String
-from events.io_endpoint import IOEndpoint
 from events.pty_manager import PTYManager
+from events.io_endpoint import IOEndpoint
+from events.fsm import FiniteStateMachine, State
 
-class CommandBase:
+class CommandBase(FiniteStateMachine):
     """ Command Execution Base Class """
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-public-methods
@@ -56,38 +59,30 @@ class CommandBase:
 
     # STATES
     #
-    # These are the states for the derived class FSMs that execute the command.
-    # The events are defined by the derived classes, since they tend to differ
-    # depending on the underlying python packages and event loop types.
-    #
     #   START:
     #       Initial state that selects either one of the password states or the
     #       running state.
     #
     #   SSH_MASTER:
-    #       Performing an ssh password authentication on the PTY master,
-    #       watching for authentication timeout.
+    #       Performing an ssh password authentication on the PTY master.
     #
     #   SUDO_MASTER:
-    #       Performing a sudo password authentication on the PTY master, since
-    #       no ssh, watching for authentication timeout.
+    #       Performing a sudo password authentication on the PTY master.
     #
     #   SUDO_STDIO:
-    #       Performing a sudo password authentication on stdin/stdout, due to
-    #       ssh, watching for authentication timeout.
+    #       Performing a sudo password authentication on stdin/stdout.
     #
     #   RUNNING:
-    #       Command is executing and collecting data from stdout/stderr,
-    #       waiting for child command process exit.
+    #       Command is executing and collecting data from stdout/stderr.
     #
     #   EXITED:
-    #       The command child process has exited.  Keep reading until all of
-    #       stdio closes.
+    #       The command child process has exited; however, there may still be
+    #       data on stdout/stderr to read.
     #
     #   TERM:
-    #       Password or command execution timeout or a stop signal (SIGINT or
-    #       SIGTERM) has occurred.  A SIGTERM is sent to the child command
-    #       process and waiting for the child command process to exit.
+    #       Password or command execution timeout or a stop event has occurred.
+    #       A SIGTERM is sent to the child command process and waiting for the
+    #       child command process to exit.
     #
     #   KILL:
     #       The child command process did not terminate.  A SIGKILL is sent to
@@ -108,8 +103,44 @@ class CommandBase:
     Q_KILL : ClassVar[int] = 7
     Q_DONE : ClassVar[int] = 8
 
+    # EVENTS
+    #
+    #   STDOUT_READ:
+    #       The child process's stdout is readable.  This is only used when
+    #       doing sudo password challenges over stdio.
+    #
+    #   MASTER_READ:
+    #       The PTY master side is readable.  This is only used during ssh or
+    #       sudo password challenges over the master.
+    #
+    #   MASTER_WRITE:
+    #       The PTY master side is writable.  This is only used during ssh or
+    #       sudo password challenges over the master.
+    #
+    #   CLOSED:
+    #       An indication that stdin, stdout, or stderr has closed.
+    #
+    #   EXITED:
+    #       The child command process has exited.
+    #
+    #   TIMEOUT:
+    #       Authentication or command timeout has occurred.
+    #
+    #   STOP:
+    #       A request to cancel the command and force termination.
+    #
+    E_STDOUT_READ : ClassVar[int] = 0
+    E_MASTER_READ : ClassVar[int] = 1
+    E_MASTER_WRITE : ClassVar[int] = 2
+    E_CLOSED : ClassVar[int] = 3
+    E_EXIT : ClassVar[int] = 4
+    E_TIMEOUT : ClassVar[int] = 5
+    E_STOP : ClassVar[int] = 6
+
     command : list[str]
 
+    remote : bool
+    privileged : bool
     use_ssh_password : bool
     use_sudo_password : bool
     ssh_prompt : re.Pattern
@@ -123,12 +154,16 @@ class CommandBase:
 
     pty : PTYManager
     master : IOEndpoint
+    stdin : IOEndpoint
+    stdout : IOEndpoint
+    stderr : IOEndpoint
 
     status : int
     reason : str
 
     def __init__(
         # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-locals
         self,
         args : list[str],
         *,
@@ -198,15 +233,17 @@ class CommandBase:
             redirect_stderr:
                 Redirect stderr to stdout.
         """
-        self.use_ssh_password = remote_host and use_ssh_password
-        self.use_sudo_password = privileged and use_sudo_password
+        super().__init__(self.setup_fsm())
+
+        self.remote = bool(remote_host)
+        self.privileged = bool(privileged)
+        self.use_ssh_password = self.remote and use_ssh_password
+        self.use_sudo_password = self.privileged and use_sudo_password
 
         self.make_command(
             args,
             remote_host=remote_host or None,
             remote_user=remote_user or None,
-            privileged=bool(privileged),
-            use_ssh_password=self.use_ssh_password
         )
 
         if self.use_ssh_password:
@@ -231,8 +268,19 @@ class CommandBase:
         self.kill_timeout = kill_timeout
         self.redirect_stderr = bool(redirect_stderr)
 
-        self.pty = None
-        self.master = None
+        if (
+            self.use_ssh_password or
+            (self.use_sudo_password and not self.remote)
+        ):
+            self.allocate_pty()
+            self.setup_master()
+        else:
+            self.pty = None
+            self.master = None
+
+        self.stdin = None
+        self.stdout = None
+        self.stderr = None
 
         self.status = None
         self.reason = None
@@ -244,8 +292,6 @@ class CommandBase:
         *,
         remote_host : Optional[str] = None,
         remote_user : Optional[str] = None,
-        privileged : Optional[bool] = False,
-        use_ssh_password : Optional[bool] = False,
     ) -> None:
         """
         Generate the command line
@@ -259,25 +305,19 @@ class CommandBase:
                 the specified host.
             remote_user:
                 Alternate user to use for remote execution.
-            privileged:
-                If True then the command is executed with privilege (via sudo).
-            use_ssh_password:
-                If True then use ssh username/password authentication.  If False
-                then use ssh key authentication.  Ignored if not executing
-                remotely.
         """
         self.command = []
 
-        if privileged:
+        if self.privileged:
             args = ['sudo', *args]
 
         if remote_host:
             # The "-t -t" is needed to force pty allocation and to ensure that
             # all signals are propagated to the child process.
-            self.command.extend(['ssh', '-t', '-t'])
+            self.command.extend(['ssh', '-q', '-t', '-t'])
 
             # Choose password or public key authentication.
-            if use_ssh_password:
+            if self.use_ssh_password:
                 self.command.extend(
                     [
                         '-o', 'PasswordAuthentication=yes',
@@ -310,12 +350,16 @@ class CommandBase:
     def allocate_pty(self) -> None:
         """ Allocate and configure a PTY """
         self.pty = PTYManager()
-        self.pty.set_nonblocking()
         self.pty.disable_echo_crlf()
+        self.pty.set_nonblocking()
 
     def set_terminal(self) -> None:
         """ Set the controlling terminal to the PTY slave """
         fcntl.ioctl(self.pty.slave, TIOCSCTTY, 0)
+
+    def setup_master(self) -> None:
+        """ Set up the PTY master for password challenges """
+        self.master = None
 
     def start_timer(self, timeout : float) -> None:
         """
@@ -328,55 +372,158 @@ class CommandBase:
     def cancel_timer(self) -> None:
         """ Cancel any started timer """
 
+    def setup_fsm(self) -> list[State]:
+        """ Create an instance of the command FSM """
+        return [
+            # Q_START
+            State(
+                self.initial_state, None,
+                [
+                    None,  # E_STDOUT_READ
+                    None,  # E_MASTER_READ
+                    None,  # E_MASTER_WRITE
+                    None,  # E_CLOSED
+                    None,  # E_EXIT
+                    None,  # E_TIMEOUT
+                    None   # E_STOP
+                ]
+            ),
+
+            # Q_SSH_MASTER
+            State(
+                self.start_auth_timer, self.stop_timer,
+                [
+                    None,               # E_STDOUT_READ
+                    self.ssh_password,  # E_MASTER_READ
+                    self.write_master,  # E_MASTER_WRITE
+                    None,               # E_CLOSED
+                    self.check_done,    # E_EXIT
+                    self.ssh_timeout,   # E_TIMEOUT
+                    self.stop_command   # E_STOP
+                ]
+            ),
+
+            # Q_SUDO_MASTER
+            State(
+                self.start_auth_timer, self.stop_timer,
+                [
+                    None,               # E_STDOUT_READ
+                    self.sudo_master,   # E_MASTER_READ
+                    self.write_master,  # E_MASTER_WRITE
+                    None,               # E_CLOSED
+                    self.check_done,    # E_EXIT
+                    self.sudo_timeout,  # E_TIMEOUT
+                    self.stop_command   # E_STOP
+                ]
+            ),
+
+            # Q_SUDO_STDIO
+            State(
+                self.start_sudo_stdio, self.stop_sudo_stdio,
+                [
+                    self.sudo_stdio,    # E_STDOUT_READ
+                    self.read_master,   # E_MASTER_READ
+                    self.write_master,  # E_MASTER_WRITE
+                    None,               # E_CLOSED
+                    self.check_done,    # E_EXIT
+                    self.sudo_timeout,  # E_TIMEOUT
+                    self.stop_command   # E_STOP
+                ]
+            ),
+
+            # Q_RUNNING
+            State(
+                self.wait_for_exit, None,
+                [
+                    None,               # E_STDOUT_READ
+                    self.read_master,   # E_MASTER_READ
+                    self.write_master,  # E_MASTER_WRITE
+                    None,               # E_CLOSED
+                    self.check_done,    # E_EXIT
+                    self.run_timeout,   # E_TIMEOUT
+                    self.stop_command   # E_STOP
+                ]
+            ),
+
+            # Q_EXITED
+            State(
+                None, self.stop_timer,
+                [
+                    None,               # E_STDOUT_READ
+                    self.read_master,   # E_MASTER_READ
+                    self.write_master,  # E_MASTER_WRITE
+                    self.check_done,    # E_CLOSED
+                    None,               # E_EXIT
+                    self.no_close,      # E_TIMEOUT
+                    self.stop_command   # E_STOP
+                ]
+            ),
+
+            # Q_TERM
+            State(
+                self.term_child, self.stop_timer,
+                [
+                    None,               # E_STDOUT_READ
+                    self.read_master,   # E_MASTER_READ
+                    self.write_master,  # E_MASTER_WRITE
+                    None,               # E_CLOSED
+                    self.check_done,    # E_EXIT
+                    self.term_failed,   # E_TIMEOUT
+                    None                # E_STOP
+                ]
+            ),
+
+            # Q_KILL
+            State(
+                self.kill_child, self.stop_timer,
+                [
+                    None,               # E_STDOUT_READ
+                    self.read_master,   # E_MASTER_READ
+                    self.write_master,  # E_MASTER_WRITE
+                    None,               # E_CLOSED
+                    self.check_done,    # E_EXIT
+                    self.kill_failed,   # E_TIMEOUT
+                    None                # E_STOP
+                ]
+            ),
+
+            # Q_DONE
+            State(
+                self.close_all, None,
+                [
+                    None,  # E_STDIN_WRITE
+                    None,  # E_STDOUT_READ
+                    None,  # E_STDERR_READ
+                    None,  # E_MASTER_READ
+                    None,  # E_MASTER_WRITE
+                    None,  # E_SIGCHLD
+                    None,  # E_TIMEOUT
+                    None   # E_STOP
+                ]
+            )
+        ]
+
     def initial_state(self, _state : int, _event : int, _data : Any) -> int:
-        """ Q_START begin method to determine the initial state """
+        """ Determine the initial state """
         if self.use_ssh_password:
             q_next = self.Q_SSH_MASTER
         elif self.use_sudo_password:
-            q_next = self.Q_SUDO_MASTER
+            q_next = self.Q_SUDO_STDIO if self.remote else self.Q_SUDO_MASTER
         else:
             q_next = self.Q_RUNNING
 
         return q_next
 
     def start_auth_timer(self, _state : int, _event : int, _data : Any) -> int:
-        """ Password state begin method to start the authentication timer """
+        """ Start the authentication timer """
         self.start_timer(self.password_timeout)
 
-    def start_command_timer(
-        self, _state : int, _event : int, _data : Any
-    ) -> int:
-        """ Q_RUNNING state begin method to start the command timer """
-        self.start_timer(self.command_timeout)
-
     def stop_timer(self, _state : int, _event : int, _data : Any) -> int:
-        """ End method to stop any running timer """
+        """ Stop any running timer """
         self.cancel_timer()
 
-    def read_master(self, _state : int, _event : int, _data : Any) -> int:
-        """ Read master action method """
-        self.master.read()
-
-        if self.master.read_errno:
-            self.status = self.master.read_errno
-            self.reason = self.master.read_error_text
-            return self.Q_TERM
-
-        return None
-
-    def write_master(self, _state : int, _event : int, _data : Any) -> int:
-        """ Write outstanding data to PTY master action method """
-        self.master.write()
-
-        if self.master.write_errno:
-            self.status = self.master.write_errno
-            self.reason = self.master.write_error_text
-            return self.Q_TERM
-
-        return self.Q_RUNNING
-
     def ssh_password(self, state : int, event : int, data : Any) -> int:
-        """ SSH authentication action method """
+        """ Attempt SSH authentication """
         q_next = self.read_master(state, event, data)
         if q_next is not None:
             return q_next
@@ -387,9 +534,9 @@ class CommandBase:
 
         self.master.write(self.password)
 
-        if self.master.write_errno:
-            self.status = self.master.write_errno
-            self.reason = self.master.write_error_text
+        if self.master.errno:
+            self.status = self.status or self.master.errno
+            self.reason = self.reason or self.master.error_text
             return self.Q_TERM
 
         if self.use_sudo_password:
@@ -397,8 +544,38 @@ class CommandBase:
 
         return self.Q_RUNNING
 
+    def read_master(self, _state : int, _event : int, _data : Any) -> int:
+        """ Read new data from master """
+        self.master.read()
+
+        if self.master.errno:
+            self.status = self.status or self.master.errno
+            self.reason = self.reason or self.master.error_text
+            return self.Q_TERM
+
+        return None
+
+    def write_master(self, _state : int, _event : int, _data : Any) -> int:
+        """ Write outstanding data to master """
+        self.master.write()
+
+        if self.master.errno:
+            self.status = self.status or self.master.errno
+            self.reason = self.reason or self.master.error_text
+            return self.Q_TERM
+
+        return None
+
+    def ssh_timeout(self, _state : int, _event : int, _data : Any) -> int:
+        """ Start termination due to ssh authentication timeout """
+        self.cancel_timer()
+
+        self.reason = self.reason or 'SSH authentication timeout'
+
+        return self.Q_TERM
+
     def sudo_master(self, state : int, event : int, data : Any) -> int:
-        """ SUDO authentication action method (on master) """
+        """ Attempt SUDO authentication (on master) """
         q_next = self.read_master(state, event, data)
         if q_next is not None:
             return q_next
@@ -409,28 +586,49 @@ class CommandBase:
 
         self.master.write(self.password)
 
-        if self.master.write_errno:
-            self.status = self.master.write_errno
-            self.reason = self.master.write_error_text
+        if self.master.errno:
+            self.status = self.status or self.master.errno
+            self.reason = self.reason or self.master.error_text
             return self.Q_TERM
 
         return self.Q_RUNNING
 
-    def ssh_timeout(self, _state : int, _event : int, _data : Any) -> int:
-        """ Start termination due to ssh timeout action method """
+    def sudo_timeout(self, _state : int, _event : int, _data : Any) -> int:
+        """ Start termination due to sudo authentication timeout """
         self.cancel_timer()
 
-        if not self.reason:
-            self.reason = 'SSH authentication timeout'
+        self.reason = self.reason or 'SUDO authentication timeout'
 
         return self.Q_TERM
 
-    def sudo_timeout(self, _state : int, _event : int, _data : Any) -> int:
-        """ Start termination due to sudo timeout action method """
-        self.cancel_timer()
+    def start_sudo_stdio(self, state : int, event : int, data : Any) -> int:
+        """ Start SUDO authentication on stdio """
+        return self.start_auth_timer(state, event, data)
 
-        if not self.reason:
-            self.reason = 'SUDO authentication timeout'
+    def stop_sudo_stdio(self, state : int, event : int, data : Any) -> int:
+        """ Stop SUDO authentication on stdio """
+        return self.stop_timer(state, event, data)
+
+    def sudo_stdio(self, _state : int, _event : int, _data : Any) -> int:
+        """ Attempt SUDO authentication (on stdio, derived override) """
+        return None
+
+    def wait_for_exit(
+        self, _state : int, _event : int, _data : Any
+    ) -> int:
+        """ Start waiting for child command process exit """
+        self.start_timer(self.command_timeout)
+
+    def check_done(self, _state : int, _event : int, _data : Any) -> int:
+        """ Check for all stdio closed (derived override) """
+        return None
+
+    def stop_command(self, state : int, _event : int, _data : Any) -> int:
+        """ Start termination sequence action method """
+        self.reason = self.reason or 'Command canceled'
+
+        if state == self.Q_EXITED:
+            return self.Q_DONE
 
         return self.Q_TERM
 
@@ -438,48 +636,39 @@ class CommandBase:
         """ Start termination due to command timeout action method """
         self.cancel_timer()
 
-        if not self.reason:
-            self.reason = 'Command timeout'
+        self.reason = self.reason or 'Command timeout'
 
         return self.Q_TERM
 
     def no_close(self, _state : int, _event : int, _data : Any) -> int:
-        """ Indicate stdio did not close action method """
+        """ Stdio did not close as expected """
         self.cancel_timer()
 
-        if not self.reason:
-            self.reason = 'Warning: stdio did not close as expected'
+        self.reason = self.reason or 'Warning: stdio did not close as expected'
 
         return self.Q_DONE
 
-    def stop_command(self, state : int, _event : int, _data : Any) -> int:
-        """ Start termination sequence action method """
-        if not self.reason:
-            self.reason = 'Command canceled'
-
-        if state == self.Q_EXITED:
-            return self.Q_DONE
-
-        return self.Q_TERM
+    def term_child(self, _state : int, _event : int, _data : Any) -> int:
+        """ Start child command process termination (derived override) """
 
     def term_failed(self, _state : int, _event : int, _data : Any) -> int:
-        """ Move on to kill child action method """
+        """ Termination failed so kill child """
         return self.Q_KILL
 
-    def kill_failed(self, _state : int, _event : int, _data : Any) -> int:
-        """ Child command process would not terminate action method """
-        if not self.status:
-            self.status = 1
+    def kill_child(self, _state : int, _event : int, _data : Any) -> int:
+        """ Kill child command process (derived override) """
 
-        if not self.reason:
-            self.reason = 'Command did not terminate'
+    def kill_failed(self, _state : int, _event : int, _data : Any) -> int:
+        """ Child command process would not exit """
+        self.status = self.status or 1
+        self.reason = self.reason or 'Command did not exit'
 
         return self.Q_DONE
 
     def close_all(
         self, _state : int, _event : int, _data : Any
     ) -> int:
-        """ Q_DONE begin method to close all resources """
+        """ Close all resources """
         self.close()
 
     def close(self) -> None:
@@ -491,7 +680,15 @@ class CommandBase:
 
         if self.pty:
             self.pty.close()
-            self.pty = None
+
+        if self.stdin:
+            self.stdin.close()
+
+        if self.stdout:
+            self.stdout.close()
+
+        if self.stderr:
+            self.stderr.close()
 
     def __enter__(self):
         """ Return self """

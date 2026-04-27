@@ -48,7 +48,6 @@ class IOEndpoint:
     DEFAULT_READ_SIZE : ClassVar[int] = 1024*1024  # 1Mb
 
     fd : int
-    old_blocking : bool
     no_close : bool
     read_size : int
     input_data : IOBuffer
@@ -76,7 +75,9 @@ class IOEndpoint:
                 Open file descriptor (>=0) for the target I/O endpoint.  Note
                 that the descriptor type is not checked.  So, for example, if
                 the descriptor represents the read end of a pipe then no write
-                operations should be performed.
+                operations should be performed.  If there is no actual file
+                descriptor involved (e.g., buffering only) then a value of
+                None can be specified.
             no_close:
                 If False then the I/O endpoint assumes ownership of the file
                 descriptor and the close() method will close it.  Otherwise,
@@ -90,8 +91,8 @@ class IOEndpoint:
                 and are usually used to represent event IDs.
         """
         self.fd = fd
-        self.old_blocking = os.get_blocking(self.fd)
-        os.set_blocking(self.fd, False)
+        if self.fd is not None:
+            os.set_blocking(self.fd, False)
 
         self.no_close = bool(no_close)
         self.read_size = read_size or self.DEFAULT_READ_SIZE
@@ -117,7 +118,7 @@ class IOEndpoint:
     @property
     def is_open(self) -> bool:
         """ Check for an open file descriptor """
-        return self.fd is not None and self.fd >= 0
+        return self.fd is not None
 
     def read(self) -> None:
         """ Read bytes and append to the current input data """
@@ -215,9 +216,7 @@ class IOEndpoint:
         self.unregister_read()
         self.unregister_write()
 
-        if self.no_close:
-            os.set_blocking(self.fd, self.old_blocking)
-        else:
+        if not self.no_close:
             os.close(self.fd)
 
         self.fd = None
