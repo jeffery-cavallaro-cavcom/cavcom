@@ -34,6 +34,14 @@ attributes.  Note that an error does not clear the output buffer.
 
 Note that the overall strategy is to not raise any exceptions; all errors can
 be gleaned from the saved error codes and reason texts.
+
+Sometimes endpoints are managed by other agents and this class is just used
+for buffering.  Normally, this class assumes ownership of the underlying file
+descriptor; however, passing a no_close argument of True during creation causes
+the close method to not actually call os.close().  Additionally, passing a None
+value for the underlying file descriptor during creation means that the endpoint
+instance is only used for buffering input.  In these cases, an is_closed
+property can be checked to see if the close() method was actually called.
 """
 
 from errno import EIO
@@ -52,6 +60,7 @@ class IOEndpoint:
     read_size : int
     input_data : IOBuffer
     output_data : IOBuffer
+    closed : bool
     read_data : Any
     write_data : Any
     errno : int
@@ -98,6 +107,7 @@ class IOEndpoint:
         self.read_size = read_size or self.DEFAULT_READ_SIZE
         self.input_data = IOBuffer()
         self.output_data = IOBuffer()
+        self.closed = False
         self.read_data = read_data
         self.write_data = write_data
         self.errno = None
@@ -119,6 +129,11 @@ class IOEndpoint:
     def is_open(self) -> bool:
         """ Check for an open file descriptor """
         return self.fd is not None
+
+    @property
+    def is_closed(self) -> bool:
+        """ Check if close() has been classed """
+        return self.closed
 
     def read(self) -> None:
         """ Read bytes and append to the current input data """
@@ -210,6 +225,8 @@ class IOEndpoint:
 
     def close(self) -> None:
         """ Close the endpoint """
+        self.closed = True
+
         if not self.is_open:
             return
 

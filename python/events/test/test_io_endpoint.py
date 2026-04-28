@@ -48,9 +48,11 @@ class TestIOEndpoint(unittest.TestCase):
         """ No actual file descriptor (buffer only) """
         with IOEndpoint(None) as endpoint:
             self.assertFalse(endpoint.is_open)
+            self.assertFalse(endpoint.closed)
             endpoint.input_data.append(self.TEST_DATA_1)
 
         self.assertFalse(endpoint.is_open)
+        self.assertTrue(endpoint.is_closed)
         self.assertEqual(
             endpoint.fetch_input(text=True, reset=True),
             self.TEST_DATA_1.decode()

@@ -187,9 +187,9 @@ class Command(asyncio.SubprocessProtocol, CommandBase):
         self.status = self.transport.get_returncode()
 
         all_closed  = (
-            (not self.stdin or not self.stdin.is_open) and
-            (not self.stdout or not self.stdout.is_open) and
-            (not self.stderr or not self.stderr.is_open)
+            (not self.stdin or self.stdin.is_closed) and
+            (not self.stdout or self.stdout.is_closed) and
+            (not self.stderr or self.stderr.is_closed)
         )
 
         if all_closed or state > self.Q_EXITED:
